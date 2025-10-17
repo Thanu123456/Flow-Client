@@ -1,10 +1,13 @@
-import React from 'react';
-import { Button } from 'antd';
+import { ConfigProvider } from "antd";
+import { customTheme } from "./config/theme.config";
+import { ButtonExamples } from "./components/common/Button/ButtonExamples";
+import InputExamples from "./components/common/Input/InputExample";
 
 const App = () => (
-  <div className="App">
-    <Button type="primary">Button</Button>
-  </div>
+  <ConfigProvider theme={customTheme}>
+    {/* <ButtonExamples /> */}
+    <InputExamples />
+  </ConfigProvider>
 );
 
 export default App;

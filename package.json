@@ -12,8 +12,9 @@
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
     "@tailwindcss/vite": "^4.1.13",
-    "antd": "^5.27.4",
+    "antd": "^5.27.5",
     "axios": "^1.12.2",
+    "classnames": "^2.5.1",
     "cors": "^2.8.5",
     "dayjs": "^1.11.18",
     "jwt-decode": "^4.0.0",
