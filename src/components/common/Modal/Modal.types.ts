@@ -30,8 +30,8 @@ export interface FormModalProps extends ModalProps {
   cancelText?: string;
 }
 
-export interface DetailModalProps extends ModalProps {
-  data: Record<string, any>;
+export interface DetailModalProps extends Omit<ModalProps, 'children' | 'onOk'> {
+  //data: Record<string, string>;
   tabs?: Array<{
     id: string;
     label: string;
@@ -39,19 +39,24 @@ export interface DetailModalProps extends ModalProps {
   }>;
 }
 
-export interface ImageModalProps extends ModalProps {
+export interface ImageModalProps extends Omit<ModalProps, "children" | "onOk"> {
   src: string;
   alt?: string;
   allowDownload?: boolean;
 }
 
-export interface DrawerProps extends Omit<ModalProps, 'size'> {
+export interface DrawerProps extends Omit<ModalProps, 'size' | 'children' | 'onOk'> {
   position: 'left' | 'right';
   width?: string | number;
 }
 
-export interface BottomSheetProps extends ModalProps {
+export interface BottomSheetProps extends Omit<ModalProps, 'onOk' | 'children'> {
   snapPoints?: Array<number | string>;
   defaultSnap?: number | string;
   enableSwipeToClose?: boolean;
+}
+
+export interface FullScreenModalProps extends Omit<ModalProps, "children" | "onOk">{
+  backgroundColor?: string,
+
 }
