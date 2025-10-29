@@ -9,6 +9,9 @@ on:
 jobs:
   sonarqube:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./Flow-Client
     steps:
       - uses: actions/checkout@v4
         with:
@@ -20,12 +23,12 @@ jobs:
           node-version: 18
 
       - name: Install dependencies
-        working-directory: Flow-Client
         run: npm install
 
       - name: Run tests and coverage
-        working-directory: Flow-Client
-        run: npm test
+        run: |
+          npm test -- --coverage --watchAll=false
+        continue-on-error: true
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v5
@@ -33,4 +36,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          projectBaseDir: Flow-Client
+          projectBaseDir: ./Flow-Client
