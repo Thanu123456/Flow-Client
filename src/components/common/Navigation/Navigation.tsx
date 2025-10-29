@@ -19,7 +19,7 @@ const { Header, Sider, Content } = Layout;
 export const Navigation: React.FC<NavigationProps> = ({
   type = "sidebar",
   collapsed,
-  onCollapse, // Add this
+  onCollapse,
   items,
   breadcrumbItems,
   activeKey,
