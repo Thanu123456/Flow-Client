@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react"; // Add useState
 import { Layout, type MenuProps } from "antd";
 import { Navigation } from "./Navigation";
 import {
@@ -11,6 +11,8 @@ import {
 const { Content } = Layout;
 
 export const NavigationExample: React.FC = () => {
+  const [collapsed, setCollapsed] = useState(false); // Add this state
+
   const sidebarItems: MenuProps["items"] = [
     { key: "1", icon: <HomeOutlined />, label: "Dashboard" },
     { key: "2", icon: <ShoppingCartOutlined />, label: "Products" },
@@ -32,7 +34,12 @@ export const NavigationExample: React.FC = () => {
 
   return (
     <Layout className="min-h-screen">
-      <Navigation type="sidebar" items={sidebarItems} />
+      <Navigation
+        type="sidebar"
+        items={sidebarItems}
+        collapsed={collapsed}
+        onCollapse={setCollapsed} // Add this
+      />
       <Layout>
         <Navigation type="header" />
         <Content className="p-6 bg-gray-100 space-y-6">

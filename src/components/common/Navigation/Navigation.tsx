@@ -19,6 +19,7 @@ const { Header, Sider, Content } = Layout;
 export const Navigation: React.FC<NavigationProps> = ({
   type = "sidebar",
   collapsed,
+  onCollapse, // Add this
   items,
   breadcrumbItems,
   activeKey,
@@ -34,6 +35,7 @@ export const Navigation: React.FC<NavigationProps> = ({
         <Sider
           collapsible
           collapsed={collapsed}
+          onCollapse={onCollapse} // Add this line
           width={240}
           className="min-h-screen"
         >
@@ -86,7 +88,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                 style={{ animationDuration: "2s" }}
               />
             </svg>
-            {!collapsed && <span>FlowPOS</span>}
+            {!collapsed && <span>MyApp</span>}
           </div>
           <Menu
             theme="dark"
