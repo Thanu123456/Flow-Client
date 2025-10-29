@@ -63,7 +63,6 @@ export const Navigation: React.FC<NavigationProps> = ({
                 className="animate-pulse"
               />
 
-              {/* Cash Drawer */}
               <rect
                 x="4"
                 y="28"
@@ -73,7 +72,6 @@ export const Navigation: React.FC<NavigationProps> = ({
                 fill="#3B82F6"
               />
 
-              {/* Keypad Buttons */}
               <circle cx="10" cy="24" r="1.5" fill="#1E40AF" />
               <circle cx="16" cy="24" r="1.5" fill="#1E40AF" />
               <circle cx="22" cy="24" r="1.5" fill="#1E40AF" />
