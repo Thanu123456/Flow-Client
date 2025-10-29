@@ -35,7 +35,7 @@ export const Navigation: React.FC<NavigationProps> = ({
         <Sider
           collapsible
           collapsed={collapsed}
-          onCollapse={onCollapse} // Add this line
+          onCollapse={onCollapse}
           width={240}
           className="min-h-screen"
         >
@@ -48,10 +48,8 @@ export const Navigation: React.FC<NavigationProps> = ({
               xmlns="http://www.w3.org/2000/svg"
               className="animate-pulse"
             >
-              {/* Cash Register Base */}
               <rect x="4" y="20" width="24" height="8" rx="1" fill="#60A5FA" />
 
-              {/* Display Screen */}
               <rect x="6" y="12" width="20" height="6" rx="1" fill="#93C5FD" />
               <rect
                 x="8"
@@ -76,7 +74,6 @@ export const Navigation: React.FC<NavigationProps> = ({
               <circle cx="16" cy="24" r="1.5" fill="#1E40AF" />
               <circle cx="22" cy="24" r="1.5" fill="#1E40AF" />
 
-              {/* Receipt Paper */}
               <path
                 d="M14 4 L14 12 L18 12 L18 4"
                 stroke="#F3F4F6"
