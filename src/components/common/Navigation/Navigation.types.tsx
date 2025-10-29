@@ -15,22 +15,17 @@ export type NavigationType =
   | "bottom";
 
 export interface NavigationProps {
-  /** Type of navigation */
   type?: NavigationType;
 
-  /** Common */
   collapsed?: boolean;
-  onCollapse?: (collapsed: boolean) => void; // Add this line
+  onCollapse?: (collapsed: boolean) => void;
   items?: any[];
   activeKey?: string;
 
-  /** Breadcrumb */
   breadcrumbItems?: BreadcrumbProps["items"];
 
-  /** Tabs */
   onTabChange?: (key: string) => void;
 
-  /** Pagination */
   totalItems?: number;
   pageSize?: number;
   currentPage?: number;
