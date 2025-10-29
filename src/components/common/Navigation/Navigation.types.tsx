@@ -20,6 +20,7 @@ export interface NavigationProps {
 
   /** Common */
   collapsed?: boolean;
+  onCollapse?: (collapsed: boolean) => void; // Add this line
   items?: any[];
   activeKey?: string;
 
