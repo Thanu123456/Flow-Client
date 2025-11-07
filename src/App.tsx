@@ -1,10 +1,24 @@
 import React from 'react';
-import { Button } from 'antd';
+import { BrowserRouter } from 'react-router-dom';
+import { Layout } from 'antd';
+import HeaderWithSearch from './components/common/Layout/HeaderWithSearch';
 
-const App = () => (
-  <div className="App">
-    <Button type="primary">Button</Button>
-  </div>
-);
+
+
+
+const App: React.FC = () => {
+  const handleMenuClick = () => {
+    console.log('Menu clicked');
+    // This will be used for sidebar toggle later
+  };
+
+  return (
+    <BrowserRouter>
+      <Layout className="min-h-screen">
+        <HeaderWithSearch onMenuClick={handleMenuClick} />
+      </Layout>
+    </BrowserRouter>
+  );
+};
 
 export default App;
