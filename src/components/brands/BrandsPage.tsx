@@ -1,14 +1,30 @@
-// src/components/brands/BrandsPage.tsx
-import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Button, Input, Select, Space, message, Spin } from 'antd';
-import { PlusOutlined, ReloadOutlined, MenuFoldOutlined, MenuUnfoldOutlined, FilePdfOutlined, FileExcelOutlined } from '@ant-design/icons';
-import { useDebounce } from '../../hooks/ui/useDebounce';
-import { useBrandStore } from '../../store/management/brandStore';
-import type { BrandPaginationParams } from '../../types/entities/brand.types';
-import BrandsTable from './BrandsTable';
-import AddBrandModal from './AddBrandModal';
-import EditBrandModal from './EditBrandModal';
-import { brandService } from '../../services/management/brandService';
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  Row,
+  Col,
+  Button,
+  Input,
+  Select,
+  Space,
+  message,
+  Spin,
+} from "antd";
+import {
+  PlusOutlined,
+  ReloadOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  FilePdfOutlined,
+  FileExcelOutlined,
+} from "@ant-design/icons";
+import { useDebounce } from "../../hooks/ui/useDebounce";
+import { useBrandStore } from "../../store/management/brandStore";
+import type { BrandPaginationParams } from "../../types/entities/brand.types";
+import BrandsTable from "./BrandsTable";
+import AddBrandModal from "./AddBrandModal";
+import EditBrandModal from "./EditBrandModal";
+import { brandService } from "../../services/management/brandService";
 
 const { Search } = Input;
 const { Option } = Select;
@@ -18,23 +34,21 @@ const BrandsPage: React.FC = () => {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<any>(null);
   const [collapsed, setCollapsed] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | undefined>(undefined);
-  const [paginationParams, setPaginationParams] = useState<BrandPaginationParams>({
-    page: 1,
-    limit: 10,
-    search: '',
-    status: undefined,
-  });
-  
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "active" | "inactive" | undefined
+  >(undefined);
+  const [paginationParams, setPaginationParams] =
+    useState<BrandPaginationParams>({
+      page: 1,
+      limit: 10,
+      search: "",
+      status: undefined,
+    });
+
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
-  
-  const {
-    brands,
-    loading,
-    pagination,
-    fetchBrands,
-  } = useBrandStore();
+
+  const { brands, loading, pagination, getBrands } = useBrandStore();
 
   useEffect(() => {
     const params = {
@@ -43,59 +57,60 @@ const BrandsPage: React.FC = () => {
       status: statusFilter,
     };
     setPaginationParams(params);
-    fetchBrands(params);
-  }, [debouncedSearchTerm, statusFilter, fetchBrands]);
+    getBrands(params);
+  }, [debouncedSearchTerm, statusFilter, getBrands]);
 
   const handlePageChange = (page: number, pageSize: number) => {
-    const params = {
-      ...paginationParams,
-      page,
-      limit: pageSize,
-    };
+    const params = { ...paginationParams, page, limit: pageSize };
     setPaginationParams(params);
-    fetchBrands(params);
+    getBrands(params);
   };
 
-  const handleRefresh = () => {
-    fetchBrands(paginationParams);
-  };
-
-  const handleAddBrand = () => {
-    setAddModalVisible(true);
-  };
-
+  const handleRefresh = () => getBrands(paginationParams);
+  const handleAddBrand = () => setAddModalVisible(true);
   const handleEditBrand = (brand: any) => {
     setSelectedBrand(brand);
     setEditModalVisible(true);
   };
+  const handleViewBrand = (brand: any) => console.log("View brand:", brand);
 
-  const handleViewBrand = (brand: any) => {
-    // Implement view functionality if needed
-    console.log('View brand:', brand);
-  };
-
-  const handleAddSuccess = () => {
-    fetchBrands(paginationParams);
-  };
-
-  const handleEditSuccess = () => {
-    fetchBrands(paginationParams);
-  };
+  const handleAddSuccess = () => getBrands(paginationParams);
+  const handleEditSuccess = () => getBrands(paginationParams);
 
   const handleExportPDF = async () => {
     try {
       const blob = await brandService.exportToPDF(paginationParams);
+
+      /**
+       * Converts the binary PDF data into a temporary local URL (like blob:http://localhost:3000/abcd1234).
+       * This lets the browser treat it like a downloadable file.
+       */
+
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+
+      /**
+       * Dynamically creates a hidden <a> tag.
+       * Sets the href to the blob URL.
+       * Adds the download attribute → tells browser to save file instead of opening it.
+       */
+
+      const link = document.createElement("a");
       link.href = url;
-      link.setAttribute('download', 'brands.pdf');
+      link.setAttribute("download", "Brands.pdf");
       document.body.appendChild(link);
       link.click();
       link.remove();
+
+      /**
+       * Appends the <a> element to the DOM.
+       * Simulates a user click to start the download.
+       * Removes the <a> element afterward (cleanup).
+       */
+
       window.URL.revokeObjectURL(url);
-      message.success('PDF exported successfully');
-    } catch (error) {
-      message.error('Failed to export PDF');
+      message.success("PDF exported successfully");
+    } catch {
+      message.error("Failed to export PDF");
     }
   };
 
@@ -103,16 +118,16 @@ const BrandsPage: React.FC = () => {
     try {
       const blob = await brandService.exportToExcel(paginationParams);
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.setAttribute('download', 'brands.xlsx');
+      link.setAttribute("download", "Brands.xlsx");
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      message.success('Excel exported successfully');
-    } catch (error) {
-      message.error('Failed to export Excel');
+      message.success("Excel exported successfully");
+    } catch {
+      message.error("Failed to export Excel");
     }
   };
 
@@ -120,8 +135,14 @@ const BrandsPage: React.FC = () => {
     <div className="brands-page">
       <Card
         title={
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>Manage your brands</span>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span>Manage your Brands</span>
             <Button
               type="text"
               icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
@@ -138,22 +159,13 @@ const BrandsPage: React.FC = () => {
             >
               Add Brand
             </Button>
-            <Button
-              icon={<FilePdfOutlined />}
-              onClick={handleExportPDF}
-            >
+            <Button icon={<FilePdfOutlined />} onClick={handleExportPDF}>
               PDF
             </Button>
-            <Button
-              icon={<FileExcelOutlined />}
-              onClick={handleExportExcel}
-            >
+            <Button icon={<FileExcelOutlined />} onClick={handleExportExcel}>
               Excel
             </Button>
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={handleRefresh}
-            >
+            <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
               Refresh
             </Button>
           </Space>
@@ -172,19 +184,21 @@ const BrandsPage: React.FC = () => {
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Select
-                  placeholder="Filter by status"
-                  allowClear
-                  style={{ width: '100%' }}
-                  value={statusFilter}
-                  onChange={(value) => setStatusFilter(value as 'active' | 'inactive' | undefined)}
-                >
-                  <Option value="active">Active</Option>
-                  <Option value="inactive">Inactive</Option>
-                </Select>
+                placeholder="Filter by status"
+                allowClear
+                style={{ width: "100%" }}
+                value={statusFilter}
+                onChange={(value) =>
+                  setStatusFilter(value as "active" | "inactive" | undefined)
+                }
+              >
+                <Option value="active">Active</Option>
+                <Option value="inactive">Inactive</Option>
+              </Select>
             </Col>
           </Row>
         )}
-        
+
         <Spin spinning={loading}>
           <BrandsTable
             brands={brands}
@@ -197,13 +211,12 @@ const BrandsPage: React.FC = () => {
           />
         </Spin>
       </Card>
-      
+
       <AddBrandModal
         visible={addModalVisible}
         onCancel={() => setAddModalVisible(false)}
         onSuccess={handleAddSuccess}
       />
-      
       <EditBrandModal
         visible={editModalVisible}
         brand={selectedBrand}
