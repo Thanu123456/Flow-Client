@@ -1,9 +1,19 @@
-// src/components/brands/BrandsTable.tsx
-import React, { useState } from 'react';
-import { Table, Button, Space, Popconfirm, Tag, Image, message } from 'antd';
-import { EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
-import type { Brand } from '../../types/entities/brand.types';
-import { useBrandStore } from '../../store/management/brandStore';
+import React, { useState } from "react";
+import {
+  Table,
+  Button,
+  Space,
+  Popconfirm,
+  Tag,
+  Image,
+  message,
+  DatePicker,
+} from "antd";
+import { EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
+import type { SortOrder } from "antd/es/table/interface";
+import type { Brand } from "../../types/entities/brand.types";
+import { useBrandStore } from "../../store/management/brandStore";
+import dayjs from "dayjs";
 
 interface BrandsTableProps {
   brands: Brand[];
@@ -31,25 +41,41 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
 }) => {
   const { deleteBrand } = useBrandStore();
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+  const [filteredBrands, setFilteredBrands] = useState<Brand[]>(brands);
+  const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
 
   const handleDelete = async (id: string) => {
     try {
       setDeleteLoading(id);
       await deleteBrand(id);
-      message.success('Brand deleted successfully');
+      message.success("Brand deleted successfully");
       refreshData();
     } catch (error: any) {
-      message.error(error.response?.data?.message || 'Failed to delete brand');
+      message.error(error.response?.data?.message || "Failed to delete Brand");
     } finally {
       setDeleteLoading(null);
     }
   };
 
+  const handleDateChange = (date: dayjs.Dayjs | null) => {
+    setSelectedDate(date);
+    if (date) {
+      const filtered = brands.filter((brand) =>
+        dayjs(brand.createdAt).isSame(date, "day")
+      );
+      setFilteredBrands(filtered);
+    } else {
+      setFilteredBrands(brands);
+    }
+  };
+
   const columns = [
     {
-      title: 'Brand',
-      dataIndex: 'name',
-      key: 'brand',
+      title: <div className="text-center w-full">Brand</div>,
+      dataIndex: "name",
+      key: "brand",
+      sorter: (a: Brand, b: Brand) => a.name.localeCompare(b.name),
+      sortDirections: ["ascend", "descend"] as SortOrder[],
       render: (text: string, record: Brand) => (
         <Space>
           {record.imageUrl && (
@@ -58,8 +84,7 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
               height={40}
               src={record.imageUrl}
               alt={text}
-              style={{ objectFit: 'contain' }}
-              fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RUG8O+L"
+              style={{ objectFit: "contain" }}
             />
           )}
           <Button type="link" onClick={() => onView(record)}>
@@ -69,36 +94,53 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
       ),
     },
     {
-      title: 'Description',
-      dataIndex: 'description',
-      key: 'description',
+      title: "Description",
+      dataIndex: "description",
+      key: "description",
+      align: "center" as const,
       ellipsis: true,
+      render: (description: string) => description?.trim() || "N/A",
     },
     {
-      title: 'Product Count',
-      dataIndex: 'productCount',
-      key: 'productCount',
+      title: "Product Count",
+      dataIndex: "productCount",
+      key: "productCount",
+      align: "center" as const,
       render: (count: number) => count || 0,
     },
     {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      align: "center" as const,
       render: (status: string) => (
-        <Tag color={status === 'active' ? 'green' : 'default'}>
-          {status === 'active' ? 'Active' : 'Inactive'}
+        <Tag color={status === "active" ? "green" : "default"}>
+          {status === "active" ? "Active" : "Inactive"}
         </Tag>
       ),
     },
     {
-      title: 'Created Date',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (date: string) => new Date(date).toLocaleDateString(),
+      title: (
+        <div className="flex flex-col gap-2 items-center">
+          <div>Created Date</div>
+          <DatePicker
+            size="small"
+            onChange={handleDateChange}
+            value={selectedDate}
+            allowClear
+            placeholder="Select date"
+          />
+        </div>
+      ),
+      dataIndex: "createdAt",
+      key: "createdAt",
+      align: "center" as const,
+      render: (date: string) => dayjs(date).format("YYYY/MM/DD"),
     },
     {
-      title: 'Actions',
-      key: 'actions',
+      title: "Actions",
+      key: "actions",
+      align: "center" as const,
       render: (_: React.ReactNode, record: Brand) => (
         <Space size="middle">
           <Button
@@ -115,7 +157,7 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
             title="Are you sure you want to delete this brand?"
             description={
               (record.productCount ?? 0) > 0
-                ? "This brand has products associated with it and cannot be deleted."
+                ? "This brand has products associated and cannot be deleted."
                 : "This action cannot be undone."
             }
             onConfirm={() => handleDelete(record.id)}
@@ -139,7 +181,7 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
   return (
     <Table
       columns={columns}
-      dataSource={brands}
+      dataSource={selectedDate ? filteredBrands : brands}
       rowKey="id"
       loading={loading}
       pagination={{
@@ -150,7 +192,7 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
         showQuickJumper: true,
         showTotal: (total, range) =>
           `${range[0]}-${range[1]} of ${total} items`,
-        pageSizeOptions: ['10', '25', '50', '100'],
+        pageSizeOptions: ["10", "25", "50", "100"],
         onChange: onPageChange,
       }}
     />
