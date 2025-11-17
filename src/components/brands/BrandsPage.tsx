@@ -8,13 +8,13 @@ import {
   Select,
   Space,
   message,
-  Spin,
+  Tooltip,
 } from "antd";
 import {
   PlusOutlined,
   ReloadOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
+  UpOutlined,
+  DownOutlined,
   FilePdfOutlined,
   FileExcelOutlined,
 } from "@ant-design/icons";
@@ -46,8 +46,7 @@ const BrandsPage: React.FC = () => {
       status: undefined,
     });
 
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
-
+  const debouncedSearchTerm = useDebounce(searchTerm, 5);
   const { brands, loading, pagination, getBrands } = useBrandStore();
 
   useEffect(() => {
@@ -143,11 +142,6 @@ const BrandsPage: React.FC = () => {
             }}
           >
             <span>Manage your Brands</span>
-            <Button
-              type="text"
-              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-              onClick={() => setCollapsed(!collapsed)}
-            />
           </div>
         }
         extra={
@@ -159,20 +153,39 @@ const BrandsPage: React.FC = () => {
             >
               Add Brand
             </Button>
-            <Button icon={<FilePdfOutlined />} onClick={handleExportPDF}>
-              PDF
-            </Button>
-            <Button icon={<FileExcelOutlined />} onClick={handleExportExcel}>
-              Excel
-            </Button>
-            <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+            <Tooltip title="Download PDF">
+              <Button
+                icon={<FilePdfOutlined style={{ color: "#FF0000" }} />}
+                onClick={handleExportPDF}
+              >
+                PDF
+              </Button>
+            </Tooltip>
+            <Tooltip title="Download Excel">
+              <Button
+                icon={<FileExcelOutlined style={{ color: "#107C41" }} />}
+                onClick={handleExportExcel}
+              >
+                Excel
+              </Button>
+            </Tooltip>
+            <Button
+              icon={<ReloadOutlined style={{ color: "blue" }} />}
+              onClick={handleRefresh}
+            >
               Refresh
+            </Button>
+            <Button
+              icon={collapsed ? <DownOutlined /> : <UpOutlined />}
+              onClick={() => setCollapsed(!collapsed)}
+            >
+              {collapsed ? "Expand" : "Collapse"}
             </Button>
           </Space>
         }
       >
         {!collapsed && (
-          <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Row gutter={[16, 16]} justify="end" style={{ marginBottom: 16 }}>
             <Col xs={24} sm={12} md={8}>
               <Search
                 placeholder="Search by brand name"
@@ -182,7 +195,8 @@ const BrandsPage: React.FC = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </Col>
-            <Col xs={24} sm={12} md={8}>
+
+            <Col xs={24} sm={12} md={4}>
               <Select
                 placeholder="Filter by status"
                 allowClear
@@ -198,18 +212,15 @@ const BrandsPage: React.FC = () => {
             </Col>
           </Row>
         )}
-
-        <Spin spinning={loading}>
-          <BrandsTable
-            brands={brands}
-            loading={loading}
-            pagination={pagination}
-            onPageChange={handlePageChange}
-            onEdit={handleEditBrand}
-            onView={handleViewBrand}
-            refreshData={handleRefresh}
-          />
-        </Spin>
+        <BrandsTable
+          brands={brands}
+          loading={loading}
+          pagination={pagination}
+          onPageChange={handlePageChange}
+          onEdit={handleEditBrand}
+          onView={handleViewBrand}
+          refreshData={handleRefresh}
+        />
       </Card>
 
       <AddBrandModal
