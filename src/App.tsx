@@ -13,10 +13,10 @@ const App = () => (
   <ConfigProvider theme={customTheme}>
     <ConfigProvider>
       <AntdApp>
-        <BrandsPage />
         <Layout className="min-h-screen">
           <HeaderWithSearch onMenuClick={handleMenuClick} />
         </Layout>
+        <BrandsPage />
       </AntdApp>
     </ConfigProvider>
   </ConfigProvider>
