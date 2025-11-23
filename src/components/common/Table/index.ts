@@ -1,2 +1,2 @@
-export { DataTable } from "./Table";
-export type { DataTableProps } from "./Table.types";
+export { default as CommonTable } from "./Table";
+export * from "./Table.types";

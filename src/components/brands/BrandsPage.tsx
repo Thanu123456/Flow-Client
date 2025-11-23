@@ -1,20 +1,9 @@
+// src/components/Brands/BrandsPage.tsx (Refactored)
 import React, { useState, useEffect } from "react";
-import {
-  Card,
-  Row,
-  Col,
-  Button,
-  Input,
-  Select,
-  Space,
-  message,
-  Tooltip,
-} from "antd";
+import { message, Space } from "antd";
 import {
   PlusOutlined,
   ReloadOutlined,
-  UpOutlined,
-  DownOutlined,
   FilePdfOutlined,
   FileExcelOutlined,
 } from "@ant-design/icons";
@@ -25,9 +14,8 @@ import BrandsTable from "./BrandsTable";
 import AddBrandModal from "./AddBrandModal";
 import EditBrandModal from "./EditBrandModal";
 import { brandService } from "../../services/management/brandService";
-
-const { Search } = Input;
-const { Option } = Select;
+import { PageLayout } from "../common/PageLayout";
+import { CommonButton } from "../common/Button";
 
 const BrandsPage: React.FC = () => {
   const [addModalVisible, setAddModalVisible] = useState(false);
@@ -46,7 +34,7 @@ const BrandsPage: React.FC = () => {
       status: undefined,
     });
 
-  const debouncedSearchTerm = useDebounce(searchTerm, 5);
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
   const { brands, loading, pagination, getBrands } = useBrandStore();
 
   useEffect(() => {
@@ -71,7 +59,6 @@ const BrandsPage: React.FC = () => {
     setSelectedBrand(brand);
     setEditModalVisible(true);
   };
-  const handleViewBrand = (brand: any) => console.log("View brand:", brand);
 
   const handleAddSuccess = () => getBrands(paginationParams);
   const handleEditSuccess = () => getBrands(paginationParams);
@@ -79,33 +66,13 @@ const BrandsPage: React.FC = () => {
   const handleExportPDF = async () => {
     try {
       const blob = await brandService.exportToPDF(paginationParams);
-
-      /**
-       * Converts the binary PDF data into a temporary local URL (like blob:http://localhost:3000/abcd1234).
-       * This lets the browser treat it like a downloadable file.
-       */
-
       const url = window.URL.createObjectURL(blob);
-
-      /**
-       * Dynamically creates a hidden <a> tag.
-       * Sets the href to the blob URL.
-       * Adds the download attribute → tells browser to save file instead of opening it.
-       */
-
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute("download", "Brands.pdf");
       document.body.appendChild(link);
       link.click();
       link.remove();
-
-      /**
-       * Appends the <a> element to the DOM.
-       * Simulates a user click to start the download.
-       * Removes the <a> element afterward (cleanup).
-       */
-
       window.URL.revokeObjectURL(url);
       message.success("PDF exported successfully");
     } catch {
@@ -131,97 +98,69 @@ const BrandsPage: React.FC = () => {
   };
 
   return (
-    <div className="brands-page">
-      <Card
-        title={
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <span>Manage your Brands</span>
-          </div>
-        }
-        extra={
+    <>
+      <PageLayout
+        title="Manage your Brands"
+        collapsed={collapsed}
+        onCollapsedChange={setCollapsed}
+        searchConfig={{
+          placeholder: "Search by brand name",
+          value: searchTerm,
+          onChange: setSearchTerm,
+        }}
+        filterConfig={[
+          {
+            placeholder: "Filter by status",
+            value: statusFilter,
+            onChange: setStatusFilter,
+            options: [
+              { label: "Active", value: "active" },
+              { label: "Inactive", value: "inactive" },
+            ],
+          },
+        ]}
+        actions={
           <Space>
-            <Button
+            <CommonButton
               type="primary"
               icon={<PlusOutlined />}
               onClick={handleAddBrand}
             >
               Add Brand
-            </Button>
-            <Tooltip title="Download PDF">
-              <Button
-                icon={<FilePdfOutlined style={{ color: "#FF0000" }} />}
-                onClick={handleExportPDF}
-              >
-                PDF
-              </Button>
-            </Tooltip>
-            <Tooltip title="Download Excel">
-              <Button
-                icon={<FileExcelOutlined style={{ color: "#107C41" }} />}
-                onClick={handleExportExcel}
-              >
-                Excel
-              </Button>
-            </Tooltip>
-            <Button
+            </CommonButton>
+            <CommonButton
+              icon={<FilePdfOutlined style={{ color: "#FF0000" }} />}
+              onClick={handleExportPDF}
+              tooltip="Download PDF"
+            >
+              PDF
+            </CommonButton>
+            <CommonButton
+              icon={<FileExcelOutlined style={{ color: "#107C41" }} />}
+              onClick={handleExportExcel}
+              tooltip="Download Excel"
+            >
+              Excel
+            </CommonButton>
+            <CommonButton
               icon={<ReloadOutlined style={{ color: "blue" }} />}
               onClick={handleRefresh}
             >
               Refresh
-            </Button>
-            <Button
-              icon={collapsed ? <DownOutlined /> : <UpOutlined />}
-              onClick={() => setCollapsed(!collapsed)}
-            >
-              {collapsed ? "Expand" : "Collapse"}
-            </Button>
+            </CommonButton>
           </Space>
         }
       >
-        {!collapsed && (
-          <Row gutter={[16, 16]} justify="end" style={{ marginBottom: 16 }}>
-            <Col xs={24} sm={12} md={8}>
-              <Search
-                placeholder="Search by brand name"
-                allowClear
-                enterButton
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </Col>
-
-            <Col xs={24} sm={12} md={4}>
-              <Select
-                placeholder="Filter by status"
-                allowClear
-                style={{ width: "100%" }}
-                value={statusFilter}
-                onChange={(value) =>
-                  setStatusFilter(value as "active" | "inactive" | undefined)
-                }
-              >
-                <Option value="active">Active</Option>
-                <Option value="inactive">Inactive</Option>
-              </Select>
-            </Col>
-          </Row>
-        )}
         <BrandsTable
           brands={brands}
           loading={loading}
           pagination={pagination}
           onPageChange={handlePageChange}
           onEdit={handleEditBrand}
-          onView={handleViewBrand}
+          onView={(brand) => console.log("View brand:", brand)}
           refreshData={handleRefresh}
         />
-      </Card>
+      </PageLayout>
 
       <AddBrandModal
         visible={addModalVisible}
@@ -234,7 +173,7 @@ const BrandsPage: React.FC = () => {
         onCancel={() => setEditModalVisible(false)}
         onSuccess={handleEditSuccess}
       />
-    </div>
+    </>
   );
 };
 
