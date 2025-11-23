@@ -1,12 +1,26 @@
-import type { TableProps as AntTableProps } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import type { TableProps as AntTableProps, ColumnType } from "antd/es/table";
+import type { Dayjs } from "dayjs";
 
-export interface DataTableProps<T = any>
-  extends Omit<AntTableProps<T>, "columns" | "dataSource"> {
-  /** Table column definitions */
-  columns: ColumnsType<T>;
-  /** Data array for table rows */
-  data: T[];
-  /** Optional CSS className */
-  className?: string;
+export interface PaginationConfig {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface TableColumn<T = any> extends ColumnType<T> {
+  showDateFilter?: boolean;
+}
+
+export interface CommonTableProps<T>
+  extends Omit<AntTableProps<T>, "columns" | "pagination"> {
+  columns: TableColumn<T>[];
+  dataSource: T[];
+  loading?: boolean;
+  pagination?: PaginationConfig;
+  onPageChange?: (page: number, pageSize: number) => void;
+  rowKey?: string | ((record: T) => string);
+  showDateFilter?: boolean;
+  onDateFilterChange?: (date: Dayjs | null) => void;
+  selectedDate?: Dayjs | null;
 }

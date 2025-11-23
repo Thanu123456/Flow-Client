@@ -1,28 +1,15 @@
+// src/components/Brands/BrandsTable.tsx (Refactored with DeleteBrandModal)
 import React, { useState } from "react";
-import {
-  Table,
-  Button,
-  Space,
-  Image,
-  message,
-  DatePicker,
-  Tooltip,
-  Popover,
-  Modal,
-} from "antd";
-import {
-  EditOutlined,
-  DeleteOutlined,
-  EyeOutlined,
-  CalendarOutlined,
-  ExclamationCircleOutlined,
-} from "@ant-design/icons";
+import { Button, Space, Image, message, Tooltip } from "antd";
+import { EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
 import { FaRegImages } from "react-icons/fa";
 import type { SortOrder } from "antd/es/table/interface";
-import { useBrandStore } from "../../store/management/brandStore";
 import type { Brand } from "../../types/entities/brand.types";
 import dayjs from "dayjs";
 import ViewBrandModal from "./ViewBrandModal";
+import DeleteBrandModal from "./DeleteBrandModal";
+import { CommonTable } from "../common/Table";
+import type { TableColumn } from "../Common/Table/Table.types";
 
 interface BrandsTableProps {
   brands: Brand[];
@@ -47,8 +34,6 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
   onEdit,
   refreshData,
 }) => {
-  const { deleteBrand } = useBrandStore();
-  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
 
   // Modal states
@@ -73,28 +58,12 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
     setDeleteModalVisible(true);
   };
 
-  const handleModalDelete = async () => {
-    if (!brandToDelete) return;
-    try {
-      setDeleteLoading(brandToDelete.id);
-      await deleteBrand(brandToDelete.id);
-      message.success("Brand deleted successfully");
-      refreshData();
-    } catch (error: any) {
-      message.error(error.response?.data?.message || "Failed to delete Brand");
-    } finally {
-      setDeleteLoading(null);
-      setDeleteModalVisible(false);
-      setBrandToDelete(null);
-    }
-  };
-
   const showViewModal = (brand: Brand) => {
     setBrandToView(brand);
     setViewModalVisible(true);
   };
 
-  const columns = [
+  const columns: TableColumn<Brand>[] = [
     {
       title: (
         <div className="text-center w-full text-base font-medium">Brand</div>
@@ -168,30 +137,11 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
       ),
     },
     {
-      title: (
-        <div className="flex items-center justify-center gap-2">
-          <span>
-            <div className="text-center w-full text-base font-medium">
-              Created Date
-            </div>
-          </span>
-          <Popover
-            trigger="click"
-            content={
-              <DatePicker
-                onChange={handleDateChange}
-                value={selectedDate}
-                allowClear
-              />
-            }
-          >
-            <Button type="text" icon={<CalendarOutlined />} size="small" />
-          </Popover>
-        </div>
-      ),
+      title: "Created Date",
       dataIndex: "createdAt",
       key: "createdAt",
       align: "center" as const,
+      showDateFilter: true,
       render: (date: string) => dayjs(date).format("YYYY/MM/DD"),
     },
     {
@@ -236,73 +186,23 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
 
   return (
     <>
-      <Table
+      <CommonTable<Brand>
         columns={columns}
         dataSource={brands}
-        rowKey="id"
         loading={loading}
-        scroll={{
-          y: "calc(100vh - 320px)",
-          x: 1000,
-        }}
-        pagination={{
-          current: pagination.page,
-          pageSize: pagination.limit,
-          total: pagination.total,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) =>
-            `${range[0]}-${range[1]} of ${total} items`,
-          pageSizeOptions: ["10", "25", "50", "100"],
-          onChange: onPageChange,
-          position: ["bottomRight"],
-        }}
-        sticky={{
-          offsetHeader: 0,
-        }}
+        pagination={pagination}
+        onPageChange={onPageChange}
+        selectedDate={selectedDate}
+        onDateFilterChange={handleDateChange}
       />
 
       {/* Delete Modal */}
-      <Modal
-        title={
-          <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ color: "red" }}>
-              <ExclamationCircleOutlined />
-            </span>
-            <span style={{ color: "black" }}>Confirm Delete</span>
-          </span>
-        }
-        open={deleteModalVisible}
-        onOk={handleModalDelete}
+      <DeleteBrandModal
+        visible={deleteModalVisible}
+        brand={brandToDelete}
         onCancel={() => setDeleteModalVisible(false)}
-        okText="Yes"
-        cancelText="No"
-        centered
-        confirmLoading={deleteLoading === brandToDelete?.id}
-        okButtonProps={{ style: { fontSize: 16, padding: "6px 20px" } }}
-        cancelButtonProps={{ style: { fontSize: 16, padding: "6px 20px" } }}
-      >
-        <Space direction="vertical" align="center" size={16}>
-          {brandToDelete?.imageUrl ? (
-            <Image
-              width={120}
-              height={120}
-              src={brandToDelete.imageUrl}
-              alt={brandToDelete.name}
-              style={{ objectFit: "contain", borderRadius: 8 }}
-              preview={false}
-            />
-          ) : (
-            <div className="w-24 h-24 flex items-center justify-center rounded-md border-2 border-dashed border-red-400 bg-gray-50">
-              <FaRegImages size={28} className="text-gray-400" />
-            </div>
-          )}
-          <p>
-            Are you sure you want to delete the brand{" "}
-            <strong>{brandToDelete?.name}</strong>?
-          </p>
-        </Space>
-      </Modal>
+        onSuccess={refreshData}
+      />
 
       {/* View Modal */}
       <ViewBrandModal
