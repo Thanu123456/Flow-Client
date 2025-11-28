@@ -1,16 +1,24 @@
-import { ConfigProvider } from "antd";
+import { Layout } from "antd";
 import { customTheme } from "./config/theme.config";
-// import { ButtonExamples } from "./components/common/Button/ButtonExamples";
-// import InputExamples from "./components/common/Input/InputExample";
-// import { TableExample } from "./components/common/Table/TableExample";
-import { NavigationExample } from "./components/common/Navigation/NavigationExample";
-import { ModalExample } from "./components/common/Modal/ModalExample";
+import { App as AntdApp, ConfigProvider } from "antd";
+import { BrandsPage } from "./components/brands";
+import HeaderWithSearch from "./components/common/Layout/HeaderWithSearch";
+
+const handleMenuClick = () => {
+  console.log("Menu clicked");
+  // This will be used for sidebar toggle later
+};
 
 const App = () => (
   <ConfigProvider theme={customTheme}>
-    {/* <ButtonExamples /> */}
-    {/* <InputExamples /> */}
-    <ModalExample/>
+    <ConfigProvider>
+      <AntdApp>
+        <Layout className="min-h-screen">
+          <HeaderWithSearch onMenuClick={handleMenuClick} />
+        </Layout>
+        <BrandsPage />
+      </AntdApp>
+    </ConfigProvider>
   </ConfigProvider>
 );
 

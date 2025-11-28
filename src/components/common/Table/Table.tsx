@@ -1,35 +1,85 @@
 import React from "react";
-import { Table } from "antd";
-import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
+import {
+  Table as AntTable,
+  Space,
+  Tooltip,
+  Button,
+  Popover,
+  DatePicker,
+} from "antd";
+import { CalendarOutlined } from "@ant-design/icons";
 import type { TableProps as AntTableProps } from "antd";
-import type { DataTableProps } from "./Table.types";
+import type { CommonTableProps, TableColumn } from "./Table.types";
+import dayjs from "dayjs";
 
-export const DataTable = <T extends object>({
+function CommonTable<T extends Record<string, any>>({
   columns,
-  data,
-  loading = false,
-  pagination = { pageSize: 10 },
-  rowSelection,
-  bordered = true,
-  onChange,
-  className = "",
-  size = "middle",
-}: DataTableProps<T>) => {
-  return (
-    <div className={`w-full ${className}`}>
-      <Table<T>
-        columns={columns as ColumnsType<T>}
-        dataSource={data}
-        loading={loading}
-        pagination={pagination as TablePaginationConfig}
-        rowSelection={rowSelection}
-        bordered={bordered}
-        size={size}
-        onChange={onChange}
-        rowKey={(record: any) => record.key || record.id}
-      />
-    </div>
-  );
-};
+  dataSource,
+  loading,
+  pagination,
+  onPageChange,
+  rowKey = "id",
+  scroll = { y: "calc(100vh - 320px)", x: 1000 },
+  showDateFilter = false,
+  onDateFilterChange,
+  selectedDate,
+  sticky = { offsetHeader: 0 },
+  ...restProps
+}: CommonTableProps<T>) {
+  const enhancedColumns = columns.map((col) => {
+    // Add date filter to column if specified
+    if (col.showDateFilter && onDateFilterChange) {
+      return {
+        ...col,
+        title: (
+          <div className="flex items-center justify-center gap-2">
+            <span>{col.title}</span>
+            <Popover
+              trigger="click"
+              content={
+                <DatePicker
+                  onChange={onDateFilterChange}
+                  value={selectedDate}
+                  allowClear
+                />
+              }
+            >
+              <Button type="text" icon={<CalendarOutlined />} size="small" />
+            </Popover>
+          </div>
+        ),
+      };
+    }
+    return col;
+  });
 
-export default DataTable;
+  const paginationConfig = pagination
+    ? {
+        current: pagination.page,
+        pageSize: pagination.limit,
+        total: pagination.total,
+        showSizeChanger: true,
+        showQuickJumper: true,
+        showTotal: (total: number, range: [number, number]) =>
+          `${range[0]}-${range[1]} of ${total} items`,
+        pageSizeOptions: ["10", "25", "50", "100"],
+        onChange: onPageChange,
+        position: ["bottomRight"] as const,
+      }
+    : false;
+
+  return (
+    <AntTable<T>
+      columns={enhancedColumns}
+      dataSource={dataSource}
+      rowKey={rowKey}
+      loading={loading}
+      scroll={scroll}
+      pagination={paginationConfig}
+      sticky={sticky}
+      {...restProps}
+    />
+  );
+}
+
+export default CommonTable;
