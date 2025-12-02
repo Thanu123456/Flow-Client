@@ -1,1 +1,6 @@
 @import "tailwindcss";
+
+.custom-blue-header .ant-table-thead>tr>th {
+    background-color: #007bff !important;
+    color: white !important;
+}

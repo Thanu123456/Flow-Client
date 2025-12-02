@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Layout } from "antd";
 import { customTheme } from "./config/theme.config";
 import { App as AntdApp, ConfigProvider } from "antd";
@@ -9,17 +10,21 @@ const handleMenuClick = () => {
   // This will be used for sidebar toggle later
 };
 
-const App = () => (
-  <ConfigProvider theme={customTheme}>
-    <ConfigProvider>
-      <AntdApp>
-        <Layout className="min-h-screen">
-          <HeaderWithSearch onMenuClick={handleMenuClick} />
-        </Layout>
-        <BrandsPage />
-      </AntdApp>
+const App = () => {
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+
+  return (
+    <ConfigProvider theme={customTheme}>
+      <ConfigProvider>
+        <AntdApp>
+          <Layout className="min-h-screen">
+            <HeaderWithSearch onMenuClick={handleMenuClick} collapsed={headerCollapsed} />
+          </Layout>
+          <BrandsPage onHeaderCollapseChange={setHeaderCollapsed} />
+        </AntdApp>
+      </ConfigProvider>
     </ConfigProvider>
-  </ConfigProvider>
-);
+  );
+};
 
 export default App;

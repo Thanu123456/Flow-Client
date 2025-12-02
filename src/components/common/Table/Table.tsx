@@ -72,6 +72,7 @@ function CommonTable<T extends Record<string, any>>({
     <AntTable<T>
       columns={enhancedColumns}
       dataSource={dataSource}
+      className="custom-blue-header"
       rowKey={rowKey}
       loading={loading}
       scroll={scroll}
