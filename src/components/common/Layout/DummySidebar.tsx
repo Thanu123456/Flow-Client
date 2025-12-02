@@ -1,4 +1,4 @@
-import { Menu } from 'antd';
+import { Drawer, Menu } from 'antd';
 import {
     HomeOutlined,
     ShoppingOutlined,
@@ -12,11 +12,12 @@ import {
     DollarOutlined,
 } from '@ant-design/icons';
 
-interface SidebarProps {
+interface DummySidebarProps {
     open: boolean;
+    onClose: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ open }) => {
+const DummySidebar: React.FC<DummySidebarProps> = ({ open, onClose }) => {
     const menuItems = [
         {
             key: 'dashboard',
@@ -86,30 +87,33 @@ const Sidebar: React.FC<SidebarProps> = ({ open }) => {
     ];
 
     return (
-        <div
-            className="fixed left-0 top-0 h-full bg-white border-r-2 border-gray-200 z-40 transition-all duration-300 overflow-hidden"
-            style={{
-                width: open ? '280px' : '0px',
-                boxShadow: open ? '2px 0 8px rgba(0, 0, 0, 0.1)' : 'none',
+        <Drawer
+            title="Navigation Menu"
+            placement="left"
+            onClose={onClose}
+            open={open}
+            width={280}
+            styles={{
+                body: { padding: 0 },
+                header: {
+                    borderBottom: '2px solid #000',
+                    backgroundColor: '#fff',
+                },
             }}
+            closeIcon={<span className="text-black font-bold text-xl">×</span>}
         >
-            <div className="h-16 flex items-center justify-center border-b-2 border-gray-200 bg-white">
-                <h1 className="text-xl font-bold text-gray-800">Flow POS</h1>
-            </div>
-            <div className="overflow-y-auto" style={{ height: 'calc(100vh - 64px)' }}>
-                <Menu
-                    mode="inline"
-                    defaultSelectedKeys={['dashboard']}
-                    items={menuItems}
-                    className="border-r-0"
-                    style={{
-                        height: '100%',
-                        borderRight: 'none',
-                    }}
-                />
-            </div>
-        </div>
+            <Menu
+                mode="inline"
+                defaultSelectedKeys={['dashboard']}
+                items={menuItems}
+                className="border-r-0"
+                style={{
+                    height: '100%',
+                    borderRight: 'none',
+                }}
+            />
+        </Drawer>
     );
 };
 
-export default Sidebar;
+export default DummySidebar;
