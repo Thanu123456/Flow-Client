@@ -30,13 +30,17 @@ interface SearchResult {
 
 interface HeaderProps {
     onMenuClick: () => void;
+    collapsed?: boolean;
+    sidebarOpen?: boolean;
+    setSidebarOpen?: (open: boolean) => void;
 }
 
-const HeaderWithSearch: React.FC<HeaderProps> = ({ onMenuClick }) => {
+const HeaderWithSearch: React.FC<HeaderProps> = ({ onMenuClick, collapsed = false, sidebarOpen: externalSidebarOpen, setSidebarOpen: externalSetSidebarOpen }) => {
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [searchModalVisible, setSearchModalVisible] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+    const [internalSidebarOpen, setInternalSidebarOpen] = useState(false);
 
     const [unreadMessages] = useState(1);
     const [unreadNotifications] = useState(3);
@@ -104,15 +108,35 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({ onMenuClick }) => {
         { key: 'logout', icon: <LogoutOutlined />, label: 'Logout', danger: true },
     ];
 
+    const sidebarOpen = externalSidebarOpen ?? internalSidebarOpen;
+
     return (
         <>
-            <AntHeader className="bg-white px-6 flex items-center justify-between h-16 sticky top-0 z-50 border-b border-gray-200" style={{ boxShadow: 'none', backgroundColor: '#FFFFFF' }}>
+            <AntHeader
+                className="bg-white px-6 flex items-center justify-between sticky top-0 z-50 border-b border-gray-200 transition-all duration-300"
+                style={{
+                    boxShadow: 'none',
+                    backgroundColor: '#FFFFFF',
+                    height: collapsed ? '0px' : '64px',
+                    overflow: 'hidden',
+                    opacity: collapsed ? 0 : 1,
+                    marginLeft: sidebarOpen ? '280px' : '0',
+                    width: sidebarOpen ? 'calc(100% - 280px)' : '100%',
+                }}
+            >
                 {/* Left: Menu + Search */}
                 <div className="flex items-center gap-4 flex-1">
                     <Button
                         type="text"
                         icon={<MenuOutlined />}
-                        onClick={onMenuClick}
+                        onClick={() => {
+                            const newState = !sidebarOpen;
+                            if (externalSetSidebarOpen) {
+                                externalSetSidebarOpen(newState);
+                            } else {
+                                setInternalSidebarOpen(newState);
+                            }
+                        }}
                         className="text-gray-700 hover:text-black border-2 border-black w-10 h-10 rounded-lg"
                     />
 

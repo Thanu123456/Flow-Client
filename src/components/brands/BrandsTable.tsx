@@ -9,7 +9,7 @@ import dayjs from "dayjs";
 import ViewBrandModal from "./ViewBrandModal";
 import DeleteBrandModal from "./DeleteBrandModal";
 import { CommonTable } from "../common/Table";
-import type { TableColumn } from "../Common/Table/Table.types";
+import type { TableColumn } from "../common/Table/Table.types";
 
 interface BrandsTableProps {
   brands: Brand[];

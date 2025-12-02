@@ -1,16 +1,14 @@
-import React from "react";
+
 import {
   Table as AntTable,
-  Space,
-  Tooltip,
   Button,
   Popover,
   DatePicker,
 } from "antd";
 import { CalendarOutlined } from "@ant-design/icons";
-import type { TableProps as AntTableProps } from "antd";
-import type { CommonTableProps, TableColumn } from "./Table.types";
-import dayjs from "dayjs";
+
+import type { CommonTableProps } from "./Table.types";
+
 
 function CommonTable<T extends Record<string, any>>({
   columns,
@@ -33,7 +31,7 @@ function CommonTable<T extends Record<string, any>>({
         ...col,
         title: (
           <div className="flex items-center justify-center gap-2">
-            <span>{col.title}</span>
+            <span>{col.title as any}</span>
             <Popover
               trigger="click"
               content={
@@ -44,7 +42,7 @@ function CommonTable<T extends Record<string, any>>({
                 />
               }
             >
-              <Button type="text" icon={<CalendarOutlined />} size="small" />
+              <Button type="text" icon={<CalendarOutlined className="!text-white" />} size="small" />
             </Popover>
           </div>
         ),
@@ -64,7 +62,7 @@ function CommonTable<T extends Record<string, any>>({
           `${range[0]}-${range[1]} of ${total} items`,
         pageSizeOptions: ["10", "25", "50", "100"],
         onChange: onPageChange,
-        position: ["bottomRight"] as const,
+        position: ["bottomRight"] as any,
       }
     : false;
 
@@ -72,6 +70,7 @@ function CommonTable<T extends Record<string, any>>({
     <AntTable<T>
       columns={enhancedColumns}
       dataSource={dataSource}
+      className="custom-blue-header"
       rowKey={rowKey}
       loading={loading}
       scroll={scroll}
