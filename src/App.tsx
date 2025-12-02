@@ -5,22 +5,27 @@ import { App as AntdApp, ConfigProvider } from "antd";
 import { BrandsPage } from "./components/brands";
 import HeaderWithSearch from "./components/common/Layout/HeaderWithSearch";
 
-const handleMenuClick = () => {
-  console.log("Menu clicked");
-  // This will be used for sidebar toggle later
-};
-
 const App = () => {
   const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <ConfigProvider theme={customTheme}>
       <ConfigProvider>
         <AntdApp>
           <Layout className="min-h-screen">
-            <HeaderWithSearch onMenuClick={handleMenuClick} collapsed={headerCollapsed} />
+            <HeaderWithSearch 
+              onMenuClick={() => console.log("Menu clicked")} 
+              collapsed={headerCollapsed}
+              sidebarOpen={sidebarOpen}
+              setSidebarOpen={setSidebarOpen}
+            />
           </Layout>
-          <BrandsPage onHeaderCollapseChange={setHeaderCollapsed} />
+          <BrandsPage
+            onHeaderCollapseChange={setHeaderCollapsed}
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+          />
         </AntdApp>
       </ConfigProvider>
     </ConfigProvider>
