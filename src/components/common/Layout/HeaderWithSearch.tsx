@@ -35,12 +35,16 @@ interface HeaderProps {
     setSidebarOpen?: (open: boolean) => void;
 }
 
-const HeaderWithSearch: React.FC<HeaderProps> = ({ onMenuClick, collapsed = false, sidebarOpen: externalSidebarOpen, setSidebarOpen: externalSetSidebarOpen }) => {
+const HeaderWithSearch: React.FC<HeaderProps> = ({ 
+    onMenuClick, 
+    collapsed = false, 
+    sidebarOpen = true, 
+    setSidebarOpen 
+}) => {
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [searchModalVisible, setSearchModalVisible] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-    const [internalSidebarOpen, setInternalSidebarOpen] = useState(false);
 
     const [unreadMessages] = useState(1);
     const [unreadNotifications] = useState(3);
@@ -87,6 +91,13 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({ onMenuClick, collapsed = fals
         }
     };
 
+    const handleMenuToggle = () => {
+        if (setSidebarOpen) {
+            setSidebarOpen(!sidebarOpen);
+        }
+        onMenuClick();
+    };
+
     const userMenuItems: MenuProps['items'] = [
         {
             key: 'profile-info',
@@ -108,8 +119,6 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({ onMenuClick, collapsed = fals
         { key: 'logout', icon: <LogoutOutlined />, label: 'Logout', danger: true },
     ];
 
-    const sidebarOpen = externalSidebarOpen ?? internalSidebarOpen;
-
     return (
         <>
             <AntHeader
@@ -120,8 +129,6 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({ onMenuClick, collapsed = fals
                     height: collapsed ? '0px' : '64px',
                     overflow: 'hidden',
                     opacity: collapsed ? 0 : 1,
-                    marginLeft: sidebarOpen ? '280px' : '0',
-                    width: sidebarOpen ? 'calc(100% - 280px)' : '100%',
                 }}
             >
                 {/* Left: Menu + Search */}
@@ -129,15 +136,8 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({ onMenuClick, collapsed = fals
                     <Button
                         type="text"
                         icon={<MenuOutlined />}
-                        onClick={() => {
-                            const newState = !sidebarOpen;
-                            if (externalSetSidebarOpen) {
-                                externalSetSidebarOpen(newState);
-                            } else {
-                                setInternalSidebarOpen(newState);
-                            }
-                        }}
-                        className="text-gray-700 hover:text-black border-2 border-black w-10 h-10 rounded-lg"
+                        onClick={handleMenuToggle}
+                        className="text-gray-700 hover:text-black hover:bg-gray-100 w-10 h-10 rounded-lg"
                     />
 
                     <div className="max-w-md w-full">
@@ -149,7 +149,7 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({ onMenuClick, collapsed = fals
                                     Cmd K
                                 </kbd>
                             }
-                            className="rounded-lg border-2 border-black hover:border-black cursor-pointer"
+                            className="rounded-lg hover:border-gray-400 cursor-pointer"
                             size="large"
                             readOnly
                             onClick={() => setSearchModalVisible(true)}
@@ -159,56 +159,50 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({ onMenuClick, collapsed = fals
 
                 {/* Right: Actions */}
                 <Space size={12}>
-                    {/* Add New - Black Border */}
                     <Button
+                        type="primary"
                         icon={<PlusOutlined />}
-                        className="border-2 border-black text-black hover:bg-gray-50 font-medium h-10 px-5 rounded-lg shadow-sm"
+                        className="font-medium h-10 px-5 rounded-lg"
                     >
                         Add New
                     </Button>
 
-                    {/* POS - Black Border */}
                     <Button
                         icon={<ShoppingCartOutlined />}
-                        className="border-2 border-black text-black hover:bg-gray-50 font-medium h-10 px-5 rounded-lg shadow-sm"
+                        className="font-medium h-10 px-5 rounded-lg"
                     >
                         POS
                     </Button>
 
-                    {/* Fullscreen */}
                     <Button
                         type="text"
                         icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
                         onClick={toggleFullscreen}
-                        className="border-2 border-black text-gray-700 hover:text-black w-10 h-10 rounded-lg"
+                        className="text-gray-700 hover:text-black hover:bg-gray-100 w-10 h-10 rounded-lg"
                     />
 
-                    {/* Messages */}
                     <Badge count={unreadMessages} offset={[-5, 5]}>
                         <Button
                             type="text"
                             icon={<MailOutlined className="text-lg" />}
-                            className="border-2 border-black text-gray-700 hover:text-black w-10 h-10 rounded-lg"
+                            className="text-gray-700 hover:text-black hover:bg-gray-100 w-10 h-10 rounded-lg"
                         />
                     </Badge>
 
-                    {/* Notifications */}
                     <Badge count={unreadNotifications} offset={[-5, 5]}>
                         <Button
                             type="text"
                             icon={<BellOutlined className="text-lg" />}
-                            className="border-2 border-black text-gray-700 hover:text-black w-10 h-10 rounded-lg"
+                            className="text-gray-700 hover:text-black hover:bg-gray-100 w-10 h-10 rounded-lg"
                         />
                     </Badge>
 
-                    {/* Settings */}
                     <Button
                         type="text"
                         icon={<SettingOutlined className="text-lg" />}
-                        className="border-2 border-black text-gray-700 hover:text-black w-10 h-10 rounded-lg"
+                        className="text-gray-700 hover:text-black hover:bg-gray-100 w-10 h-10 rounded-lg"
                     />
 
-                    {/* User Avatar */}
                     <Dropdown menu={{ items: userMenuItems }} trigger={['click']} placement="bottomRight">
                         <div className="cursor-pointer">
                             <Avatar
@@ -234,7 +228,7 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({ onMenuClick, collapsed = fals
                 closeIcon={<CloseOutlined className="text-gray-500" />}
                 width={640}
                 className="search-modal"
-                bodyStyle={{ padding: 0 }}
+                styles={{ body: { padding: 0 } }}
             >
                 <div className="p-5 border-b border-gray-200">
                     <Input
@@ -244,7 +238,7 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({ onMenuClick, collapsed = fals
                         autoFocus
                         value={searchQuery}
                         onChange={(e) => handleSearch(e.target.value)}
-                        className="rounded-lg text-base border-2 border-black"
+                        className="rounded-lg text-base"
                     />
                 </div>
 
