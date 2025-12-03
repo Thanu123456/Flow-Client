@@ -16,7 +16,6 @@ import EditBrandModal from "./EditBrandModal";
 import { brandService } from "../../services/management/brandService";
 import { PageLayout } from "../common/PageLayout";
 import { CommonButton } from "../common/Button";
-import Sidebar from "../common/Layout/Sidebar";
 
 interface BrandsPageProps {
   onHeaderCollapseChange?: (collapsed: boolean) => void;
@@ -111,78 +110,68 @@ const BrandsPage: React.FC<BrandsPageProps> = ({ onHeaderCollapseChange, sidebar
 
   return (
     <>
-      <Sidebar open={sidebarOpen} />
-
-      <div
-        className="transition-all duration-300"
-        style={{
-          marginLeft: sidebarOpen ? '280px' : '0',
-          width: sidebarOpen ? 'calc(100% - 280px)' : '100%'
+      <PageLayout
+        title="Manage your Brands"
+        collapsed={collapsed}
+        onCollapsedChange={handleCollapsedChange}
+        searchConfig={{
+          placeholder: "Search by brand name",
+          value: searchTerm,
+          onChange: setSearchTerm,
         }}
+        filterConfig={[
+          {
+            placeholder: "Filter by status",
+            value: statusFilter,
+            onChange: setStatusFilter,
+            options: [
+              { label: "Active", value: "active" },
+              { label: "Inactive", value: "inactive" },
+            ],
+          },
+        ]}
+        actions={
+          <Space>
+            <CommonButton
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleAddBrand}
+            >
+              Add Brand
+            </CommonButton>
+            <CommonButton
+              icon={<FilePdfOutlined style={{ color: "#FF0000" }} />}
+              onClick={handleExportPDF}
+              tooltip="Download PDF"
+            >
+              PDF
+            </CommonButton>
+            <CommonButton
+              icon={<FileExcelOutlined style={{ color: "#107C41" }} />}
+              onClick={handleExportExcel}
+              tooltip="Download Excel"
+            >
+              Excel
+            </CommonButton>
+            <CommonButton
+              icon={<ReloadOutlined style={{ color: "blue" }} />}
+              onClick={handleRefresh}
+            >
+              Refresh
+            </CommonButton>
+          </Space>
+        }
       >
-        <PageLayout
-          title="Manage your Brands"
-          collapsed={collapsed}
-          onCollapsedChange={handleCollapsedChange}
-          searchConfig={{
-            placeholder: "Search by brand name",
-            value: searchTerm,
-            onChange: setSearchTerm,
-          }}
-          filterConfig={[
-            {
-              placeholder: "Filter by status",
-              value: statusFilter,
-              onChange: setStatusFilter,
-              options: [
-                { label: "Active", value: "active" },
-                { label: "Inactive", value: "inactive" },
-              ],
-            },
-          ]}
-          actions={
-            <Space>
-              <CommonButton
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleAddBrand}
-              >
-                Add Brand
-              </CommonButton>
-              <CommonButton
-                icon={<FilePdfOutlined style={{ color: "#FF0000" }} />}
-                onClick={handleExportPDF}
-                tooltip="Download PDF"
-              >
-                PDF
-              </CommonButton>
-              <CommonButton
-                icon={<FileExcelOutlined style={{ color: "#107C41" }} />}
-                onClick={handleExportExcel}
-                tooltip="Download Excel"
-              >
-                Excel
-              </CommonButton>
-              <CommonButton
-                icon={<ReloadOutlined style={{ color: "blue" }} />}
-                onClick={handleRefresh}
-              >
-                Refresh
-              </CommonButton>
-            </Space>
-          }
-        >
-          <BrandsTable
-            brands={brands}
-            loading={loading}
-            pagination={pagination}
-            onPageChange={handlePageChange}
-            onEdit={handleEditBrand}
-            onView={(brand) => console.log("View brand:", brand)}
-            refreshData={handleRefresh}
-          />
-        </PageLayout>
-      </div>
+        <BrandsTable
+          brands={brands}
+          loading={loading}
+          pagination={pagination}
+          onPageChange={handlePageChange}
+          onEdit={handleEditBrand}
+          onView={(brand) => console.log("View brand:", brand)}
+          refreshData={handleRefresh}
+        />
+      </PageLayout>
 
       <AddBrandModal
         visible={addModalVisible}
