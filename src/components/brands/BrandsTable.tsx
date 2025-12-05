@@ -72,27 +72,42 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
       key: "brand",
       sorter: (a: Brand, b: Brand) => a.name.localeCompare(b.name),
       sortDirections: ["ascend", "descend"] as SortOrder[],
-      render: (text: string, record: Brand) => (
-        <Space>
-          {record.imageUrl ? (
-            <Image
-              width={40}
-              height={40}
-              src={record.imageUrl}
-              alt={text}
-              style={{ objectFit: "contain" }}
-              preview={false}
-            />
-          ) : (
-            <div className="w-10 h-10 flex items-center justify-center rounded-md border-2 border-dashed border-red-400 bg-gray-50">
-              <FaRegImages size={20} className="text-gray-400" />
-            </div>
-          )}
+      render: (text: string, record: Brand) => {
+        const capitalizedText = text
+          .split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+          .join(' ');
+        const displayName = capitalizedText.length > 15 ? `${capitalizedText.substring(0, 15)}...` : capitalizedText;
+        const nameElement = (
           <Button type="link" onClick={() => showViewModal(record)}>
-            {text}
+            {displayName}
           </Button>
-        </Space>
-      ),
+        );
+
+        return (
+          <Space>
+            {record.imageUrl ? (
+              <Image
+                width={40}
+                height={40}
+                src={record.imageUrl}
+                alt={text}
+                style={{ objectFit: "contain" }}
+                preview={false}
+              />
+            ) : (
+              <div className="w-10 h-10 flex items-center justify-center rounded-md border-2 border-dashed border-red-400 bg-gray-50">
+                <FaRegImages size={20} className="text-gray-400" />
+              </div>
+            )}
+            {capitalizedText.length > 15 ? (
+              <Tooltip title={capitalizedText}>{nameElement}</Tooltip>
+            ) : (
+              nameElement
+            )}
+          </Space>
+        );
+      },
     },
     {
       title: (
@@ -103,8 +118,19 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
       dataIndex: "description",
       key: "description",
       align: "center" as const,
-      ellipsis: true,
-      render: (description: string) => description?.trim() || "N/A",
+      render: (description: string) => {
+        if (!description?.trim()) return "N/A";
+        const trimmedDescription = description.trim();
+        const displayDescription = trimmedDescription.length > 15
+          ? `${trimmedDescription.substring(0, 15)}...`
+          : trimmedDescription;
+
+        return trimmedDescription.length > 15 ? (
+          <Tooltip title={trimmedDescription}>{displayDescription}</Tooltip>
+        ) : (
+          displayDescription
+        );
+      },
     },
     {
       title: (
