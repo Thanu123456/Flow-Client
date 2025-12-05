@@ -140,12 +140,12 @@ const EditBrandModal: React.FC<EditBrandModalProps> = ({
               { required: true, message: "Please enter Brand Name" },
               {
                 min: 1,
-                max: 255,
-                message: "Brand Name must be between 1 and 255 characters",
+                max: 20,
+                message: "Brand Name must be between 1 and 20 characters",
               },
             ]}
           >
-            <Input placeholder="Enter Brand Name" />
+            <Input placeholder="Enter Brand Name" maxLength={20} />
           </Form.Item>
 
           <Form.Item
@@ -153,12 +153,12 @@ const EditBrandModal: React.FC<EditBrandModalProps> = ({
             name="description"
             rules={[
               {
-                max: 500,
-                message: "Description must be less than 500 characters",
+                max: 20,
+                message: "Description must be less than 20 characters",
               },
             ]}
           >
-            <TextArea rows={4} placeholder="Enter brand description" />
+            <TextArea rows={4} placeholder="Enter brand description" maxLength={20} />
           </Form.Item>
 
           <Form.Item label="Status" name="status" valuePropName="checked">
