@@ -1,6 +1,6 @@
 // src/components/Common/PageLayout/PageLayout.tsx
 import { useState } from "react";
-import { Card, Row, Col, Input, Select, Space } from "antd";
+import { Card, Row, Col, Input, Select, Space, Tooltip } from "antd";
 import { CommonButton } from "../Button";
 import type { PageLayoutProps } from "./PageLayout.types";
 
@@ -40,13 +40,18 @@ function PageLayout({
         extra={
           <Space>
             {actions}
+
             {showCollapseButton && (
-              <CommonButton
-                icon={collapsed ? <span>▼</span> : <span>▲</span>}
-                onClick={toggleCollapse}
+              <Tooltip
+                title={collapsed ? "Expand Filters" : "Collapse Filters"}
               >
-                {collapsed ? "Expand" : "Collapse"}
-              </CommonButton>
+                <CommonButton
+                  icon={collapsed ? <span>▼</span> : <span>▲</span>}
+                  onClick={toggleCollapse}
+                >
+                  {collapsed ? "Expand" : "Collapse"}
+                </CommonButton>
+              </Tooltip>
             )}
           </Space>
         }
