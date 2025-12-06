@@ -158,11 +158,15 @@ const EditBrandModal: React.FC<EditBrandModalProps> = ({
               },
             ]}
           >
-            <TextArea rows={4} placeholder="Enter brand description" maxLength={20} />
+            <TextArea
+              rows={4}
+              placeholder="Enter brand description"
+              maxLength={20}
+            />
           </Form.Item>
 
           <Form.Item label="Status" name="status" valuePropName="checked">
-            <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
+            <Switch checkedChildren="Active" unCheckedChildren="In-active" />
           </Form.Item>
         </>
       )}

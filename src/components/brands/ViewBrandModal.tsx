@@ -70,7 +70,7 @@ const ViewBrandModal: React.FC<ViewBrandModalProps> = ({
                     : "border-red-500 text-red-500 bg-red-50/70"
                 }`}
               >
-                {brandData?.status === "active" ? "Active" : "Inactive"}
+                {brandData?.status === "active" ? "Active" : "In-active"}
               </span>
             </Descriptions.Item>
 

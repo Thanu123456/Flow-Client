@@ -1,14 +1,6 @@
-
-import {
-  Table as AntTable,
-  Button,
-  Popover,
-  DatePicker,
-} from "antd";
+import { Table as AntTable, Button, Popover, DatePicker } from "antd";
 import { CalendarOutlined } from "@ant-design/icons";
-
 import type { CommonTableProps } from "./Table.types";
-
 
 function CommonTable<T extends Record<string, any>>({
   columns,
@@ -34,15 +26,21 @@ function CommonTable<T extends Record<string, any>>({
             <span>{col.title as any}</span>
             <Popover
               trigger="click"
+              placement="bottomLeft"
               content={
                 <DatePicker
                   onChange={onDateFilterChange}
                   value={selectedDate}
                   allowClear
+                  placement="bottomRight"
                 />
               }
             >
-              <Button type="text" icon={<CalendarOutlined className="!text-white" />} size="small" />
+              <Button
+                type="text"
+                icon={<CalendarOutlined className="!text-white" />}
+                size="small"
+              />
             </Popover>
           </div>
         ),
