@@ -32,7 +32,7 @@ const DummySidebar: React.FC<DummySidebarProps> = ({ open, onClose }) => {
     {
       key: "categories",
       icon: <ClusterOutlined />,
-      label: "Categories",
+      label: <Link to="/categories">Categories</Link>,
     },
     {
       key: "subCategories",

@@ -143,7 +143,7 @@ const UnitsPage: React.FC<UnitsPageProps> = ({
   return (
     <>
       <PageLayout
-        title="Manage Your Units"
+        title="Manage Units"
         collapsed={collapsed}
         onCollapsedChange={handleCollapsedChange}
         searchConfig={{

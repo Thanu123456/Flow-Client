@@ -7,6 +7,7 @@ import { BrandsPage } from "./components/brands";
 import HeaderWithSearch from "./components/common/Layout/HeaderWithSearch";
 import DummySidebar from "./components/common/Layout/DummySidebar";
 import { UnitsPage } from "./components/units";
+import { CategoriesPage } from "./components/categories";
 
 interface AppLayoutProps {
   children:
@@ -106,6 +107,24 @@ const App = () => {
                     setSidebarOpen,
                   }) => (
                     <BrandsPage
+                      onHeaderCollapseChange={onHeaderCollapseChange}
+                      sidebarOpen={sidebarOpen}
+                      setSidebarOpen={setSidebarOpen}
+                    />
+                  )}
+                </AppLayout>
+              }
+            />
+            <Route
+              path="/categories"
+              element={
+                <AppLayout>
+                  {({
+                    onHeaderCollapseChange,
+                    sidebarOpen,
+                    setSidebarOpen,
+                  }) => (
+                    <CategoriesPage
                       onHeaderCollapseChange={onHeaderCollapseChange}
                       sidebarOpen={sidebarOpen}
                       setSidebarOpen={setSidebarOpen}

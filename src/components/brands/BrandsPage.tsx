@@ -115,7 +115,7 @@ const BrandsPage: React.FC<BrandsPageProps> = ({
   return (
     <>
       <PageLayout
-        title="Manage Your Brands"
+        title="Manage Brands"
         collapsed={collapsed}
         onCollapsedChange={handleCollapsedChange}
         searchConfig={{
