@@ -1,7 +1,7 @@
 // src/components/Common/Modal/AddModal.tsx
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Modal, Form, Button, App } from "antd";
-import type { FormInstance } from "antd";
+
 import type { AddModalProps } from "./Modal.types";
 
 function AddModal<T = any>({

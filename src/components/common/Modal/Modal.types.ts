@@ -2,7 +2,7 @@ import type { ModalProps } from "antd";
 import type { FormInstance } from "antd";
 import type { ReactNode } from "react";
 
-export interface BaseModalProps extends Omit<ModalProps, "onOk"> {
+export interface BaseModalProps extends Omit<ModalProps, "onOk" | "children"> {
   visible: boolean;
   onCancel: () => void;
   onSuccess?: () => void;

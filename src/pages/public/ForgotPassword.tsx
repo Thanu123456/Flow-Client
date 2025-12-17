@@ -11,12 +11,15 @@ import {
 import { MailOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import { authService } from '../../services/auth/authService';
+import { useApiError } from '../../hooks/useApiError';
+import { Alert } from 'antd';
 
 const { Title, Text } = Typography;
 
 const ForgotPassword: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const { token } = theme.useToken();
+    const apiError = useApiError();
 
     const onFinish = async (values: any) => {
         setLoading(true);
@@ -53,6 +56,16 @@ const ForgotPassword: React.FC = () => {
                     <Title level={3}>Forgot Password?</Title>
                     <Text type="secondary">Enter your email to reset your password.</Text>
                 </div>
+
+                {apiError && (
+                    <Alert
+                        message="Error"
+                        description={apiError.message}
+                        type="error"
+                        showIcon
+                        style={{ marginBottom: 24 }}
+                    />
+                )}
 
                 <Form
                     name="forgot_password"

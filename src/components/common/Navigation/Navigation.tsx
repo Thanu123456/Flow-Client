@@ -8,13 +8,12 @@ import {
 } from "antd";
 import {
   HomeOutlined,
-  SettingOutlined,
   UserOutlined,
   NotificationOutlined,
 } from "@ant-design/icons";
 import type { NavigationProps } from "./Navigation.types";
 
-const { Header, Sider, Content } = Layout;
+const { Header, Sider } = Layout;
 
 export const Navigation: React.FC<NavigationProps> = ({
   type = "sidebar",

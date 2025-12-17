@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8090/api/v1';
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8090/api/v1';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -51,8 +51,42 @@ api.interceptors.response.use(
         return Promise.reject(refreshError);
       }
     }
+    if (error.response?.status === 429) {
+      const retryAfter = error.response.headers['retry-after'];
+      // You might want to expose this to the UI via a custom event or store
+      const event = new CustomEvent('api-error', { 
+        detail: { 
+          status: 429, 
+          message: `Too many attempts. Please try again ${retryAfter ? 'in ' + retryAfter + ' seconds' : 'later'}.` 
+        } 
+      });
+      window.dispatchEvent(event);
+      return Promise.reject(error);
+    }
     return Promise.reject(error);
   }
 );
+
+// Check email existence
+export const checkEmailExists = async (email: string): Promise<boolean> => {
+  try {
+    const response = await api.get(`/auth/check-email?email=${encodeURIComponent(email)}`);
+    // API returns { available: boolean } or { data: { available: boolean } }
+    // If available is true, it does NOT exist.
+    const data = response.data;
+    if (data && typeof data === 'object') {
+       if ('data' in data && (data as any).data && 'available' in (data as any).data) {
+           return !((data as any).data.available);
+       }
+       if ('available' in data) {
+           return !(data.available); // available: true -> exists: false
+       }
+    }
+    return false;
+  } catch (error) {
+    console.error("Error checking email:", error);
+    return false;
+  }
+};
 
 export default api;

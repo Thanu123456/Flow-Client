@@ -11,15 +11,20 @@ import {
   message, 
   Row, 
   Col,
-  theme
+  theme,
+  Modal
 } from 'antd';
 import { UserOutlined, ShopOutlined, EnvironmentOutlined, LockOutlined, MailOutlined, PhoneOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import type { RegisterRequest } from '../../types/auth/auth.types';
+import PasswordStrengthMeter from '../../components/auth/PasswordStrengthMeter';
+import { checkEmailExists } from '../../utils/api';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+
+const SRI_LANKAN_CITIES = ['Colombo', 'Kandy', 'Galle', 'Jaffna', 'Negombo', 'Anuradhapura', 'Trincomalee', 'Batticaloa', 'Kurunegala', 'Ratnapura'];
 
 const Signup: React.FC = () => {
     const { register } = useAuth();
@@ -28,11 +33,11 @@ const Signup: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const { token } = theme.useToken();
     const [messageApi, contextHolder] = message.useMessage();
+    const [password, setPassword] = useState('');
 
     const onFinish = async (values: any) => {
         setLoading(true);
         try {
-            // Transform values if necessary to match RegisterRequest
             const requestData: RegisterRequest = {
                 shop_name: values.shop_name,
                 business_type: values.business_type,
@@ -46,16 +51,19 @@ const Signup: React.FC = () => {
                 address_line2: values.address_line2,
                 city: values.city,
                 postal_code: values.postal_code,
-                country: 'Sri Lanka', // Fixed as per requirements
+                country: 'Sri Lanka',
                 accept_terms: values.accept_terms,
             };
 
             await register(requestData);
-            messageApi.success({
-              content: 'Registration Submitted Successfully! Please check your email.',
-              duration: 5,
+            
+            Modal.success({
+                title: 'Registration Submitted Successfully!',
+                content: 'Your account is pending approval from our admin team. You will be notified via email once approved.',
+                onOk: () => navigate('/login'),
+                okText: 'Go to Login'
             });
-            navigate('/login');
+
         } catch (error: any) {
             console.error(error);
             const errorMsg = error.response?.data?.message || 'Registration failed. Please try again.';
@@ -84,7 +92,6 @@ const Signup: React.FC = () => {
                 variant="borderless"
             >
                 <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                    {/* Placeholder for Logo */}
                     <div style={{ 
                         height: 48, 
                         width: 48, 
@@ -118,7 +125,11 @@ const Signup: React.FC = () => {
                             <Form.Item
                                 name="shop_name"
                                 label="Shop / Business Name"
-                                rules={[{ required: true, message: 'Please enter your shop name' }, { min: 3, message: 'Must be at least 3 characters' }]}
+                                rules={[
+                                    { required: true, message: 'Please enter your shop name' }, 
+                                    { min: 3, message: 'Must be at least 3 characters' },
+                                    { max: 100, message: 'Must be less than 100 characters' }
+                                ]}
                             >
                                 <Input prefix={<ShopOutlined />} placeholder="e.g. John's Grocery" />
                             </Form.Item>
@@ -164,7 +175,10 @@ const Signup: React.FC = () => {
                             <Form.Item
                                 name="full_name"
                                 label="Full Name"
-                                rules={[{ required: true, message: 'Please enter your full name' }]}
+                                rules={[
+                                    { required: true, message: 'Please enter your full name' },
+                                    { min: 3, message: 'Must be at least 3 characters' }
+                                ]}
                             >
                                 <Input prefix={<UserOutlined />} placeholder="John Doe" />
                             </Form.Item>
@@ -173,9 +187,21 @@ const Signup: React.FC = () => {
                             <Form.Item
                                 name="email"
                                 label="Email"
+                                validateTrigger="onBlur"
                                 rules={[
                                     { type: 'email', message: 'The input is not valid E-mail!' },
                                     { required: true, message: 'Please enter your email' },
+                                    {
+                                        validator: async (_, value) => {
+                                            if (value && value.includes('@')) {
+                                                const exists = await checkEmailExists(value);
+                                                if (exists) {
+                                                    return Promise.reject(new Error('This email is already registered.'));
+                                                }
+                                            }
+                                            return Promise.resolve();
+                                        },
+                                    }
                                 ]}
                             >
                                 <Input prefix={<MailOutlined />} placeholder="john@example.com" />
@@ -185,7 +211,13 @@ const Signup: React.FC = () => {
                             <Form.Item
                                 name="phone"
                                 label="Phone Number"
-                                rules={[{ required: true, message: 'Please enter your phone number' }]}
+                                rules={[
+                                    { required: true, message: 'Please enter your phone number' },
+                                    { 
+                                        pattern: /^\+94 \d{2} \d{3} \d{4}$/, 
+                                        message: 'Format must be +94 XX XXX XXXX' 
+                                    }
+                                ]}
                             >
                                 <Input prefix={<PhoneOutlined />} placeholder="+94 77 123 4567" />
                             </Form.Item>
@@ -196,12 +228,20 @@ const Signup: React.FC = () => {
                                 label="Password"
                                 rules={[
                                     { required: true, message: 'Please input your password!' },
-                                    { min: 8, message: 'Password must be at least 8 characters' }
+                                    { min: 8, message: 'Password must be at least 8 characters' },
+                                    { 
+                                        pattern: /(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9])/,
+                                        message: 'Must include uppercase, lowercase, number, and special char'
+                                    }
                                 ]}
-                                hasFeedback
                             >
-                                <Input.Password prefix={<LockOutlined />} placeholder="Password" />
+                                <Input.Password 
+                                    prefix={<LockOutlined />} 
+                                    placeholder="Password" 
+                                    onChange={(e) => setPassword(e.target.value)}
+                                />
                             </Form.Item>
+                            <PasswordStrengthMeter password={password} />
                         </Col>
                         <Col xs={24} sm={12}>
                              <Form.Item
@@ -249,9 +289,13 @@ const Signup: React.FC = () => {
                             <Form.Item
                                 name="city"
                                 label="City"
-                                rules={[{ required: true, message: 'Please enter city' }]}
+                                rules={[{ required: true, message: 'Please select city' }]}
                             >
-                                <Input placeholder="Colombo" />
+                                <Select showSearch placeholder="Select a city">
+                                    {SRI_LANKAN_CITIES.map(city => (
+                                        <Option key={city} value={city}>{city}</Option>
+                                    ))}
+                                </Select>
                             </Form.Item>
                         </Col>
                         <Col xs={24} sm={12}>
@@ -283,7 +327,7 @@ const Signup: React.FC = () => {
                         ]}
                     >
                         <Checkbox>
-                            I accept the <a href="#">Terms and Conditions</a> and <a href="#">Privacy Policy</a>
+                            I accept the <Link to="/terms">Terms and Conditions</Link> and <Link to="/privacy">Privacy Policy</Link>
                         </Checkbox>
                     </Form.Item>
 

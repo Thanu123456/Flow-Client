@@ -1,13 +1,15 @@
 import api from '../../utils/api';
-import type { 
-  LoginRequest, 
-  LoginResponse, 
-  RegisterRequest, 
-  RegisterResponse 
+import type {
+  LoginRequest,
+  LoginResponse,
+  RegisterRequest,
+  RegisterResponse,
+  ResetPasswordRequest
 } from '../../types/auth/auth.types';
 import type { 
   KioskLoginRequest, 
-  KioskLoginResponse 
+  KioskLoginResponse,
+  KioskEndShiftResponse
 } from '../../types/auth/kiosk.types';
 import type { 
   SuperAdminLoginRequest, 
@@ -33,9 +35,17 @@ export const authService = {
     return response.data.data;
   },
 
+
+
   // Kiosk Login
   async kioskLogin(data: KioskLoginRequest): Promise<KioskLoginResponse> {
     const response = await api.post<{ data: KioskLoginResponse }>('/auth/kiosk-login', data);
+    return response.data.data;
+  },
+
+  // Kiosk End Shift
+  async endShift(): Promise<KioskEndShiftResponse> {
+    const response = await api.post<{ data: KioskEndShiftResponse }>('/auth/kiosk/end-shift');
     return response.data.data;
   },
 
@@ -62,7 +72,7 @@ export const authService = {
   },
 
   // Reset Password
-  async resetPassword(data: any): Promise<void> {
+  async resetPassword(data: ResetPasswordRequest): Promise<void> {
     await api.post('/auth/reset-password', data);
   }
 };

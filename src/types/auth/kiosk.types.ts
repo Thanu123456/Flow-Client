@@ -23,3 +23,11 @@ export interface KioskLoginResponse {
   shift_started: string;
   must_change_pin: boolean;
 }
+
+export interface KioskEndShiftResponse {
+  total_sales: number;
+  total_transactions: number;
+  shift_duration: string;
+  shift_started: string;
+  shift_ended: string;
+}

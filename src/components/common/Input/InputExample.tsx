@@ -16,7 +16,7 @@ import {
 import { Divider } from "antd";
 
 export const InputExamples: React.FC = () => {
-  const [searchValue, setSearchValue] = useState("");
+  const [, setSearchValue] = useState("");
   const [pinValue, setPinValue] = useState("");
   const [password, setPassword] = useState("");
   const [barcode, setBarcode] = useState("");

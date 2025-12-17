@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Modal, Form, Button, App } from "antd";
 import type { EditModalProps } from "./Modal.types";
 
