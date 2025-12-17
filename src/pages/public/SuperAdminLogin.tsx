@@ -6,38 +6,36 @@ import {
   Checkbox, 
   Typography, 
   Card, 
-  message, 
-  Divider,
-  theme
+  message 
 } from 'antd';
-import { UserOutlined, LockOutlined, GoogleOutlined, ShopOutlined } from '@ant-design/icons';
-import { Link, useNavigate } from 'react-router-dom';
+import { UserOutlined, LockOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import type { LoginRequest } from '../../types/auth/auth.types';
+import type { SuperAdminLoginRequest } from '../../types/auth/superadmin.types';
 
 const { Title, Text } = Typography;
 
-const Login: React.FC = () => {
-    const { login } = useAuth();
+const SuperAdminLogin: React.FC = () => {
+    const { superAdminLogin } = useAuth();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
-    const { token } = theme.useToken();
     const [messageApi, contextHolder] = message.useMessage();
 
     const onFinish = async (values: any) => {
         setLoading(true);
         try {
-            const loginData: LoginRequest = {
+            const loginData: SuperAdminLoginRequest = {
                 email: values.email,
                 password: values.password,
                 remember_me: values.remember,
+                // mfa_code: values.mfa_code // Implement MFA field if enabled
             };
-            await login(loginData);
-            messageApi.success('Login Successful');
-            navigate('/dashboard'); // Change to appropriate dashboard based on role later
+            await superAdminLogin(loginData);
+            messageApi.success('Super Admin Login Successful');
+            navigate('/superadmin/dashboard');
         } catch (error: any) {
             console.error('Login Failed:', error);
-            const errorMsg = error.response?.data?.message || 'Invalid email or password';
+            const errorMsg = error.response?.data?.message || 'Invalid credentials';
             messageApi.error(errorMsg);
         } finally {
             setLoading(false);
@@ -47,7 +45,7 @@ const Login: React.FC = () => {
     return (
         <div style={{ 
             minHeight: '100vh', 
-            background: token.colorBgLayout, 
+            background: '#001529', // Dark background for Super Admin
             display: 'flex', 
             justifyContent: 'center', 
             alignItems: 'center',
@@ -57,8 +55,8 @@ const Login: React.FC = () => {
             <Card 
                 style={{ 
                     width: '100%', 
-                    maxWidth: 420, 
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)' 
+                    maxWidth: 400, 
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)' 
                 }}
                 variant="borderless"
             >
@@ -66,21 +64,21 @@ const Login: React.FC = () => {
                     <div style={{ 
                         height: 48, 
                         width: 48, 
-                        background: token.colorPrimary, 
+                        background: '#f5222d', // Red accent for Admin
                         borderRadius: 8, 
                         margin: '0 auto 16px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center'
                      }}>
-                        <ShopOutlined style={{ fontSize: 24, color: '#fff' }} />
+                        <SafetyCertificateOutlined style={{ fontSize: 24, color: '#fff' }} />
                     </div>
-                    <Title level={2} style={{ margin: 0 }}>Welcome Back</Title>
-                    <Text type="secondary">Sign in to your owner/admin account</Text>
+                    <Title level={3} style={{ margin: 0 }}>Super Admin Portal</Title>
+                    <Text type="secondary">Restricted Access</Text>
                 </div>
 
                 <Form
-                    name="login"
+                    name="super_admin_login"
                     initialValues={{ remember: true }}
                     onFinish={onFinish}
                     layout="vertical"
@@ -93,7 +91,7 @@ const Login: React.FC = () => {
                             { type: 'email', message: 'Invalid Email Format'}
                         ]}
                     >
-                        <Input prefix={<UserOutlined />} placeholder="Email" />
+                        <Input prefix={<UserOutlined />} placeholder="Admin Email" />
                     </Form.Item>
 
                     <Form.Item
@@ -104,36 +102,20 @@ const Login: React.FC = () => {
                     </Form.Item>
 
                     <Form.Item>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Form.Item name="remember" valuePropName="checked" noStyle>
-                                <Checkbox>Remember me</Checkbox>
-                            </Form.Item>
-                            <Link to="/forgot-password">Forgot password?</Link>
-                        </div>
+                        <Form.Item name="remember" valuePropName="checked" noStyle>
+                            <Checkbox>Remember me</Checkbox>
+                        </Form.Item>
                     </Form.Item>
 
                     <Form.Item>
-                        <Button type="primary" htmlType="submit" block loading={loading}>
-                            Log in
+                        <Button type="primary" htmlType="submit" block loading={loading} danger>
+                            Secure Login
                         </Button>
                     </Form.Item>
-                    
-                    <Divider plain><Text type="secondary" style={{ fontSize: 12 }}>OR CONTINUE WITH</Text></Divider>
-
-                     <Form.Item>
-                        <Button block icon={<GoogleOutlined />}>
-                            Google
-                        </Button>
-                    </Form.Item>
-
-                    <div style={{ textAlign: 'center' }}>
-                         <Text type="secondary">Don't have an account? </Text>
-                        <Link to="/register">Register now</Link>
-                    </div>
                 </Form>
             </Card>
         </div>
     );
 };
 
-export default Login;
+export default SuperAdminLogin;
