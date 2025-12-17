@@ -65,19 +65,22 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
 
   const columns: TableColumn<Brand>[] = [
     {
-      title: (
-        <div className="text-center w-full text-base font-medium">Brand</div>
-      ),
+      title: <div className="text-center w-full">Brand</div>,
       dataIndex: "name",
       key: "brand",
       sorter: (a: Brand, b: Brand) => a.name.localeCompare(b.name),
       sortDirections: ["ascend", "descend"] as SortOrder[],
       render: (text: string, record: Brand) => {
         const capitalizedText = text
-          .split(' ')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-          .join(' ');
-        const displayName = capitalizedText.length > 15 ? `${capitalizedText.substring(0, 15)}...` : capitalizedText;
+          .split(" ")
+          .map(
+            (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+          )
+          .join(" ");
+        const displayName =
+          capitalizedText.length > 15
+            ? `${capitalizedText.substring(0, 15)}...`
+            : capitalizedText;
         const nameElement = (
           <Button type="link" onClick={() => showViewModal(record)}>
             {displayName}
@@ -110,20 +113,17 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
       },
     },
     {
-      title: (
-        <div className="text-center w-full text-base font-medium">
-          Description
-        </div>
-      ),
+      title: <div className="text-center w-full">Description</div>,
       dataIndex: "description",
       key: "description",
       align: "center" as const,
       render: (description: string) => {
         if (!description?.trim()) return "N/A";
         const trimmedDescription = description.trim();
-        const displayDescription = trimmedDescription.length > 15
-          ? `${trimmedDescription.substring(0, 15)}...`
-          : trimmedDescription;
+        const displayDescription =
+          trimmedDescription.length > 15
+            ? `${trimmedDescription.substring(0, 15)}...`
+            : trimmedDescription;
 
         return trimmedDescription.length > 15 ? (
           <Tooltip title={trimmedDescription}>{displayDescription}</Tooltip>
@@ -133,20 +133,14 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
       },
     },
     {
-      title: (
-        <div className="text-center w-full text-base font-medium">
-          Product Count
-        </div>
-      ),
+      title: <div className="text-center w-full">Product Count</div>,
       dataIndex: "productCount",
       key: "productCount",
       align: "center" as const,
       render: (count: number) => count || 0,
     },
     {
-      title: (
-        <div className="text-center w-full text-base font-medium">Status</div>
-      ),
+      title: <div className="text-center w-full">Status</div>,
       dataIndex: "status",
       key: "status",
       align: "center" as const,
@@ -158,7 +152,7 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
               : "border-red-500 text-red-500 bg-red-50/70"
           }`}
         >
-          {status === "active" ? "Active" : "Inactive"}
+          {status === "active" ? "Active" : "In-active"}
         </span>
       ),
     },
@@ -171,9 +165,7 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
       render: (date: string) => dayjs(date).format("YYYY/MM/DD"),
     },
     {
-      title: (
-        <div className="text-center w-full text-base font-medium">Actions</div>
-      ),
+      title: <div className="text-center w-full">Actions</div>,
       key: "actions",
       align: "center" as const,
       render: (_: React.ReactNode, record: Brand) => (

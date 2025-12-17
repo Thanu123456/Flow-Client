@@ -23,7 +23,11 @@ interface BrandsPageProps {
   setSidebarOpen?: (open: boolean) => void;
 }
 
-const BrandsPage: React.FC<BrandsPageProps> = ({ onHeaderCollapseChange, sidebarOpen = false, setSidebarOpen }) => {
+const BrandsPage: React.FC<BrandsPageProps> = ({
+  onHeaderCollapseChange,
+  sidebarOpen = false,
+  setSidebarOpen,
+}) => {
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<any>(null);
@@ -111,22 +115,22 @@ const BrandsPage: React.FC<BrandsPageProps> = ({ onHeaderCollapseChange, sidebar
   return (
     <>
       <PageLayout
-        title="Manage your Brands"
+        title="Manage Brands"
         collapsed={collapsed}
         onCollapsedChange={handleCollapsedChange}
         searchConfig={{
-          placeholder: "Search by brand name",
+          placeholder: "Search By Brand Name",
           value: searchTerm,
           onChange: setSearchTerm,
         }}
         filterConfig={[
           {
-            placeholder: "Filter by status",
+            placeholder: "Filter By Status",
             value: statusFilter,
             onChange: setStatusFilter,
             options: [
               { label: "Active", value: "active" },
-              { label: "Inactive", value: "inactive" },
+              { label: "In-active", value: "inactive" },
             ],
           },
         ]}
