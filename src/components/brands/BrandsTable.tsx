@@ -133,11 +133,19 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
       },
     },
     {
-      title: <div className="text-center w-full">Product Count</div>,
+      title: <div className="text-center w-full">Products Count</div>,
       dataIndex: "productCount",
       key: "productCount",
       align: "center" as const,
       render: (count: number) => count || 0,
+    },
+    {
+      title: "Created Date",
+      dataIndex: "createdAt",
+      key: "createdAt",
+      align: "center" as const,
+      showDateFilter: true,
+      render: (date: string) => dayjs(date).format("YYYY/MM/DD"),
     },
     {
       title: <div className="text-center w-full">Status</div>,
@@ -155,14 +163,6 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
           {status === "active" ? "Active" : "In-active"}
         </span>
       ),
-    },
-    {
-      title: "Created Date",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      align: "center" as const,
-      showDateFilter: true,
-      render: (date: string) => dayjs(date).format("YYYY/MM/DD"),
     },
     {
       title: <div className="text-center w-full">Actions</div>,

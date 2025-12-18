@@ -58,7 +58,7 @@ const ViewBrandModal: React.FC<ViewBrandModalProps> = ({
               {brandData?.description ?? "N/A"}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Product Count">
+            <Descriptions.Item label="Products Count">
               {brandData?.productCount ?? 0}
             </Descriptions.Item>
 

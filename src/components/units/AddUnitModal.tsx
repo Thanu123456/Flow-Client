@@ -18,8 +18,8 @@ const AddUnitModal: React.FC<AddUnitModalProps> = ({
 }) => {
   const handleSubmit = async (values: any) => {
     const unitData: UnitFormData = {
-      name: values.name,
-      shortName: values.shortName,
+      unitName: values.name,
+      shortUnitName: values.shortName,
       status: values.status ? "active" : "inactive",
     };
     console.log(unitData);
@@ -42,12 +42,13 @@ const AddUnitModal: React.FC<AddUnitModalProps> = ({
           <Form.Item
             label="Unit Name"
             name="name"
+            validateTrigger="onChange"
             rules={[
-              { required: true, message: "Please enter Unit Name" },
+              { required: true, message: "Please Enter Unit Name" },
               {
                 min: 1,
-                max: 255,
-                message: "Unit name must be between 1 and 255 characters",
+                max: 10,
+                message: "Unit Name Must be Between 1 and 10 Characters",
               },
             ]}
           >
@@ -57,20 +58,25 @@ const AddUnitModal: React.FC<AddUnitModalProps> = ({
           <Form.Item
             label="Short Name"
             name="shortName"
+            validateTrigger="onChange"
             rules={[
-              { required: true, message: "Please enter Short Name" },
+              { required: true, message: "Please Enter Short Name" },
               {
                 min: 1,
-                max: 10,
-                message: "Short name must be between 1 and 10 characters",
+                max: 5,
+                message: "Short name must be between 1 and 5 Characters",
               },
             ]}
           >
             <Input placeholder="e.g., Kg" />
           </Form.Item>
 
-          <Form.Item label="Status" name="status" valuePropName="checked">
-            <Switch checkedChildren="Active" unCheckedChildren="In-active" />
+          <Form.Item
+            label="Status (Active/ In-active)"
+            name="status"
+            valuePropName="checked"
+          >
+            <Switch />
           </Form.Item>
         </>
       )}

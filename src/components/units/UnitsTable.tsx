@@ -56,7 +56,7 @@ const UnitsTable: React.FC<UnitsTableProps> = ({
       render: (text: string) => text,
     },
     {
-      title: <div className="text-center w-full">No. of Products</div>,
+      title: <div className="text-center w-full">Products Count</div>,
       dataIndex: "productCount",
       key: "productCount",
       align: "center" as const,

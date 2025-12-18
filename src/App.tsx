@@ -8,6 +8,7 @@ import HeaderWithSearch from "./components/common/Layout/HeaderWithSearch";
 import DummySidebar from "./components/common/Layout/DummySidebar";
 import { UnitsPage } from "./components/units";
 import { CategoriesPage } from "./components/categories";
+import { SubCategoriesPage } from "./components/subcategories";
 
 interface AppLayoutProps {
   children:
@@ -125,6 +126,24 @@ const App = () => {
                     setSidebarOpen,
                   }) => (
                     <CategoriesPage
+                      onHeaderCollapseChange={onHeaderCollapseChange}
+                      sidebarOpen={sidebarOpen}
+                      setSidebarOpen={setSidebarOpen}
+                    />
+                  )}
+                </AppLayout>
+              }
+            />
+            <Route
+              path="/subcategories"
+              element={
+                <AppLayout>
+                  {({
+                    onHeaderCollapseChange,
+                    sidebarOpen,
+                    setSidebarOpen,
+                  }) => (
+                    <SubCategoriesPage
                       onHeaderCollapseChange={onHeaderCollapseChange}
                       sidebarOpen={sidebarOpen}
                       setSidebarOpen={setSidebarOpen}

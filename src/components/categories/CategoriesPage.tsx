@@ -1,3 +1,4 @@
+// src/components/Categories/CategoriesPage.tsx
 import React, { useState, useEffect } from "react";
 import { message, Space } from "antd";
 import {
@@ -22,16 +23,10 @@ import { useNavigate } from "react-router-dom";
 
 interface CategoriesPageProps {
   userRole?: string; // 'owner' | 'manager' | 'staff'
-  onHeaderCollapseChange?: (collapsed: boolean) => void;
-  sidebarOpen?: boolean;
-  setSidebarOpen?: (open: boolean) => void;
 }
 
 const CategoriesPage: React.FC<CategoriesPageProps> = ({
-  userRole = "staff",
-  onHeaderCollapseChange,
-  sidebarOpen = false,
-  setSidebarOpen,
+  userRole = "owner",
 }) => {
   const navigate = useNavigate();
   const [addModalVisible, setAddModalVisible] = useState(false);
@@ -40,12 +35,6 @@ const CategoriesPage: React.FC<CategoriesPageProps> = ({
     null
   );
   const [collapsed, setCollapsed] = useState(false);
-
-  const handleCollapsedChange = (newCollapsed: boolean) => {
-    setCollapsed(newCollapsed);
-    onHeaderCollapseChange?.(newCollapsed);
-  };
-
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<
     "active" | "inactive" | undefined
@@ -97,6 +86,7 @@ const CategoriesPage: React.FC<CategoriesPageProps> = ({
   };
 
   const handleSubCategoryCountClick = (category: Category) => {
+    // Navigate to sub-categories page with category filter
     navigate(`/sub-categories?category=${category.id}`);
   };
 
@@ -142,20 +132,20 @@ const CategoriesPage: React.FC<CategoriesPageProps> = ({
       <PageLayout
         title="Manage Categories"
         collapsed={collapsed}
-        onCollapsedChange={handleCollapsedChange}
+        onCollapsedChange={setCollapsed}
         searchConfig={{
-          placeholder: "Search by category name or code",
+          placeholder: "Search by Category Name or Code",
           value: searchTerm,
           onChange: setSearchTerm,
         }}
         filterConfig={[
           {
-            placeholder: "Filter by status",
+            placeholder: "Filter by Status",
             value: statusFilter,
             onChange: setStatusFilter,
             options: [
               { label: "Active", value: "active" },
-              { label: "Inactive", value: "inactive" },
+              { label: "In-active", value: "inactive" },
             ],
           },
         ]}

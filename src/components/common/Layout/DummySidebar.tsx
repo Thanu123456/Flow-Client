@@ -37,7 +37,7 @@ const DummySidebar: React.FC<DummySidebarProps> = ({ open, onClose }) => {
     {
       key: "subCategories",
       icon: <ShoppingOutlined />,
-      label: "Sub Categories",
+      label: <Link to="/subcategories">Sub Categories</Link>,
     },
     { key: "users", icon: <UserOutlined />, label: "Users" },
     { key: "settings", icon: <SettingOutlined />, label: "Settings" },

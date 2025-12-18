@@ -36,7 +36,7 @@ const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
       const code = await generateCategoryCode();
       setGeneratedCode(code);
     } catch (error) {
-      console.error("Failed to generate code:", error);
+      console.error("Failed to Generate Code:", error);
     } finally {
       setLoadingCode(false);
     }
@@ -77,55 +77,63 @@ const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
             <Form.Item
               label="Category Name"
               name="name"
+              validateTrigger="onChange"
               rules={[
-                { required: true, message: "Please enter Category Name" },
+                { required: true, message: "Please Enter Category Name" },
                 {
-                  min: 3,
-                  max: 50,
-                  message: "Category name must be between 3 and 50 characters",
+                  min: 1,
+                  max: 10,
+                  message: "Category Name Must be Between 1 and 10 Characters",
                 },
               ]}
             >
-              <Input placeholder="e.g., Electronics" />
+              <Input placeholder="e.g., Fans" />
             </Form.Item>
 
             <Form.Item
               label="Category Code"
               name="code"
-              tooltip="Leave empty for auto-generation (e.g., CAT-001)"
+              tooltip="Leave Empty for Auto-Generation (e.g., CAT-001)"
             >
               <Input
-                placeholder="CAT-001"
+                placeholder="Auto-Filled"
                 suffix={
                   <Button
                     type="text"
                     size="small"
-                    icon={<ReloadOutlined />}
+                    //icon={<ReloadOutlined />}
                     loading={loadingCode}
                     onClick={handleGenerateCode}
                   />
                 }
+                disabled
               />
             </Form.Item>
 
             <Form.Item
               label="Description"
               name="description"
+              validateTrigger="onChange"
               rules={[
                 {
-                  max: 500,
-                  message: "Description must be less than 500 characters",
+                  min: 1,
+                  max: 20,
+                  message: "Description Must be Between 1 and 20 Characters",
                 },
               ]}
             >
               <TextArea
                 rows={4}
-                placeholder="Enter category description (optional)"
+                placeholder="Enter Category Description (Optional)"
               />
             </Form.Item>
 
-            <Form.Item label="Status" name="status" valuePropName="checked">
-              <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
+            <Form.Item
+              label="Status (Active/ In-active)"
+              name="status"
+              valuePropName="checked"
+            >
+              <Switch />
             </Form.Item>
           </>
         );

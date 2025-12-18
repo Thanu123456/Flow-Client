@@ -89,7 +89,7 @@ const CategoriesTable: React.FC<CategoriesTableProps> = ({
       ),
     },
     {
-      title: <div className="text-center w-full"># Sub-Cats</div>,
+      title: <div className="text-center w-full">No of Sub-Cats</div>,
       dataIndex: "subCategoryCount",
       key: "subCategoryCount",
       align: "center" as const,
@@ -115,17 +115,6 @@ const CategoriesTable: React.FC<CategoriesTableProps> = ({
       ),
     },
     {
-      title: <div className="text-center w-full">Created At</div>,
-      dataIndex: "createdAt",
-      key: "createdAt",
-      align: "center" as const,
-      showDateFilter: true,
-      sorter: (a: Category, b: Category) =>
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-      sortDirections: ["ascend", "descend"] as SortOrder[],
-      render: (date: string) => dayjs(date).format("DD MMM YYYY"),
-    },
-    {
       title: <div className="text-center w-full">Status</div>,
       dataIndex: "status",
       key: "status",
@@ -146,6 +135,17 @@ const CategoriesTable: React.FC<CategoriesTableProps> = ({
           {status === "active" ? "Active" : "Inactive"}
         </span>
       ),
+    },
+    {
+      title: <div className="text-center w-full">Created At</div>,
+      dataIndex: "createdAt",
+      key: "createdAt",
+      align: "center" as const,
+      showDateFilter: true,
+      sorter: (a: Category, b: Category) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      sortDirections: ["ascend", "descend"] as SortOrder[],
+      render: (date: string) => dayjs(date).format("DD MMM YYYY"),
     },
     {
       title: <div className="text-center w-full">Actions</div>,
