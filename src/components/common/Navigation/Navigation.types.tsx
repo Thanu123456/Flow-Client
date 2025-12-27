@@ -1,8 +1,5 @@
 import type {
-  MenuProps,
   BreadcrumbProps,
-  TabsProps,
-  PaginationProps,
 } from "antd";
 
 export type NavigationType =

@@ -13,6 +13,7 @@ import Signup from '../pages/public/Signup';
 import SuperAdminLogin from '../pages/public/SuperAdminLogin';
 import ForgotPassword from '../pages/public/ForgotPassword';
 import ResetPassword from '../pages/public/ResetPassword';
+import ChangePassword from '../pages/public/ChangePassword';
 
 // Kiosk Pages
 import KioskLogin from '../pages/kiosk/KioskLogin';
@@ -20,9 +21,20 @@ import KioskPOS from '../pages/kiosk/KioskPOS';
 
 // Admin Pages
 import Dashboard from '../pages/admin/Dashboard'; 
+import Brands from '../pages/management/Brands';
+import Roles from '../pages/management/Roles';
+import Users from '../pages/management/Users';
 
-// Super Admin Pages (Placeholders for now if not existing)
-// import SuperAdminDashboard from '../pages/superadmin/Dashboard';
+// Super Admin Pages
+import SuperAdminDashboard from '../pages/superadmin/SuperAdminDashboard';
+import PendingRegistrations from '../pages/superadmin/PendingRegistrations';
+import TenantManagement from '../pages/superadmin/TenantManagement';
+import SystemLogs from '../pages/superadmin/SystemLogs';
+import SystemSettings from '../pages/superadmin/SystemSettings';
+
+// Guard Components
+import PermissionRoute from './PermissionRoute';
+import { PERMISSIONS } from '../types/auth/permissions';
 
 const AppRoutes: React.FC = () => {
   return (
@@ -37,6 +49,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/superadmin/login" element={<SuperAdminLogin />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/brands" element={<Brands />} />
         
         {/* Kiosk Login is public but specific */}
         <Route path="/kiosk" element={<Navigate to="/kiosk/login" replace />} />
@@ -45,13 +58,27 @@ const AppRoutes: React.FC = () => {
 
       {/* Owner/Admin Private Routes */}
       <Route element={<PrivateRoutes />}>
+         <Route path="/change-password" element={<ChangePassword />} />
          <Route path="/dashboard" element={<Dashboard />} />
+         
+         {/* Management Routes with Permission Guards */}
+         <Route element={<PermissionRoute requiredPermission={PERMISSIONS.USERS_ROLES} />}>
+            <Route path="/roles" element={<Roles />} />
+         </Route>
+         <Route element={<PermissionRoute requiredPermission={PERMISSIONS.USERS_VIEW} />}>
+            <Route path="/users" element={<Users />} />
+         </Route>
+         
          {/* Add other protected admin routes here */}
       </Route>
 
       {/* Super Admin Private Routes */}
       <Route path="/superadmin" element={<SuperAdminRoutes />}>
-         <Route path="dashboard" element={<div>Super Admin Dashboard Placeholder</div>} />
+         <Route path="dashboard" element={<SuperAdminDashboard />} />
+         <Route path="registrations" element={<PendingRegistrations />} />
+         <Route path="tenants" element={<TenantManagement />} />
+         <Route path="logs" element={<SystemLogs />} />
+         <Route path="settings" element={<SystemSettings />} />
       </Route>
 
       {/* Kiosk Private Routes */}

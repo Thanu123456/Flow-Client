@@ -25,8 +25,8 @@ interface BrandsPageProps {
 
 const BrandsPage: React.FC<BrandsPageProps> = ({
   onHeaderCollapseChange,
-  sidebarOpen = false,
-  setSidebarOpen,
+  sidebarOpen: _sidebarOpen = false,
+  setSidebarOpen: _setSidebarOpen,
 }) => {
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);

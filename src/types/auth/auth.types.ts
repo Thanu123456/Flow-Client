@@ -66,3 +66,17 @@ export interface RegisterResponse {
   tenant_id: string;
   email: string;
 }
+
+export interface ResetPasswordRequest {
+  token: string;
+  password: string;
+  confirm_password?: string;
+}
+
+export type AccountStatus = 'pending' | 'rejected' | 'suspended' | 'active' | 'inactive';
+
+export interface AccountStatusResponse {
+  status: AccountStatus;
+  rejection_reason?: string;
+  message: string;
+}

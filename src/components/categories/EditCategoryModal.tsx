@@ -66,7 +66,7 @@ const EditCategoryModal: React.FC<EditCategoryModalProps> = ({
       submitButtonText="Update Category"
       width={600}
     >
-      {(form: FormInstance, data: Category | null) => (
+      {(_form: FormInstance, _data: Category | null) => (
         <>
           <Form.Item
             label="Category Name"

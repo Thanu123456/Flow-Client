@@ -15,7 +15,7 @@ interface DummySidebarProps {
   onClose: () => void;
 }
 
-const DummySidebar: React.FC<DummySidebarProps> = ({ open, onClose }) => {
+const DummySidebar: React.FC<DummySidebarProps> = ({ open, onClose: _onClose }) => {
   const sidebarWidth = open ? 280 : 70;
 
   const menuItems = [
