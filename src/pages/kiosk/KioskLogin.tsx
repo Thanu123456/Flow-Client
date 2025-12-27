@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Form, 
   Input, 
@@ -8,11 +8,14 @@ import {
   Modal,
   theme,
   Row,
-  Col
+  Col,
+  Avatar,
+  Card
 } from 'antd';
 import { UserOutlined, InfoCircleOutlined, ShopOutlined, FullscreenOutlined, FullscreenExitOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTenant } from '../../contexts/TenantContext'; // Added TenantContext
 import VirtualKeypad from '../../components/kiosk/VirtualKeypad';
 import type { KioskLoginRequest } from '../../types/auth/kiosk.types';
 
@@ -20,6 +23,7 @@ const { Title, Text } = Typography;
 
 const KioskLogin: React.FC = () => {
     const { kioskLogin } = useAuth();
+    const { tenant } = useTenant(); // Get tenant info
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const { token } = theme.useToken();
@@ -31,11 +35,6 @@ const KioskLogin: React.FC = () => {
     const [activeField, setActiveField] = useState<'user_id' | 'pin'>('user_id');
     const [pinValue, setPinValue] = useState('');
     const [userIdValue, setUserIdValue] = useState('');
-
-    useEffect(() => {
-        // Attempt to load tenant info from localStorage for Logo/Name
-        // If not found, maybe redirect to setup? But for now assume it's pre-configured.
-    }, []);
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -53,15 +52,11 @@ const KioskLogin: React.FC = () => {
                 form.setFieldsValue({ pin: newValue });
             }
         } else {
-            const newValue = userIdValue + key; // User ID might be alphanumeric, but keypad is numeric. 
-            // If User ID is alphanumeric, they must use physical keyboard. 
-            // Requirements: "Add virtual numeric keypad component". 
-            // "User ID validation (3-20 chars, alphanumeric)".
-            // If User ID is alphanumeric, numeric keypad is insufficient? 
-            // Use numeric keypad for PIN primarily. 
-            // For User ID, if it's numeric (e.g. Employee Number), it works.
-            setUserIdValue(newValue);
-            form.setFieldsValue({ user_id: newValue });
+            if (userIdValue.length < 10) { // Limit numeric ID length via keypad
+                const newValue = userIdValue + key;
+                setUserIdValue(newValue);
+                form.setFieldsValue({ user_id: newValue });
+            }
         }
     };
 
@@ -124,42 +119,46 @@ const KioskLogin: React.FC = () => {
     return (
         <div style={{ 
             height: '100vh', 
-            background: '#f0f2f5', 
+            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)', 
             display: 'flex', 
             flexDirection: 'column',
             overflow: 'hidden'
         }}>
             {contextHolder}
             {/* Top Bar */}
-            <div style={{ padding: 16, display: 'flex', justifyContent: 'flex-end' }}>
+            <div style={{ padding: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <Avatar 
+                        src={tenant?.logo_url} 
+                        icon={<ShopOutlined />} 
+                        size={48} 
+                        style={{ background: token.colorPrimary }}
+                    />
+                    <Title level={3} style={{ margin: 0 }}>{tenant?.shop_name || 'Flow POS'}</Title>
+                </div>
                 <Button 
+                    size="large"
                     icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />} 
                     onClick={toggleFullscreen}
+                    style={{ borderRadius: 10 }}
                 >
                     {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
                 </Button>
             </div>
 
-            <Row style={{ flex: 1, height: '100%' }}>
+            <Row style={{ flex: 1, paddingBottom: 40 }}>
                 {/* Left Side: Login Form */}
                 <Col xs={24} md={12} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-                    <div style={{ maxWidth: 400, width: '100%' }}>
-                         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-                            <div style={{ 
-                                height: 80, 
-                                width: 80, 
-                                background: token.colorPrimary, 
-                                borderRadius: '50%', 
-                                margin: '0 auto 16px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                             }}>
-                                <ShopOutlined style={{ fontSize: 40, color: '#fff' }} />
-                            </div>
-                            <Title level={2}>POS Access</Title>
-                            <Text type="secondary">Enter ID and PIN to start</Text>
+                    <Card style={{ 
+                        maxWidth: 450, 
+                        width: '100%', 
+                        borderRadius: 24, 
+                        boxShadow: '0 12px 30px rgba(0,0,0,0.1)',
+                        padding: '20px 10px'
+                    }}>
+                         <div style={{ textAlign: 'center', marginBottom: 40 }}>
+                            <Title level={2} style={{ marginBottom: 8 }}>Team Sign In</Title>
+                            <Text type="secondary" style={{ fontSize: 16 }}>Tap input fields to use keypad</Text>
                         </div>
 
                         <Form
@@ -172,31 +171,33 @@ const KioskLogin: React.FC = () => {
                                 name="user_id"
                                 rules={[
                                     { required: true, message: 'Please enter User ID' },
-                                    { min: 3, max: 20, message: 'ID must be 3-20 characters' },
-                                    { pattern: /^[a-zA-Z0-9]+$/, message: 'Alphanumeric only' }
+                                    { min: 3, max: 20, message: 'ID must be 3-20 characters' }
                                 ]}
                             >
                                 <Input 
-                                    prefix={<UserOutlined />} 
-                                    placeholder="User ID" 
+                                    prefix={<UserOutlined style={{ color: activeField === 'user_id' ? token.colorPrimary : '#bfbfbf' }} />} 
+                                    placeholder="Enter User ID" 
                                     onClick={() => setActiveField('user_id')}
-                                    onChange={(e) => setUserIdValue(e.target.value)} // Sync manual typing
-                                    style={{ borderColor: activeField === 'user_id' ? token.colorPrimary : undefined }}
+                                    onChange={(e) => setUserIdValue(e.target.value)}
+                                    style={{ 
+                                        height: 64, 
+                                        borderRadius: 16, 
+                                        fontSize: 18,
+                                        borderWidth: activeField === 'user_id' ? 2 : 1,
+                                        borderColor: activeField === 'user_id' ? token.colorPrimary : undefined
+                                    }}
                                 />
                             </Form.Item>
 
                             <Form.Item
                                 name="pin"
+                                label={<Text strong style={{ fontSize: 16 }}>Security PIN</Text>}
                                 rules={[
                                     { required: true, message: 'Please enter PIN' },
-                                    { len: 4, message: 'PIN must be 4-6 digits' }, // Adjust if variable length
-                                    // Visual indicator handled separately below
+                                    { min: 4, message: 'Minimum 4 digits' }
                                 ]}
                             >
-                                {/* Hidden input for form submission, we use visual indicator */}
                                 <Input.Password 
-                                    placeholder="PIN"
-                                    onClick={() => setActiveField('pin')} 
                                     style={{ display: 'none' }}
                                 />
                                 <div 
@@ -204,47 +205,69 @@ const KioskLogin: React.FC = () => {
                                     style={{ 
                                         display: 'flex', 
                                         justifyContent: 'center', 
-                                        gap: 12, 
-                                        padding: 16, 
-                                        border: `1px solid ${activeField === 'pin' ? token.colorPrimary : '#d9d9d9'}`,
-                                        borderRadius: 8,
+                                        gap: 16, 
+                                        padding: '24px 16px', 
+                                        border: `2px solid ${activeField === 'pin' ? token.colorPrimary : '#e8e8e8'}`,
+                                        borderRadius: 16,
                                         cursor: 'pointer',
-                                        background: '#fff'
+                                        background: activeField === 'pin' ? '#fff' : '#fafafa',
+                                        transition: 'all 0.3s'
                                     }}
                                 >
                                     {[...Array(6)].map((_, i) => (
                                         <div key={i} style={{
-                                            width: 16,
-                                            height: 16,
+                                            width: 20,
+                                            height: 20,
                                             borderRadius: '50%',
-                                            background: i < pinValue.length ? token.colorPrimary : '#f0f0f0',
-                                            border: '1px solid #d9d9d9'
+                                            background: i < pinValue.length ? token.colorPrimary : '#e0e0e0',
+                                            transform: i < pinValue.length ? 'scale(1.1)' : 'scale(1)',
+                                            transition: 'all 0.2s',
+                                            boxShadow: i < pinValue.length ? `0 0 8px ${token.colorPrimary}40` : 'none'
                                         }} />
                                     ))}
                                 </div>
                             </Form.Item>
 
-                            <Button type="primary" htmlType="submit" block size="large" loading={loading} style={{ height: 50 }}>
-                                ENTER
-                            </Button>
+                            <div style={{ marginTop: 40 }}>
+                                <Button 
+                                    type="primary" 
+                                    htmlType="submit" 
+                                    block 
+                                    size="large" 
+                                    loading={loading} 
+                                    style={{ 
+                                        height: 64, 
+                                        fontSize: 20, 
+                                        fontWeight: 600, 
+                                        borderRadius: 16,
+                                        boxShadow: `0 8px 20px ${token.colorPrimary}40`
+                                    }}
+                                >
+                                    START SHIFT
+                                </Button>
+                                <div style={{ textAlign: 'center', marginTop: 24 }}>
+                                    <Button type="link" onClick={showHelp} icon={<InfoCircleOutlined />} style={{ fontSize: 16 }}>
+                                        Forgot PIN or ID?
+                                    </Button>
+                                </div>
+                            </div>
                         </Form>
-
-                         <div style={{ textAlign: 'center', marginTop: 16 }}>
-                            <Button type="link" onClick={showHelp} icon={<InfoCircleOutlined />}>Help</Button>
-                        </div>
-                    </div>
+                    </Card>
                 </Col>
 
-                {/* Right Side: Keypad (Visible on larger screens or always?) */}
-                <Col xs={0} md={12} style={{ background: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center', borderLeft: '1px solid #f0f0f0' }}>
-                    <div>
+                {/* Right Side: Keypad */}
+                <Col xs={0} md={12} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ width: '100%', maxWidth: 500 }}>
                         <VirtualKeypad 
                             onKeyPress={handleKeypadPress} 
                             onBackspace={handleBackspace} 
                             onClear={handleClear}
+                            disabled={loading}
                         />
-                        <div style={{ textAlign: 'center', marginTop: 32 }}>
-                            <Text type="secondary">Use the keypad to enter credentials</Text>
+                        <div style={{ textAlign: 'center', marginTop: 40 }}>
+                             <Typography.Title level={4} type="secondary" style={{ fontWeight: 400 }}>
+                                {activeField === 'pin' ? 'Entering Security PIN' : 'Entering User ID'}
+                             </Typography.Title>
                         </div>
                     </div>
                 </Col>

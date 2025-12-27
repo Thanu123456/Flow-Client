@@ -31,8 +31,8 @@ interface UnitsPageProps {
 
 const UnitsPage: React.FC<UnitsPageProps> = ({
   onHeaderCollapseChange,
-  sidebarOpen = false,
-  setSidebarOpen,
+  sidebarOpen: _sidebarOpen = false,
+  setSidebarOpen: _setSidebarOpen,
 }) => {
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);

@@ -26,7 +26,7 @@ interface UnitState {
 
 export const useUnitStore = create<UnitState>()(
     devtools(
-        (set, get) => ({
+        (set, _get) => ({
             units: [],
             loading: false,
             error: null,

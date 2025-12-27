@@ -90,7 +90,7 @@ const AddBrandModal: React.FC<AddBrandModalProps> = ({
       initialValues={{ status: true }}
       submitButtonText="Add Brand"
     >
-      {(form: FormInstance) => (
+      {(_form: FormInstance) => (
         <>
           <Form.Item
             label="Brand Image"

@@ -32,8 +32,8 @@ const EditUnitModal: React.FC<EditUnitModalProps> = ({
 
   const handleSubmit = async (values: any, originalData: Unit) => {
     const unitData: Partial<UnitFormData> = {
-      name: values.name,
-      shortName: values.shortName,
+      unitName: values.unitName,
+      shortUnitName: values.shortUnitName,
       status: values.status ? "active" : "inactive",
     };
 
@@ -41,8 +41,8 @@ const EditUnitModal: React.FC<EditUnitModalProps> = ({
   };
 
   const mapDataToForm = (unit: Unit) => ({
-    name: unit.name,
-    shortName: unit.shortName,
+    unitName: unit.unitName,
+    shortUnitName: unit.shortUnitName,
     status: unit.status === "active",
   });
 
@@ -57,11 +57,11 @@ const EditUnitModal: React.FC<EditUnitModalProps> = ({
       mapDataToForm={mapDataToForm}
       submitButtonText="Update Unit"
     >
-      {(form: FormInstance, data: Unit | null) => (
+      {(_form: FormInstance, _data: Unit | null) => (
         <>
           <Form.Item
             label="Unit Name"
-            name="name"
+            name="unitName"
             rules={[
               { required: true, message: "Please enter Unit Name" },
               {
@@ -76,7 +76,7 @@ const EditUnitModal: React.FC<EditUnitModalProps> = ({
 
           <Form.Item
             label="Short Name"
-            name="shortName"
+            name="shortUnitName"
             rules={[
               { required: true, message: "Please enter Short Name" },
               {

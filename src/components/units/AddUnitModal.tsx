@@ -18,8 +18,8 @@ const AddUnitModal: React.FC<AddUnitModalProps> = ({
 }) => {
   const handleSubmit = async (values: any) => {
     const unitData: UnitFormData = {
-      name: values.name,
-      shortName: values.shortName,
+      unitName: values.unitName,
+      shortUnitName: values.shortUnitName,
       status: values.status ? "active" : "inactive",
     };
     console.log(unitData);
@@ -37,11 +37,11 @@ const AddUnitModal: React.FC<AddUnitModalProps> = ({
       initialValues={{ status: true }}
       submitButtonText="Add Unit"
     >
-      {(form: FormInstance) => (
+      {(_form: FormInstance) => (
         <>
           <Form.Item
             label="Unit Name"
-            name="name"
+            name="unitName"
             rules={[
               { required: true, message: "Please enter Unit Name" },
               {
@@ -56,7 +56,7 @@ const AddUnitModal: React.FC<AddUnitModalProps> = ({
 
           <Form.Item
             label="Short Name"
-            name="shortName"
+            name="shortUnitName"
             rules={[
               { required: true, message: "Please enter Short Name" },
               {
