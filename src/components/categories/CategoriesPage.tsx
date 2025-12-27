@@ -30,8 +30,8 @@ interface CategoriesPageProps {
 const CategoriesPage: React.FC<CategoriesPageProps> = ({
   userRole = "staff",
   onHeaderCollapseChange,
-  sidebarOpen = false,
-  setSidebarOpen,
+  sidebarOpen: _sidebarOpen = false,
+  setSidebarOpen: _setSidebarOpen,
 }) => {
   const navigate = useNavigate();
   const [addModalVisible, setAddModalVisible] = useState(false);

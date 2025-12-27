@@ -1,0 +1,2156 @@
+# POS System – Functional Requirements (Multi-Tenant Architecture)
+
+## Database Architecture Overview
+
+### Multi-Tenancy Strategy: Schema-Per-Tenant
+- **Master Database (pos_master)**: Contains public schema with:
+  - `tenants` table: Stores all business/shop information
+  - `users` table: Stores all users (super admin, owners, employees)
+  - `audit_logs` table: System-wide audit trail
+  
+- **Tenant Schemas**: Each approved shop gets its own PostgreSQL schema:
+  - Schema naming: `tenant_shopname_uniqueid` (e.g., `tenant_johngrocery_a1b2c3d4`)
+  - Contains all POS tables: products, sales, purchases, customers, suppliers, etc.
+  - Complete data isolation per tenant
+  - Automatic creation upon owner approval
+
+---
+
+## 1. Authentication & User Access
+
+### 1.1 Super Admin Authentication
+
+#### 1.1.1 Super Admin Login Page
+- **Access URL**: `/superadmin/login`
+- **Fields**:
+  - Email (Required)
+  - Password (Required)
+  - Two-Factor Authentication Code (if enabled)
+- **Features**:
+  - "Remember Me" checkbox
+  - "Forgot Password?" functionality (sends reset link to registered email)
+  - Rate limiting: Max 5 attempts per 15 minutes
+  - Must change password on first login
+- **Post Authentication**:
+  - Display loading animation
+  - Redirect to Super Admin Dashboard
+
+#### 1.1.2 Super Admin Credentials Storage
+- **CRITICAL SECURITY**: DO NOT store in .env file
+- **Recommended Approach**:
+  - Super admin created via database seeding during initial deployment
+  - Default temporary password must be changed on first login
+  - Store email in secure configuration (Azure Key Vault/AWS Secrets Manager)
+  - Enable Multi-Factor Authentication (mandatory)
+- **Initial Seed Data**:
+  ```sql
+  INSERT INTO public.users (email, password_hash, full_name, is_super_admin, must_change_password)
+  VALUES ('superadmin@yourcompany.com', '[HASHED_PASSWORD]', 'System Administrator', true, true);
+  ```
+
+---
+
+### 1.2 Owner Registration & Approval Workflow
+
+#### 1.2.1 Owner Registration Page
+- **Access URL**: `/register`
+- **Business Information Section**:
+  - Shop/Business Name (Required, min 3 chars, max 100 chars)
+  - Business Type (Dropdown: Retail, Wholesale, Restaurant, Cafe, Pharmacy, Supermarket, Other)
+  - Business Registration Number (Optional)
+  - Tax/VAT Number (Optional)
+  
+- **Owner Information Section**:
+  - Full Name (Required, min 3 chars)
+  - Email (Required, unique, validated format)
+  - Phone Number (Required, formatted: +94XXXXXXXXX or local format)
+  - Password (Required: min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char)
+  - Confirm Password (Required, must match)
+  
+- **Business Address Section**:
+  - Address Line 1 (Required)
+  - Address Line 2 (Optional)
+  - City (Required, dropdown or autocomplete)
+  - Postal Code (Optional)
+  - Country (Default: Sri Lanka, non-editable for now)
+
+- **Terms & Conditions**:
+  - Checkbox: "I agree to Terms & Conditions and Privacy Policy" (Required)
+  - Links to view T&C and Privacy Policy
+
+- **Validation**:
+  - Real-time email format validation
+  - Password strength indicator (Weak/Medium/Strong)
+  - Check email uniqueness via API
+  - Phone number format validation
+  - All required fields highlighted on submission
+
+- **Post-Registration**:
+  - Display success message: 
+    > "Registration Submitted Successfully! 
+    > Your account is pending approval from our admin team. 
+    > You will receive an email notification once your account is approved. 
+    > This typically takes 24-48 hours."
+  - Send confirmation email to owner with registration details
+  - Send notification to super admin (email + dashboard alert)
+  - Registration status set to "Pending"
+  - Redirect to login page with info banner
+
+#### 1.2.2 Registration Status States
+- **Pending**: Initial state after registration
+- **Active**: Approved by super admin, shop schema created, owner can login
+- **Rejected**: Denied by super admin with reason
+- **Suspended**: Temporarily disabled by super admin
+- **Inactive**: Owner account deactivated
+
+---
+
+### 1.3 Owner/Admin Login Page
+
+#### 1.3.1 Login Methods
+- **Access URL**: `/login`
+- **Primary Login**:
+  - Email (Required)
+  - Password (Required)
+  - "Remember Me" checkbox
+  
+- **Alternative Login**:
+  - Google Authentication (OAuth 2.0)
+  - Button: "Continue with Google"
+
+- **Additional Links**:
+  - "Forgot Password?" → Password reset flow
+  - "Don't have an account? Register" → Redirect to registration
+
+#### 1.3.2 Account Status Handling
+- **If status = "Pending"**:
+  - Block login attempt
+  - Display message: 
+    > "Your account is awaiting admin approval. 
+    > Please check your email for updates. 
+    > For urgent inquiries, contact: support@yourpos.com"
+  
+- **If status = "Rejected"**:
+  - Block login attempt
+  - Display message: 
+    > "Your registration was not approved. 
+    > Reason: [Rejection reason from super admin] 
+    > Please contact support for more information: support@yourpos.com"
+  
+- **If status = "Suspended"**:
+  - Block login attempt
+  - Display message: 
+    > "Your account has been temporarily suspended. 
+    > Please contact support: support@yourpos.com"
+  
+- **If status = "Active"**:
+  - Proceed with authentication
+  - Generate JWT token with claims (UserId, TenantId, Role, SchemaName)
+  - Display loading animation
+  - Redirect to Owner Dashboard
+
+#### 1.3.3 Forgot Password Flow
+1. User clicks "Forgot Password?"
+2. Enter registered email
+3. System sends password reset link (valid for 1 hour)
+4. User clicks link → Redirect to reset password page
+5. Enter new password + confirm password
+6. Success message → Redirect to login
+
+#### 1.3.4 Google OAuth Flow
+1. User clicks "Continue with Google"
+2. Redirect to Google consent screen
+3. User authorizes access
+4. System receives Google user info (email, name, profile picture)
+5. If email exists in database:
+   - Login user (check account status first)
+6. If email doesn't exist:
+   - Display message: "No account found. Please register first."
+   - Option to pre-fill registration form with Google data
+
+---
+
+### 1.4 Kiosk Mode (Employee Login)
+
+#### 1.4.1 Kiosk Mode Activation
+- **Triggers**:
+  - Owner/Admin clicks "Logout" button → Auto-switch to Kiosk Mode
+  - Owner/Admin clicks "Switch to Kiosk Mode" button (in user menu)
+  - System idle for X minutes (configurable in settings, default: 30 mins)
+  
+- **Kiosk Mode URL**: `/kiosk`
+
+#### 1.4.2 Kiosk Login Interface
+- **Design Requirements**:
+  - Fullscreen mode (hide browser controls)
+  - Large, touch-friendly UI elements
+  - Business logo at top center
+  - Minimal distractions, clean interface
+  - Optimized for tablet/touch screen devices
+
+- **Login Fields**:
+  - **User ID Field**:
+    - Large input field with placeholder: "Enter User ID (e.g., EMP001)"
+    - Auto-focus on page load
+    - Accept alphanumeric characters
+    - Show example format below field
+  
+  - **PIN Field**:
+    - Numeric input only (4-6 digits)
+    - Display as password dots (hidden)
+    - Optional: Virtual numeric keypad for touch screens
+    - Show indicator of PIN length (e.g., ●●●●)
+  
+  - **Login Button**:
+    - Large, prominent button
+    - Text: "Start Shift" or "Clock In"
+  
+  - **Help Link**:
+    - Small link at bottom: "Need help?"
+    - Shows modal with owner contact info and instructions
+
+- **Business Branding**:
+  - Display shop logo (from tenant settings)
+  - Shop name below logo
+  - Optional: Background image or color theme
+
+#### 1.4.3 Kiosk Authentication Process
+1. Employee enters User ID (e.g., EMP001)
+2. Employee enters PIN (4-6 digits)
+3. System validates:
+   - User ID exists in current tenant
+   - User is not owner/admin (employees only)
+   - User status is "Active"
+   - PIN matches hashed PIN in database
+   - User is not already logged in on another device (optional setting)
+4. **If valid**:
+   - Create session record (login time, device info)
+   - Generate limited-scope JWT token
+   - Display welcome message: "Welcome, [Employee Name]!"
+   - Redirect to POS interface (limited permissions)
+5. **If invalid**:
+   - Show error: "Invalid User ID or PIN. Please try again."
+   - Clear PIN field, keep User ID
+   - Increment failed attempt counter
+   - After 5 failed attempts for same User ID:
+     - Lock account temporarily (15 minutes)
+     - Send notification to owner
+     - Display: "Account locked. Contact your manager."
+
+#### 1.4.4 Kiosk Session Management
+- **Active Session Display**:
+  - Header shows: "Logged in as: [Employee Name] | [Role]"
+  - Session timer: "Shift started: 2h 30m ago"
+  - "End Shift" button always visible in header
+
+- **Session Tracking**:
+  - Record login timestamp
+  - Track all transactions during session
+  - Log device information
+  - Monitor activity for auto-logout
+
+- **Auto-Logout Conditions**:
+  - After X minutes of inactivity (configurable, default: 15 mins)
+  - When employee clicks "End Shift"
+  - When owner manually ends session from admin panel
+  - Show warning 2 minutes before auto-logout
+
+- **End Shift Process**:
+  1. Employee clicks "End Shift" button
+  2. Show confirmation modal: "End your shift?"
+  3. Display shift summary:
+     - Total sales processed: LKR XX,XXX
+     - Total transactions: XX
+     - Shift duration: X hours Y minutes
+  4. Option to "Print Shift Report" or "Email Report"
+  5. Logout and return to Kiosk login screen
+
+#### 1.4.5 Kiosk Security Features
+- **Rate Limiting**: 5 login attempts per User ID per 15 minutes
+- **Account Lockout**: After 5 failed PIN attempts, lock for 15 minutes
+- **Session Security**:
+  - Tokens expire after inactivity
+  - Single active session per employee (optional)
+  - Cannot access admin features
+- **Audit Trail**: Log all kiosk login/logout events
+- **PIN Security**:
+  - Hashed using bcrypt/Argon2 (never stored plain text)
+  - Cannot be sequential (1234, 5678)
+  - Cannot be repetitive (1111, 2222)
+  - Must be changed every 90 days (optional)
+
+---
+
+### 1.5 Post Authentication (Owner/Admin)
+
+- Display loading animation with progress indicator
+- Verify tenant status is "Active"
+- Load tenant-specific configuration and settings
+- Set PostgreSQL search_path to tenant schema
+- Auto-redirect to Admin Dashboard
+- Display welcome notification: "Welcome back, [Owner Name]!"
+
+---
+
+## 2. Super Admin Dashboard
+
+### 2.1 Dashboard Overview
+- **Access**: Super Admin only (role-based authentication)
+- **Layout**: Full-width layout with sidebar navigation
+
+### 2.2 Summary Cards (Top Section)
+- **Pending Registrations**:
+  - Count of pending owner registrations
+  - Red badge for urgent (pending > 3 days)
+  - Click to view pending registrations list
+  
+- **Total Tenants**:
+  - Count of active tenants/shops
+  - Growth percentage vs. last month
+  
+- **Active Users**:
+  - Total users across all tenants
+  - Currently logged in users count
+  
+- **System Status**:
+  - Database health indicator
+  - API uptime percentage
+  - Last backup time
+
+### 2.3 Pending Registrations Table
+- **Toolbar Actions**:
+  - Refresh button
+  - Export to Excel
+  - Filter by registration date range
+  
+- **Table Columns**:
+  - Shop Name
+  - Owner Name
+  - Email
+  - Phone Number
+  - Registered Date
+  - Days Pending
+  - Actions (View Details, Approve, Reject)
+
+- **View Details Action**:
+  - Opens modal with full registration details:
+    - Business Information
+    - Owner Information
+    - Address
+    - Registration timestamp
+    - IP address (for fraud detection)
+  
+- **Approve Action**:
+  - Click "Approve" button
+  - Confirmation modal: "Approve [Shop Name]?"
+  - Show approval checklist (optional):
+    - ☐ Verified business information
+    - ☐ Verified owner identity
+    - ☐ No duplicate registrations
+  - Click "Confirm Approval"
+  - **Backend Process**:
+    1. Generate unique schema name from shop name
+    2. Create PostgreSQL schema: `CREATE SCHEMA tenant_xxxxx`
+    3. Run migrations to create all POS tables in new schema
+    4. Update tenant record:
+       - Set `schema_name` field
+       - Set `registration_status` = 'active'
+       - Set `approved_by` = super admin user ID
+       - Set `approved_at` = current timestamp
+    5. Send approval email to owner with login instructions
+    6. Log approval action in audit trail
+  - Success message: "[Shop Name] approved successfully. Owner notified via email."
+  
+- **Reject Action**:
+  - Click "Reject" button
+  - Modal with text area: "Reason for rejection (will be sent to applicant)"
+  - Click "Confirm Rejection"
+  - Update tenant `registration_status` = 'rejected'
+  - Send rejection email to owner with reason
+  - Log rejection action in audit trail
+  - Success message: "Registration rejected. Owner notified."
+
+### 2.4 Tenant Management
+- **Active Tenants Table**:
+  - Columns: Shop Name, Owner Name, Email, Schema Name, Registered Date, Last Active, Status, Actions
+  - **Status Options**: Active, Suspended, Inactive
+  - **Actions**:
+    - View Details: Show tenant info, owner info, statistics
+    - Suspend: Temporarily disable tenant access
+    - Delete: Permanently delete tenant (show warning, requires confirmation + password)
+    - View Audit Log: Show all actions for this tenant
+
+- **Tenant Statistics** (click on tenant name to view):
+  - Total Users
+  - Total Products
+  - Total Sales (last 30 days)
+  - Database size
+  - Last login date
+  - Storage usage
+
+### 2.5 System Logs & Audit Trail
+- **Activity Log Table**:
+  - Columns: Timestamp, Action Type, User, Tenant, Description, IP Address
+  - Filter by: Date range, Action type, Tenant, User
+  - Search by keyword
+  - Export to CSV
+  
+- **Action Types**:
+  - Registration submitted
+  - Registration approved
+  - Registration rejected
+  - Tenant suspended
+  - Tenant deleted
+  - Super admin login
+  - Schema created
+  - Migration executed
+
+### 2.6 System Settings (Super Admin)
+- **General Settings**:
+  - System name
+  - Support email
+  - Contact phone
+  - Logo upload
+  
+- **Email Configuration**:
+  - SMTP settings
+  - Email templates (approval, rejection, welcome)
+  
+- **Security Settings**:
+  - Require MFA for super admin
+  - Session timeout duration
+  - Password expiry policy
+  
+- **Tenant Defaults**:
+  - Default currency: LKR
+  - Default timezone: Asia/Colombo
+  - Default language: English
+  - Trial period duration (if applicable)
+
+---
+
+## 3. Admin Dashboard Overview (Owner/Admin)
+
+### 3.1 Summary Cards (Top Section)
+- Display daily, weekly, monthly, yearly metrics with growth/loss percentages for:
+  - **Total Sales**
+    - Display amount in LKR
+    - Show % change vs. previous period
+    - Click "View All" → Redirects to Sales Report
+  
+  - **Sales Returns**
+    - Display refund amount
+    - Show % change vs. previous period
+    - Click "View All" → Redirects to Sales Returns Report
+  
+  - **Purchase Returns**
+    - Display return amount
+    - Show % change vs. previous period
+    - Click "View All" → Redirects to Purchase Returns Report
+  
+  - **Profit**
+    - Display net profit (Sales - Cost - Expenses)
+    - Show % change vs. previous period
+    - Click "View All" → Redirects to Profit & Loss Report
+  
+  - **Invoice Due**
+    - Display total outstanding amount
+    - Show count of overdue invoices
+    - Click "View All" → Redirects to Invoice Report
+  
+  - **Expenses**
+    - Display total expenses
+    - Show % change vs. previous period
+    - Click "View All" → Redirects to Expenses Report
+  
+  - **Total Refunds**
+    - Display refund amount
+    - Show refund count
+    - Click "View All" → Redirects to Sales Report (Refunds tab)
+
+- **Time Filter Toggle** (applies to all cards):
+  - Buttons: Daily | Weekly | Monthly | Yearly
+  - Selected filter highlighted
+  - All cards update when filter changes
+  - Show period comparison text (e.g., "vs. last week", "vs. last month")
+
+### 3.2 Notifications Bar
+- **Low Stock Alerts**:
+  - Icon with badge showing count
+  - Text: "X items low in stock"
+  - "View" button → Redirects to Low Stock Items Table Page
+  - Auto-updates when stock levels change
+  
+- **Expired Products**:
+  - Icon with badge showing count
+  - Text: "X products expired"
+  - "View" button → Redirects to Expired Products Table Page
+  - Highlight if count > 0
+
+- **Pending Actions** (if applicable):
+  - Pending purchase approvals
+  - Pending returns
+  - Outstanding payments
+
+### 3.3 Graphs & Charts
+
+#### 3.3.1 Sales & Purchases Bar Chart
+- **Chart Type**: Grouped vertical bar chart
+- **Data Series**:
+  - Blue bars: Total Sales
+  - Orange bars: Total Purchases
+- **Dropdown Filter** for time range:
+  - **Daily**: X-axis shows 2 AM to 12 AM (2-hour intervals)
+  - **Weekly**: X-axis shows Monday to Sunday
+  - **Monthly**: X-axis shows Week 1 to Week 4/5
+  - **Last 3 Months**: X-axis shows week-wise breakdown
+  - **Last 6 Months**: X-axis shows month-wise breakdown
+  - **Yearly**: X-axis shows January to December
+- **Y-axis**: Amount in LKR (with K/M suffix for readability)
+- **Interactions**:
+  - Hover to show exact values
+  - Click bar to drill down to detailed report
+  - Export chart as PNG/PDF
+
+#### 3.3.2 Business KPIs (Info Cards)
+- **Supplier Count**:
+  - Total active suppliers
+  - Icon: Supplier/truck icon
+  - Click to view Suppliers page
+  
+- **Customer Count**:
+  - Total registered customers
+  - Icon: Users icon
+  - Click to view Customers page
+  
+- **Order Count**:
+  - Total orders (current period)
+  - Icon: Shopping cart icon
+  - Click to view Orders page
+
+#### 3.3.3 Customer Insights
+- **Customer Overview Pie Chart**:
+  - Categories:
+    - Walk-in Customers (no customer record selected)
+    - Regular Customers (registered in system)
+  - Filter: Daily | Weekly | Monthly
+  - Show percentage and count for each category
+  - Color-coded slices
+  
+- **Top Customers Table**:
+  - Columns: Rank, Customer Name, Total Purchases, Last Purchase Date
+  - Shows top 10 high-value customers
+  - Based on total sales amount
+  - Click customer name to view detailed profile
+  - "View All" button to see complete list
+
+#### 3.3.4 Top Products & Categories
+- **Top-Selling Products Pie Chart**:
+  - Shows top 5-7 products by sales volume
+  - Filter: Daily | Weekly | Monthly
+  - Display product name and sales amount
+  - Color-coded slices
+  - Hover to see details
+  
+- **Top Categories Pie Chart**:
+  - Shows product categories by sales
+  - Filter: Weekly | Monthly
+  - Display category name and sales amount
+  - Click slice to view products in that category
+
+#### 3.3.5 Stock & Sales Monitoring
+- **Low Stock Table** (Right Sidebar Widget):
+  - Columns: Product Name, Current Stock, Alert Level
+  - Shows top 5 low-stock items
+  - Red indicator for critical stock
+  - "View All" button → Redirects to Low Stock Page
+  
+- **Recent Sales Table**:
+  - Columns: Invoice No, Customer, Total Amount, Date
+  - Shows last 5 completed transactions
+  - Click row to view sale details
+  - "View All" button → Redirects to Sales page
+
+#### 3.3.6 Financial Overview
+- **Sales Statistics Chart** (Revenue vs. Expenses):
+  - Chart Type: Line or Area chart
+  - Time Range: Selectable by Year (dropdown: 2024, 2025, etc.)
+  - X-Axis: Months (Jan–Dec)
+  - Y-Axis: Amount in LKR (-30K to +30K scale)
+  - Two lines:
+    - Green line: Revenue (Sales)
+    - Red line: Expenses
+  - Shaded area shows profit/loss
+  - Hover to see exact monthly values
+  
+- **Recent Transactions Table** (Tabbed View):
+  - **4 Tabs**: Sales | Purchases | Quotations | Expenses
+  - Each tab shows 5 most recent transactions
+  - Columns (adjust per tab):
+    - Sales: Bill No, Customer, Amount, Date
+    - Purchases: GRN No, Supplier, Amount, Date
+    - Quotations: Quote No, Customer, Amount, Date, Status
+    - Expenses: Expense Type, Description, Amount, Date
+  - Click row to view details
+  - "View All" link in each tab
+
+### 3.4 Additional Dashboard Features
+- **Quick Actions Panel**:
+  - Button: "Create New Sale" (POS icon)
+  - Button: "Add Product" (plus icon)
+  - Button: "New Purchase Order" (cart icon)
+  - Button: "Generate Report" (chart icon)
+  
+- **Welcome Message**:
+  - Display at top: "Welcome back, [Owner Name]!"
+  - Show last login time
+  - Optional: Daily tips or system updates
+
+### 3.5 Dashboard Performance Requirements
+- All visualizations must be interactive and responsive
+- Optimize dashboard for large datasets:
+  - Implement pagination for tables
+  - Lazy loading for charts
+  - Cache frequently accessed data
+  - Use database indexes on date and amount fields
+- Load time target: < 2 seconds for full dashboard
+- Ensure mobile responsiveness and accessibility
+- Support print layout for dashboard reports
+
+---
+
+## 4. Role & Permission Management
+
+### 4.1 Page Overview
+- Interface for defining and assigning roles/permissions
+- **Access**: Owner/Admin only
+- **URL**: `/roles`
+
+### 4.2 System Roles (Non-deletable)
+Pre-defined roles created automatically for each tenant:
+- **Owner**: Full access to all features (created during registration)
+- **Manager**: Full access except user management and critical settings
+- **Cashier**: POS access, limited reports, cannot modify products/prices
+- **Stock Keeper**: Inventory management, purchase orders, stock adjustments
+
+### 4.3 Toolbar Actions
+- **Add Role Button**: Opens Create Role modal
+- **PDF Download**: Export role list as PDF
+- **Excel Download**: Export role list as Excel (.xlsx)
+- **Refresh Button**: Reload data and reset filters
+- **Collapse Button**: Toggle header section visibility
+
+### 4.4 Search & Filter
+- **Search Bar**: Keyword search by role name
+- **Status Filter Dropdown**: Options (Active, Inactive)
+- **Type Filter**: System Roles | Custom Roles
+
+### 4.5 Add/Edit Role Functionality
+- **"Add Role" Button**: Opens Create Role modal
+
+#### Modal Fields:
+- **Role Name** (Required):
+  - Text input
+  - Validation: 3-50 characters, alphanumeric + spaces
+  - Check for duplicate role names
+  
+- **Status** (Required):
+  - Dropdown: Active | Inactive
+  - Default: Active
+  
+- **Permissions** (Checkboxes/Toggles):
+  Organize permissions by module with expand/collapse sections:
+  
+  - **📊 Dashboard**:
+    - ☐ View Dashboard
+    - ☐ View Reports
+  
+  - **🛒 POS Operations**:
+    - ☐ Process Sales
+    - ☐ Process Returns
+    - ☐ Apply Discounts (specify max discount %)
+    - ☐ Void Transactions
+  
+  - **📦 Inventory Management**:
+    - ☐ View Products
+    - ☐ Add Products
+    - ☐ Edit Products
+    - ☐ Delete Products
+    - ☐ Stock Adjustments
+    - ☐ Transfer Stock
+  
+  - **🛍️ Sales**:
+    - ☐ View Sales
+    - ☐ Create Sales (included in POS)
+    - ☐ View Sales Reports
+    - ☐ Process Refunds
+  
+  - **📥 Purchases**:
+    - ☐ View Purchases
+    - ☐ Create Purchase Orders
+    - ☐ Approve Purchase Orders
+    - ☐ Process Purchase Returns
+  
+  - **👥 Customer Management**:
+    - ☐ View Customers
+    - ☐ Add Customers
+    - ☐ Edit Customers
+    - ☐ Delete Customers
+  
+  - **🚚 Supplier Management**:
+    - ☐ View Suppliers
+    - ☐ Add Suppliers
+    - ☐ Edit Suppliers
+    - ☐ Delete Suppliers
+  
+  - **📊 Reports**:
+    - ☐ View Sales Reports
+    - ☐ View Inventory Reports
+    - ☐ View Financial Reports
+    - ☐ Export Reports
+  
+  - **⚙️ Settings**:
+    - ☐ Manage Categories/Brands
+    - ☐ Manage Warehouses
+    - ☐ Configure System Settings
+    - ☐ Manage Payment Methods
+  
+  - **👤 User Management**:
+    - ☐ View Users
+    - ☐ Add Users
+    - ☐ Edit Users
+    - ☐ Delete Users
+    - ☐ Manage Roles
+
+- **Buttons**:
+  - **Save**: Validates and saves role
+  - **Cancel**: Closes modal without saving
+  - **Duplicate** (edit mode only): Create copy of current role
+
+### 4.6 Roles Table
+- **Columns**:
+  - **Role Name**: Display name with icon if system role
+  - **Type**: Badge (System | Custom)
+  - **Assigned Users**: Count of users with this role
+  - **Created Date**: Format: DD MMM YYYY
+  - **Status**: Badge (Active | Inactive)
+  - **Actions**: Edit | Delete | View Permissions
+
+- **Edit Action**:
+  - Opens pre-filled edit modal
+  - System roles: Can only edit status, cannot modify permissions
+  - Custom roles: Can edit all fields
+
+- **Delete Action**:
+  - Cannot delete system roles
+  - If custom role has assigned users, show warning:
+    > "This role is assigned to X users. Reassign them before deleting."
+  - Confirmation modal: "Delete [Role Name]?"
+  - Require password confirmation for deletion
+
+- **View Permissions Action**:
+  - Opens read-only modal showing all permissions for this role
+  - Organized by module
+  - Close button only
+
+### 4.7 Pagination
+- Items per page: 10, 25, 50, 100
+- Show total count
+- Navigate through pages
+
+---
+
+## 5. User Management
+
+### 5.1 Page Overview
+- Interface to manage users, assign roles, and control access
+- **Access**: Owner/Admin only (permission required)
+- **URL**: `/users`
+- **User Types**:
+  - Owner (1 per tenant, created during registration)
+  - Employees (Managers, Cashiers, Stock Keepers, Custom roles)
+
+### 5.2 Toolbar Actions
+- **Add User Button**: Opens Create User modal
+- **PDF Download**: Export user list as PDF
+- **Excel Download**: Export user list as Excel
+- **Refresh Button**: Reload user list and reset filters
+- **Collapse Button**: Toggle header visibility
+- **Bulk Actions**: Select multiple users → Activate/Deactivate/Delete
+
+### 5.3 Search & Filter
+- **Search Bar**: Search by name, email, phone, or User ID
+- **Role Filter Dropdown**: Options (All Roles, Manager, Cashier, etc.)
+- **Status Filter Dropdown**: Options (Active, Inactive)
+- **Sort Options**: Name (A-Z), Recently Added, Role
+
+### 5.4 Add User Functionality (Employee Creation)
+
+#### Modal: Create New Employee
+- **"Add User" Button**: Opens Create User modal
+
+#### Modal Fields:
+
+**Personal Information**:
+- **Profile Image** (Optional):
+  - Image uploader with preview
+  - Max size: 2MB
+  - Formats: JPG, PNG
+  - Circular crop preview
+  
+- **Full Name** (Required):
+  - Text input
+  - Validation: 3-100 characters
+  
+- **Email** (Required):
+  - Email input with validation
+  - Check for uniqueness
+  - Used for login (if not using User ID only)
+  
+- **Phone Number** (Required):
+  - Formatted input: +94 XX XXX XXXX
+  - Country code selector
+  
+**Role & Access**:
+- **Role** (Required):
+  - Dropdown listing all active roles
+  - Options: Manager, Cashier, Stock Keeper, [Custom Roles]
+  - Show permission summary on hover
+  
+- **Warehouse Assignment** (Optional):
+  - Dropdown if multiple warehouses exist
+  - Restrict employee to specific warehouse
+  - Option: "All Warehouses"
+
+**Authentication (for System Login)**:
+- **Password** (Required if email login enabled):
+  - Password input with strength indicator
+  - Minimum 8 characters
+  - Show/hide toggle
+  
+- **Confirm Password** (Required):
+  - Must match password
+  - Real-time validation
+
+**Kiosk Access (PIN Login)**:
+- **User ID** (Required for Kiosk Mode):
+  - Auto-generated or manual entry
+  - Format: EMP001, EMP002, etc.
+  - Must be unique within tenant
+  - Display format example
+  - Validation: 3-20 characters, alphanumeric
+  
+- **PIN for Kiosk Login** (Required):
+  - Numeric input (4-6 digits)
+  - Cannot be sequential (e.g., 1234)
+  - Cannot be repetitive (e.g., 1111)
+  - Masked input (show dots)
+  
+- **Confirm PIN** (Required):
+  - Must match PIN
+  - Real-time validation
+  
+- **Enable Kiosk Access** (Checkbox):
+  - If checked, User ID and PIN are required
+  - If unchecked, employee can only login via email/password
+
+**Status & Settings**:
+- **Status Toggle**: Active | Inactive
+  - Default: Active
+  - Inactive users cannot login
+  
+- **Allow Overtime** (Checkbox, optional)
+- **Max Discount Authority** (%, optional)
+
+#### Buttons:
+- **Save**: Validates and creates user
+  - Hash password using bcrypt
+  - Hash PIN using bcrypt
+  - Create user record in public.users table
+  - Link to tenant
+  - Send welcome email with credentials
+- **Cancel**: Close modal without saving
+
+### 5.5 Users Table
+
+#### Table Columns:
+- **Profile Image**: Circular avatar
+- **User ID**: Display User ID (for kiosk users)
+- **Full Name**: Clickable → View user details
+- **Email**: Display email address
+- **Phone Number**: Formatted display
+- **Assigned Role**: Badge with role name
+- **Warehouse**: Display assigned warehouse (if any)
+- **Last Login**: Format: "2 hours ago" or date
+- **Status**: Badge (Active | Inactive | Locked)
+- **Actions**: Edit | Delete | Reset PIN | View Activity
+
+#### Action Details:
+
+- **Edit**:
+  - Opens pre-filled edit modal
+  - Can update all fields except User ID
+  - Cannot change to/from Owner role
+  - Save changes with audit log
+
+- **Delete**:
+  - Cannot delete Owner
+  - Cannot delete if user has active session
+  - Confirmation modal: "Delete [User Name]?"
+  - Warning: "This action cannot be undone. User's access will be permanently revoked."
+  - Require password confirmation
+  - Log deletion in audit trail
+
+- **Reset PIN**:
+  - Opens modal: "Reset PIN for [User Name]"
+  - Options:
+    1. Generate Random PIN (show in modal, must be printed/noted)
+    2. Set Custom PIN (admin enters new PIN)
+  - Send new PIN via SMS/Email
+  - Force PIN change on next login (optional)
+  - Log PIN reset action
+
+- **View Activity**:
+  - Opens modal showing user activity log
+  - Columns: Date, Action, Description, IP Address
+  - Last 100 activities
+  - Export to CSV option
+
+### 5.6 User Details View
+- **Click on user name** → Opens detailed view modal
+- **Tabs**:
+  - **Overview**: Personal info, role, status
+  - **Permissions**: List of permissions from assigned role
+  - **Activity Log**: Recent actions
+  - **Sessions**: Current and past login sessions
+  - **Sales Performance**: Sales processed (if cashier)
+
+### 5.7 Pagination & Bulk Actions
+- **Pagination**: 10, 25, 50 items per page
+- **Select All Checkbox**: Select all users on current page
+- **Bulk Actions Dropdown** (when users selected):
+  - Activate Selected
+  - Deactivate Selected
+  - Delete Selected (confirm action)
+  - Export Selected to Excel
+
+---
+
+## 6. Customer Management
+
+### 6.1 Page Overview
+- Interface to manage customers (create, update, delete)
+- **Access**: Users with "View Customers" permission
+- **URL**: `/customers`
+
+### 6.2 Toolbar Actions
+- **Add Customer Button**: Opens Create Customer modal
+- **PDF Download**: Export customer list as PDF
+- **Excel Download**: Export customer list as Excel
+- **Refresh Button**: Reload customer list and reset filters
+- **Collapse Button**: Toggle header visibility
+- **Import Customers**: Upload CSV/Excel file
+
+### 6.3 Search & Filter
+- **Search Bar**: Search by name, email, or phone
+- **Sort Options**: Name (A-Z), Recently Added, Most Purchases
+
+### 6.4 Add Customer Functionality
+- **"Add Customer" Button**: Opens Create Customer modal
+
+#### Modal Fields:
+- **Profile Image** (Optional):
+  - Image uploader with preview
+  - Max size: 1MB
+  
+- **Customer First Name** (Required):
+  - Text input, 2-50 characters
+  
+- **Customer Last Name** (Required):
+  - Text input, 2-50 characters
+  
+- **Email** (Optional):
+  - Email validation
+  - Check for duplicates (show warning, allow duplicate)
+  
+- **Phone Number** (Required):
+  - Formatted input
+  - Primary contact method
+  
+- **Customer City Name** (Optional):
+  - Text input or dropdown
+  
+- **Address** (Optional):
+  - Text area
+  
+- **Customer Type** (Optional):
+  - Dropdown: Walk-in, Regular, Wholesale, VIP
+  
+- **Loyalty Points** (Display only if loyalty program enabled)
+  - Default: 0
+
+#### Buttons:
+- **Save**: Validates and saves customer
+- **Save & Add Sale**: Save customer and redirect to POS with customer selected
+- **Cancel**: Close modal
+
+### 6.5 Customers Table
+- **Columns**:
+  - Customer Image (avatar with initials if no image)
+  - Full Name (First + Last)
+  - Email
+  - Phone Number
+  - City
+  - Customer Type (badge)
+  - Total Purchases (amount)
+  - Last Purchase Date
+  - Actions (Edit, Delete, View)
+
+- **Edit**: Opens pre-filled edit modal
+- **Delete**:
+  - Confirmation: "Delete [Customer Name]?"
+  - Warning: "Customer purchase history will be retained."
+  - Soft delete (mark as deleted, don't remove from database)
+- **View**:
+  - Opens customer profile modal
+  - Shows: Full details, purchase history, total spent, loyalty points
+
+### 6.6 Pagination
+- Navigate through customer list
+- Items per page: 10, 25, 50
+
+---
+
+## 7. Supplier Management
+
+### 7.1 Page Overview
+- Interface to manage suppliers (create, update, delete)
+- **Access**: Users with "View Suppliers" permission
+- **URL**: `/suppliers`
+
+### 7.2 Toolbar Actions
+- **Add Supplier Button**: Opens Create Supplier modal
+- **PDF Download**: Export supplier list as PDF
+- **Excel Download**: Export supplier list as Excel
+- **Refresh Button**: Reload supplier list and reset filters
+- **Collapse Button**: Toggle header visibility
+
+### 7.3 Search & Filter
+- **Search Bar**: Search by name, email, or phone
+- **Status Filter Dropdown**: Options (Active, Inactive)
+- **Sort Options**: Name (A-Z), Recently Added
+
+### 7.4 Add Supplier Functionality
+- **"Add Supplier" Button**: Opens Create Supplier modal
+
+#### Modal Fields:
+- **Profile Image** (Optional)
+- **Supplier First Name** (Required)
+- **Supplier Last Name** (Required)
+- **Company Name** (Optional)
+- **Email** (Optional, validated)
+- **Phone Number** (Required, formatted)
+- **Supplier City Name** (Optional)
+- **Address** (Optional)
+- **Tax/VAT Number** (Optional)
+- **Payment Terms** (Optional):
+  - Dropdown: Cash on Delivery, Net 30, Net 60, etc.
+- **Status Toggle**: Active | Inactive (default: Active)
+
+#### Buttons:
+- **Save**: Validates and saves supplier
+- **Cancel**: Close modal
+
+### 7.5 Suppliers Table
+- **Columns**:
+  - Supplier Image with Full Name
+  - Company Name
+  - Email
+  - Phone Number
+  - City
+  - Total Purchases (amount)
+  - Outstanding Balance
+  - Status (badge)
+  - Actions (Edit, Delete, View)
+
+- **Edit**: Opens pre-filled edit modal
+- **Delete**:
+  - Cannot delete if supplier has associated purchase orders
+  - Confirmation required
+- **View**:
+  - Opens supplier details modal
+  - Shows: Full details, purchase history, outstanding payments
+
+### 7.6 Pagination
+- Navigate through supplier list
+
+---
+
+## 8. Warehouse Management
+
+### 8.1 Page Overview
+- Interface to manage warehouses (create, update, delete)
+- **Access**: Users with "Manage Warehouses" permission
+- **URL**: `/warehouses`
+
+### 8.2 Toolbar Actions
+- **Add Warehouse Button**: Opens Create Warehouse modal
+- **PDF Download**: Export warehouse list as PDF
+- **Excel Download**: Export warehouse list as Excel
+- **Refresh Button**: Reload warehouse list and reset filters
+- **Collapse Button**: Toggle header visibility
+
+### 8.3 Search & Filter
+- **Search Bar**: Search by name, contact person, or phone
+- **Status Filter Dropdown**: Options (Active, Inactive)
+
+### 8.4 Add Warehouse Functionality
+- **"Add Warehouse" Button**: Opens Create Warehouse modal
+
+#### Modal Fields:
+- **Warehouse Name** (Required)
+- **Contact Person Name** (Required)
+- **Email** (Optional, validated)
+- **Mobile Number** (Required, formatted)
+- **Phone (Work) Number** (Optional, formatted)
+- **Warehouse City Name** (Optional)
+- **Warehouse Address** (Optional, text area)
+- **Status Toggle**: Active | Inactive
+
+#### Buttons:
+- **Save**: Validates and saves warehouse
+- **Cancel**: Close modal
+
+### 8.5 Warehouses Table
+- **Columns**:
+  - Warehouse Name
+  - Contact Person
+  - Mobile/Phone
+  - Total Products (count from products table)
+  - Total Stock (sum of quantities)
+  - City
+  - Status (badge)
+  - Actions (View, Edit, Delete)
+
+- **View**:
+  - Opens read-only modal with all warehouse details
+  - Shows product list in this warehouse
+  - No Save/Cancel buttons, only Close
+  
+- **Edit**: Opens pre-filled edit modal
+
+- **Delete**:
+  - Cannot delete if warehouse has stock
+  - Confirmation required
+  - Prompt to transfer stock first
+
+### 8.6 Pagination
+- Navigate through warehouse list
+
+---
+
+## 9. Brands Management
+
+### 9.1 Page Overview
+- Interface to manage brands (create, update, delete)
+- **URL**: `/brands`
+
+### 9.2 Toolbar Actions
+- **Add Brand Button**: Opens Create Brand modal
+- **PDF Download**: Export brand list as PDF
+- **Excel Download**: Export brand list as Excel
+- **Refresh Button**: Reload brand list and reset filters
+- **Collapse Button**: Toggle header visibility
+
+### 9.3 Search & Filter
+- **Search Bar**: Search by brand name
+- **Status Filter Dropdown**: Options (Active, Inactive)
+
+### 9.4 Add Brand Functionality
+- **"Add Brand" Button**: Opens Create Brand modal
+
+#### Modal Fields:
+- **Brand Name** (Required)
+- **Brand Image** (Optional image uploader)
+- **Description** (Optional)
+- **Status Toggle**: Active | Inactive
+
+#### Buttons:
+- **Save**: Validates and saves brand
+- **Cancel**: Close modal
+
+### 9.5 Brands Table
+- **Columns**:
+  - Brand Image with Name
+  - Brand Name
+  - Brand Items QTY (count of products)
+  - Status (badge)
+  - Actions (Edit, Delete)
+
+- **Edit**: Opens pre-filled edit modal
+- **Delete**:
+  - Cannot delete if brand has products
+  - Confirmation prompt
+
+### 9.6 Pagination
+- Navigate through brand list
+
+---
+
+## 10. Category Management
+
+### 10.1 Page Overview
+- Interface to manage categories (create, update, delete)
+- **URL**: `/categories`
+
+### 10.2 Toolbar Actions
+- **Add Category Button**: Opens Create Category modal
+- **PDF, Excel, Refresh, Collapse buttons**
+
+### 10.3 Search & Filter
+- **Search Bar**: Search by category name
+- **Status Filter Dropdown**: Options (Active, Inactive)
+
+### 10.4 Add Category Functionality
+#### Modal Fields:
+- **Category Name** (Required)
+- **Category Code** (Optional, auto-generated)
+- **Description** (Optional)
+- **Status Toggle**: Active | Inactive
+
+### 10.5 Categories Table
+- **Columns**: Category Name, Code, Sub-Categories Count, Created At, Status, Actions
+- **Edit, Delete actions**
+
+---
+
+## 11. Sub-Category Management
+
+### 11.1 Page Overview
+- Interface to manage sub-categories
+- **URL**: `/sub-categories`
+
+### 11.2 Toolbar Actions
+- Standard toolbar with Add, Export, Refresh
+
+### 11.3 Search & Filter
+- **Search Bar**: Search by sub-category name
+- **Status Filter**: Active | Inactive
+- **Category Filter Dropdown**: Filter by parent category
+
+### 11.4 Add Sub-Category Functionality
+#### Modal Fields:
+- **Sub-Category Image** (Optional)
+- **Sub-Category Name** (Required)
+- **Category Name** (Required dropdown selector)
+- **Category Code** (Auto-filled based on selected category)
+- **Status Toggle**: Active | Inactive
+
+### 11.5 Sub-Categories Table
+- **Columns**: Sub-Category Image with Name, Category Code, Category Name, Status, Actions
+
+---
+
+## 12. Units Management
+
+### 12.1 Page Overview
+- Interface to manage units of measurement
+- **URL**: `/units`
+
+### 12.2-12.5 Standard CRUD Operations
+#### Add Unit Modal:
+- **Unit Name** (Required): e.g., Piece, Kilogram, Liter
+- **Short Name** (Required): e.g., Pcs, Kg, L
+- **Status Toggle**
+
+#### Units Table:
+- Columns: Unit Name, Short Name, No. of Products, Created At, Status, Actions
+
+---
+
+## 13. Variations Management
+
+### 13.1 Page Overview
+- Interface to manage product variations (Size, Color, etc.)
+- **URL**: `/variations`
+
+### 13.2-13.5 Standard CRUD Operations
+#### Add Variation Modal:
+- **Variation Name** (Required): e.g., Size, Color, Material
+- **Variation Value** (Required): e.g., Small, Medium, Large
+- **Status Toggle**
+
+#### Variations Table:
+- Columns: Variation Name, Values Name, Created At, Status, Actions
+
+---
+
+## 14. Warranties Management
+
+### 14.1 Page Overview
+- Interface to manage product warranties
+- **URL**: `/warranties`
+
+### 14.2-14.5 Standard CRUD Operations
+#### Add Warranty Modal:
+- **Warranty Name/Type** (Required): e.g., "6 Month Warranty"
+- **Warranty Duration** (Required, numbers only): e.g., 6
+- **Warranty Period** (Required dropdown): Month | Year
+- **Warranty Description** (Optional text area)
+- **Status Toggle**
+
+#### Warranties Table:
+- Columns: Warranty Name, Description, Duration, Status, Actions
+
+---
+
+## 15. Low Stock and Out Of Stock Management
+
+### 15.1 Page Overview
+- Interface to monitor low stock and out of stock products
+- **URL**: `/stock-alerts`
+
+### 15.2 Toolbar Actions
+- **Toggle Buttons**:
+  - **Low Stock Button**: Shows low stock products
+  - **Out Of Stock Button**: Shows out of stock products
+- **PDF/Excel Download**
+- **Refresh Button**
+- **Collapse Button**
+
+#### When Low Stock Button Selected:
+
+### 15.3 Search & Filter
+- **Search Bar**: Search by product name (index search)
+- **Warehouse Filter Dropdown**: Display all warehouses
+- **Category Filter Dropdown**: Display all categories
+- **Notify Toggle Button**: Enable to show notification on dashboard
+
+### 15.4 Low Stocks Table
+- **Columns**: Product Name with icon, SKU Number, Category, Warehouse, Current QTY, QTY Alert Level
+- **Visual Indicators**: Red badge if stock <= alert level
+- Pagination
+
+#### When Out Of Stock Button Selected:
+
+### 15.5 Search & Filter
+- **Search Bar**: Search by product name
+- **Warehouse Filter Dropdown**
+- **Category Filter Dropdown**
+- **Sort by Filter Dropdown**: Recently Added, Last 7 Days, Last Month (30 days), All
+  - Default: Last 7 Days
+- **Notify Toggle Button**
+
+### 15.6 Out Of Stock Table
+- **Columns**: Product Name with icon, SKU, Category, Warehouse, QTY (0), QTY Alert
+- Pagination
+
+---
+
+## 16. Expired Products Management
+
+### 16.1 Page Overview
+- Interface to manage expired products
+- **URL**: `/expired-products`
+
+### 16.2 Toolbar Actions
+- **PDF/Excel Download**
+- **Refresh, Collapse buttons**
+
+### 16.3 Expired Products Table
+- **Columns**:
+  - Product Name with icon
+  - SKU Number
+  - Purchase No (GRN No)
+  - Purchase Date
+  - Expiry Date (highlighted in red if expired)
+  - Days Expired (calculated)
+  - Actions: Return
+
+- **Return Action**:
+  - Redirect to Purchase Returns Page
+  - Pre-fill form with product details
+  - Auto-select reason: "Expired Product"
+
+- Pagination
+
+---
+
+## 17. Add Products Page
+
+### 17.1 Page Overview
+- Interface to add products to system
+- **URL**: `/products/add`
+
+### 17.2 Toolbar Actions
+- **Refresh Button**: Refresh/reset all fields
+- **Collapse Button**: Toggle header visibility
+
+### 17.3 Add Products Functionality
+
+#### Basic Information:
+- **Product Name** (Required)
+- **Warehouse** (Combo box, optional): Select warehouse for this product
+- **Category** (Autocomplete/Suggestions, required):
+  - Plus icon on right → Opens Add Category modal (quick add)
+- **Sub-Category** (Combo box, required):
+  - Plus icon → Opens Add Sub-Category modal
+- **Brand** (Autocomplete, optional):
+  - Plus icon → Opens Add Brand modal
+- **Unit** (Combo box, required): Piece, Kg, Liter, etc.
+- **Warranty Type** (Combo box, optional)
+
+#### Product Type Selection:
+- **Radio Buttons**:
+  - ⦿ Single Item (default)
+  - ⦿ Variable Item (has variations)
+
+---
+
+#### IF SINGLE ITEM SELECTED:
+
+**Pricing Section**:
+- **SKU Number** (Optional, auto-generated if empty)
+- **Item Barcode** (Optional, can scan or manually enter)
+- **Cost Price** (Required, decimal): Purchase price
+- **Wholesale Price** (Optional, decimal)
+- **Retail Price** (Optional, decimal)
+- **Our Price** (Optional, decimal): Your selling price
+- **Discount Type** (Combo box): Fixed | Percentage
+- **Select Sale Type for Discount** (Checkboxes):
+  - ☐ Wholesale Price
+  - ☐ Retail Price
+  - ☐ Our Price
+- **Discount Value** (Optional, number): Amount or percentage
+- **Quantity Alert** (Optional, number): Alert when stock falls below this
+- **Item Image** (Optional): Image uploader
+
+---
+
+#### IF VARIABLE ITEM SELECTED:
+
+**Variation Setup**:
+- **Select Variation Name** (Combo box, required): Size, Color, Material, etc.
+  - Plus icon → Opens Create Variation modal
+- **Variation Type Field** (Tag Input):
+  - Type variation values (e.g., Small, Medium, Large)
+  - Shows suggestions from existing variations
+  - Each selected value appears as a tag/chip
+  - Can add multiple values
+
+**For Each Variation Value**, display a separate form section:
+
+**Variation: [Value Name]** (e.g., "Small", "Red")
+- **Variation Type** (Display only, non-editable): Shows the value name
+- **Cost Price** (Required)
+- **Retail Price** (Optional)
+- **Wholesale Price** (Optional)
+- **Discount Type** (Combo box): Fixed | Percentage
+- **Select Sale Type for Discount** (Checkboxes)
+- **Discount Value** (Optional)
+- **Quantity Alert** (Optional)
+- **SKU Number** (Optional, auto-generated with variation suffix)
+- **Item Barcode** (Optional)
+- **Item Image** (Optional, specific to this variation)
+
+---
+
+#### Buttons:
+- **Save**: Validates and saves product(s)
+  - If single item: Create one product record
+  - If variable: Create one product record with multiple variation records
+- **Save & Add Another**: Save and reset form for next product
+- **Cancel**: Discard and return to Products page
+
+---
+
+## 18. Products Page
+
+### 18.1 Page Overview
+- Interface to manage products
+- **URL**: `/products`
+
+### 18.2 Toolbar Actions
+- **Add Product Button**: Redirect to Create Product page (`/products/add`)
+- **Import Products Button**: Opens import file modal
+  - Accept CSV/Excel file
+  - Show sample file download link
+  - Validate and import products in bulk
+  - Show import summary (success, errors)
+- **PDF/Excel Download**
+- **Refresh, Collapse buttons**
+
+### 18.3 Search & Filter
+- **Search Bar**: Search by product name, SKU, or barcode
+- **Category Filter Dropdown**: All Categories | Specific category
+- **Brand Filter Dropdown**: All Brands | Specific brand
+- **Status Filter**: Active | Inactive | Out of Stock
+- **Sort Options**: Name (A-Z), Price (Low-High), Stock (Low-High), Recently Added
+
+### 18.4 Products Table
+- **Columns**:
+  - Product ID
+  - Product Image + Name
+  - Category
+  - Brand
+  - Price (display retail or our price)
+  - Unit
+  - Quantity (show stock level)
+    - Red badge if low stock
+    - Gray if out of stock
+  - Status (badge)
+  - Actions (View, Edit, Delete)
+
+- **View**:
+  - Opens modal with all product details:
+    - Image gallery
+    - Name, Category, Sub-category, Brand
+    - Unit, SKU, Barcode
+    - Quantity alert level
+    - Current stock (by warehouse if multiple)
+    - Discount type and value
+    - All prices (cost, wholesale, retail, our price)
+    - Generate barcode image for this product (display in modal)
+    - "Print Barcode" button
+  - Close button
+
+- **Edit**:
+  - Redirect to Edit Product page (similar to Add Product)
+  - Pre-filled with existing data
+
+- **Delete**:
+  - Confirmation: "Delete [Product Name]?"
+  - Warning: "This will affect sales and purchase records."
+  - Cannot delete if product has active sales/purchase orders (show error)
+  - Soft delete option
+
+### 18.5 Pagination
+- Items per page: 10, 25, 50, 100
+- Show total products count
+
+---
+
+## 19. Print Barcode Page
+
+### 19.1 Page Overview
+- Interface to print product barcodes
+- **URL**: `/print-barcode`
+
+### 19.2 Toolbar Actions
+- **Refresh Button**: Reload and reset all fields
+- **Collapse Button**: Toggle header
+
+### 19.3 Print Barcode Functionality
+
+#### Product Selection:
+- **Search Product Name** (Autocomplete):
+  - Search products by name, SKU, or barcode
+  - After selection, automatically add to table below
+
+#### Selected Products Table:
+- **Columns**:
+  - Image (thumbnail)
+  - Product Name
+  - Product ID
+  - Barcode Number
+  - Decrease Button (-)
+  - Quantity (Editable number input)
+  - Increase Button (+)
+  - Delete (remove from list)
+
+#### Print Settings:
+- **Select Paper Size** (Radio buttons):
+  - ⦿ Thermal (default for thermal printers)
+  - ⦿ A4 (standard paper)
+
+- **Display Options** (Toggles):
+  - Show store name in printed barcode (toggle ON/OFF)
+  - Show product name in printed barcode (toggle ON/OFF)
+
+- **Show product price in printed barcode** (Checkboxes):
+  - ☐ Retail Price
+  - ☐ Wholesale Price
+  - ☐ Our Price
+  - (Can select one or multiple)
+
+#### Buttons:
+- **Generate**: 
+  - Opens modal with barcode preview
+  - Shows how barcodes will look when printed
+  - Modal has "Print" button to proceed to print
+  
+- **Print**:
+  - Opens browser print dialog / printer settings
+  - Sends to connected printer
+  
+- **Reset**:
+  - Clear all fields and table
+  - Reset to default settings
+
+---
+
+## 20. QR Code Page
+
+### 20.1 Page Overview
+- Interface to print product QR codes
+- **URL**: `/print-qr`
+
+### 20.2 Toolbar Actions
+- **Refresh, Collapse buttons**
+
+### 20.3 Print QR Functionality
+
+#### Product Selection & Table:
+- Same as Print Barcode page (search and select products)
+
+#### Selected Products Table:
+- Same columns as barcode table
+
+#### Print Settings:
+- **Select Paper Size**: Thermal | A4
+
+- **Show product price in printed QR** (Checkboxes):
+  - ☐ Retail Price
+  - ☐ Wholesale Price
+  - ☐ Our Price
+
+#### Buttons:
+- **Generate**: Opens QR code preview modal
+- **Print**: Opens printer settings
+- **Reset**: Clear all fields
+
+---
+
+## 21. Purchases Management (GRN)
+
+### 21.1 Page Overview
+- Interface to manage purchases/goods received notes
+- **URL**: `/purchases`
+
+### 21.2 Toolbar Actions
+- **Add Purchase Button**: Redirects to Add Purchase page
+- **PDF/Excel Download**
+- **Refresh, Collapse buttons**
+
+### 21.3 Search & Filter
+- **Search Bar**: Search by GRN number or supplier name
+- **Payment Method Filter**: Cash | Cheque | Credit
+- **Date Range Filter**: Custom date selection
+
+### 21.4 Add Purchase Functionality
+- **URL**: `/purchases/add`
+
+#### Page Fields:
+
+**Purchase Header**:
+- **Warehouse Name** (Combo box, required): Select destination warehouse
+- **Supplier Name** (Autocomplete, optional): Search and select supplier
+  - Shows supplier details on selection
+
+**Product Selection**:
+- **Product Search Bar** (Autocomplete):
+  - Search products by name, SKU, or barcode
+  - After selection, auto-fill these fields:
+    - Product ID
+    - Product Name
+    - Category
+    - Variation Name (if variable product)
+    - Variation Type (if applicable)
+    - Unit
+    - Current Stock
+    - Cost Price (can be edited)
+
+**Per Product Fields**:
+- **Manufacture Date** (Date picker, optional)
+- **Expiry Date** (Date picker, optional)
+  - Show warning if expiry date < 6 months from now
+- **Quantity** (Number input, required)
+  - Minimum: 1
+- **Net Price** (Auto-calculated: Quantity × Cost Price)
+  - Display only, updates in real-time
+
+**Action Buttons** (Per Product):
+- **Add to List**: Adds product to purchase table below
+- **Reset**: Clears product fields for next entry
+
+---
+
+**Purchase Items Table** (Below):
+- **Columns**:
+  - Product Name with image
+  - Variation Type (if applicable)
+  - Unit
+  - Quantity
+  - Serial Number (editable if needed)
+  - Expiry Date
+  - Cost Price (per unit)
+  - Net Price (total for this line)
+  - Delete (remove from list)
+
+**Purchase Summary** (Right side or bottom):
+- **Total Cost Value**: Sum of all net prices (auto-updates)
+- **Supplier Discount Value** (Optional input):
+  - Can be fixed amount or percentage
+  - Reduces total cost
+- **Total Credit/Debit Value**: Display if credit purchase
+- **Total Net Amount**: Final amount after discount
+
+**Payment Details**:
+- **Select Payment Method** (Radio buttons):
+  - ⦿ **Cash**:
+    - If supplier discount > 0: Payment value = Net amount - discount
+    - If no supplier: Payment value = Net amount
+    - Payment value field: Editable (cannot be zero if supplier exists)
+  
+  - ⦿ **Cheque**:
+    - Same as cash calculation
+    - Additional field: **Cheque Number** (required, visible only if selected)
+  
+  - ⦿ **Credit Supplier**:
+    - Purchase on credit, payment later
+    - Payment value field: Hidden (no payment now)
+    - Creates accounts payable entry
+
+**Final Buttons**:
+- **Save**: Validates and saves purchase
+  - Generates unique GRN number
+  - Updates product stock in warehouse
+  - Creates purchase record and items
+  - Updates supplier balance if credit
+  - Log transaction
+  - Show success message: "Purchase saved successfully. GRN No: [number]"
+  - Option to print GRN receipt
+- **Reset**: Clear all fields and table
+
+---
+
+### 21.5 Purchases Table
+- **Columns**:
+  - GRN Number
+  - Payment Method (badge)
+  - Supplier Name
+  - Total Amount
+  - Date (format: DD MMM YYYY)
+  - Status (badge: Completed, Pending, etc.)
+  - Actions (View)
+
+- **View**:
+  - Opens modal displaying complete GRN details:
+    - GRN number, date, warehouse
+    - Supplier details
+    - All purchased items with details
+    - Payment information
+    - Total amounts
+    - "Print GRN" button
+    - "Download PDF" button
+  - Close button
+
+### 21.6 Pagination
+- Navigate through purchases list
+
+---
+
+## 22. Purchase Returns Management (GRN Returns)
+
+### 22.1 Page Overview
+- Interface to manage purchase returns
+- **URL**: `/purchase-returns`
+
+### 22.2 Toolbar Actions
+- **Add Purchase Return Button**: Opens Add Purchase Return page/modal
+- **PDF/Excel Download**
+- **Refresh, Collapse buttons**
+
+### 22.3 Search & Filter
+- **Search Bar**: Search by return number or supplier name
+- **Status Filter**: Pending | Complete
+- **Custom Date Filter**: Date range selection
+
+### 22.4 Add Purchase Return Functionality
+
+#### Selection Criteria:
+- **Supplier Name** (Autocomplete, required):
+  - After selection, displays available GRNs from this supplier in table
+
+- **Date Filter** (Date selector, optional):
+  - Filter GRNs by date
+  - Updates table to show GRNs on selected date
+
+**Available GRNs Table**:
+- **Columns**:
+  - GRN Number
+  - Payment Method
+  - Total Amount
+  - Date
+  - Actions: **Add**
+
+- **Add Action**:
+  - Clicking "Add" button for a GRN
+  - Fetches all products from that GRN
+  - Populates them in the "Products to Return" table below
+
+**Products to Return Table**:
+- **Columns**:
+  - Product ID
+  - Product Name
+  - Brand
+  - Variation Type (if applicable)
+  - Unit
+  - Available Quantity (from that GRN)
+  - Cost Price (per unit)
+  - Return Quantity (Editable number input)
+    - Validation: Cannot exceed available quantity
+    - Default: 0
+  - Net Price (Auto-calculated: Return Quantity × Cost Price)
+  - Delete (remove from return)
+
+**Return Summary**:
+- **Calculate Net Amount**: Display total return value (sum of net prices)
+- **Total Quantity**: Sum of return quantities
+
+**Return Details**:
+- **Reason** (Combo box, required):
+  - Product Damage or Defective
+  - Product Not as Described or Expected
+  - Expired Product
+  - Other
+
+- **Status** (Combo box, required):
+  - Pending (return initiated, waiting confirmation)
+  - Complete (return processed, stock adjusted)
+
+- **Note** (Text area, optional):
+  - Additional comments or details
+
+**Buttons**:
+- **Save**: Validates and saves purchase return
+  - Creates return record
+  - If status = "Complete":
+    - Reduces stock from warehouse
+    - Updates supplier balance (credit back)
+    - Log transaction
+  - If status = "Pending":
+    - Creates return record only, no stock adjustment
+  - Show success message
+- **Reset**: Clear all fields
+
+---
+
+### 22.5 Purchase Returns Table
+- **Columns**:
+  - Return ID
+  - GRN Number (original purchase)
+  - Supplier Name
+  - Total Amount (return value)
+  - Status (badge: Pending, Complete)
+  - Date
+  - Actions (View, Edit if Pending, Delete if Pending)
+
+- **View**:
+  - Opens modal with all return details
+  - Shows returned items
+  - Reason and notes
+  - If complete, show stock adjustment details
+  - "Print Return Receipt" button
+
+- **Edit** (only if status = Pending):
+  - Opens return form pre-filled
+  - Can modify return quantities, status
+  
+- **Delete** (only if status = Pending):
+  - Confirmation required
+  - Cannot delete completed returns
+
+### 22.6 Pagination
+- Navigate through returns list
+
+---
+
+## 23. Sales Management Page
+
+### 23.1 Page Overview
+- Interface to view and manage sales
+- **URL**: `/sales`
+- **Note**: Sales are created via POS interface, this page is for viewing only
+
+### 23.2 Toolbar Actions
+- **PDF/Excel Download**
+- **Refresh, Collapse buttons**
+
+### 23.3 Search & Filter
+- **Search Bar**: Search by bill number, customer name, or user name (index search)
+- **Payment Method Filter**: Card | Cash | Credit
+- **Custom Date Filter**: Date range selection
+- **Sort Options**: Recent First, Amount (High-Low), Customer Name
+
+### 23.4 Sales Table
+- **Columns**:
+  - Bill No
+  - Customer Name (or "Walk-in" if no customer)
+  - User Name (cashier who processed)
+  - Quantity of Items (total item count)
+  - Payment Method (badge)
+  - Total Price
+  - Date (format: DD MMM YYYY HH:mm)
+  - Actions (View, Print Receipt)
+
+- **View**:
+  - Opens modal displaying complete sale details:
+    - Bill number, date, time
+    - Customer details
+    - Cashier/user details
+    - All sold items with quantities and prices
+    - Subtotal, discount, tax (if applicable), total
+    - Payment method and amount received/change
+    - "Print Receipt" button
+    - "Email Receipt" button (if customer email available)
+    - "Download PDF" button
+  - Close button
+
+- **Print Receipt**:
+  - Opens receipt in print format
+  - Thermal printer format or A4
+  - Auto-print or manual print
+
+### 23.5 Pagination
+- Navigate through sales list
+- Show sales count and total revenue for current view
+
+---
+
+## 24. Sales Returns Management Page
+
+### 24.1 Page Overview
+- Interface to view sales returns/refunds
+- **URL**: `/sales-returns`
+- **Note**: Sales returns are processed via POS, this page is for viewing
+
+### 24.2 Toolbar Actions
+- **PDF/Excel Download**
+- **Refresh, Collapse buttons**
+
+### 24.3 Search & Filter
+- **Search Bar**: Search by refund number or bill number (index search)
+- **Reason Filter**: Poor Quality | Wrong Item | Damage Product | Other
+- **Custom Date Filter**: Date range selection
+
+### 24.4 Sales Returns Table
+- **Columns**:
+  - Refund No
+  - Original Bill No (link to original sale)
+  - User Name (who processed refund)
+  - Quantity (items returned)
+  - Total Price (refund amount)
+  - Reason (badge)
+  - Date (format: DD MMM YYYY HH:mm)
+  - Actions (View)
+
+- **View**:
+  - Opens modal with complete return details:
+    - Refund number and date
+    - Original sale reference
+    - Customer details
+    - User who processed refund
+    - Returned items with quantities
+    - Reason for return
+    - Notes (if any)
+    - Refund amount
+    - Refund method (cash, card, credit note)
+    - "Print Refund Receipt" button
+  - Close button
+
+### 24.5 Pagination
+- Navigate through returns list
+
+---
+
+## 25. Additional Technical Requirements
+
+### 25.1 Security Requirements
+- **Authentication**:
+  - JWT-based authentication
+  - Token expiration: 30 minutes (access token)
+  - Refresh token: 7 days
+  - Store tokens in HttpOnly secure cookies
+  - HTTPS only in production
+
+- **Authorization**:
+  - Role-based access control (RBAC)
+  - Permission checks on every API endpoint
+  - Frontend route guards based on roles
+  - Hide UI elements if user lacks permission
+
+- **Password Security**:
+  - Hash using bcrypt or Argon2
+  - Minimum 8 characters
+  - Enforce complexity rules
+  - Prevent reuse of last 3 passwords
+  - Expire passwords every 90 days (optional)
+
+- **PIN Security** (Kiosk):
+  - Hash using bcrypt
+  - 4-6 digits only
+  - Cannot be sequential or repetitive
+  - Lock account after 5 failed attempts
+  - Rate limiting on PIN endpoint
+
+- **Data Security**:
+  - Encrypt sensitive data at rest
+  - Use parameterized queries (prevent SQL injection)
+  - Sanitize all inputs (prevent XSS)
+  - CORS policy: Whitelist frontend domains only
+  - Rate limiting on all API endpoints
+  - Audit logging for all sensitive operations
+
+### 25.2 Database Architecture (PostgreSQL)
+- **Master Database**: `pos_master`
+  - `public` schema:
+    - `tenants` table
+    - `users` table
+    - `audit_logs` table
+
+- **Tenant Schemas**: `tenant_[shopname]_[uniqueid]`
+  - All POS tables (products, sales, purchases, etc.)
+  - Isolated data per tenant
+  - Dynamic schema selection via middleware
+
+- **Schema Naming Convention**:
+  - Format: `tenant_shopname_uniqueid`
+  - Example: `tenant_johngrocery_a1b2c3d4`
+  - Sanitize shop name (remove special chars, lowercase)
+  - Append unique identifier from tenant UUID
+
+- **Connection Management**:
+  - Use connection pooling
+  - Set `search_path` to tenant schema for each request
+  - Master context for super admin operations
+  - Tenant context for owner/employee operations
+
+### 25.3 Performance Requirements
+- **API Response Time**:
+  - < 200ms for simple queries
+  - < 500ms for complex queries
+  - < 2 seconds for dashboard with charts
+
+- **Database Optimization**:
+  - Index on frequently queried fields (SKU, date, tenant_id)
+  - Implement pagination (max 100 items per page)
+  - Use database views for complex reports
+  - Cache frequently accessed data (categories, brands)
+
+- **Frontend Optimization**:
+  - Lazy loading for routes
+  - Code splitting for large components
+  - Debounce search inputs (300ms)
+  - Virtual scrolling for large lists
+  - Image optimization (compress, lazy load)
+
+### 25.4 Deployment Requirements
+- **Backend** (ASP.NET Core):
+  - Deploy to Digital Ocean Droplet or App Platform
+  - Use Docker container
+  - Environment-based configuration
+  - Automated deployment via CI/CD (GitHub Actions)
+
+- **Frontend** (React.js):
+  - Deploy to CDN or static hosting
+  - Build optimization (minification, tree shaking)
+  - Service worker for offline support (optional)
+
+- **Database** (PostgreSQL):
+  - Digital Ocean Managed PostgreSQL
+  - Automated backups (daily)
+  - Point-in-time recovery enabled
+  - SSL/TLS enforced
+
+- **Secrets Management**:
+  - DO NOT use .env for super admin credentials
+  - Use Azure Key Vault, AWS Secrets Manager, or HashiCorp Vault
+  - Environment variables for non-sensitive config
+  - Rotate secrets regularly
+
+### 25.5 Monitoring & Logging
+- **Application Logging**:
+  - Use Serilog or NLog
+  - Log levels: Info, Warning, Error, Critical
+  - Log to file and external service (ELK, Seq)
+  - Include request ID for tracing
+
+- **Audit Trail**:
+  - Log all CRUD operations
+  - Log authentication events
+  - Log permission changes
+  - Store: User, Action, Timestamp, IP, Old Value, New Value
+
+- **Error Tracking**:
+  - Implement global error handling
+  - Report errors to monitoring service (Sentry, Raygun)
+  - Display user-friendly error messages
+  - Log full stack trace for debugging
+
+- **Performance Monitoring**:
+  - Track API response times
+  - Monitor database query performance
+  - Alert on high error rates
+  - Dashboard for system health
+
+### 25.6 Backup & Recovery
+- **Database Backups**:
+  - Automated daily backups
+  - Retention: 30 days
+  - Test restore process monthly
+  - Store backups in separate location
+
+- **Data Export**:
+  - Owners can export their data (CSV, Excel, PDF)
+  - Super admin can export entire database
+  - Comply with data portability regulations
+
+### 25.7 Compliance & Legal
+- **Data Protection**:
+  - GDPR compliance (if applicable)
+  - Right to access, correct, delete data
+  - Data retention policies
+  - Privacy policy and terms of service
+
+- **Financial Compliance**:
+  - Accurate sales and tax reporting
+  - Audit trail for all financial transactions
+  - Support for tax regulations (VAT, GST)
+
+---
+
+## 26. Future Enhancements (Phase 2)
+
+- Mobile app (React Native)
+- Barcode scanner integration
+- Receipt printer integration
+- Customer loyalty program
+- Multi-currency support
+- Advanced analytics and forecasting
+- Integrations (accounting software, e-commerce)
+- Subscription/billing management
+- Multi-language support
+- Offline POS mode
+
+---
+
+## Summary of Major Changes
+
+1. ✅ **Multi-Tenant Architecture**: Schema-per-tenant approach
+2. ✅ **Super Admin Portal**: Registration approval, tenant management
+3. ✅ **Owner Registration Workflow**: With pending/approved/rejected states
+4. ✅ **Enhanced Authentication**: Email + Google OAuth + Kiosk PIN login
+5. ✅ **Kiosk Mode**: Employee login with User ID and PIN
+6. ✅ **Role-Based Permissions**: Granular permission system
+7. ✅ **Employee Management**: Create employees with kiosk access
+8. ✅ **Session Management**: Track employee shifts and activity
+9. ✅ **Security Enhancements**: Password policies, PIN security, rate limiting
+10. ✅ **Audit Logging**: Complete audit trail for compliance
+11. ✅ **Database Strategy**: PostgreSQL schema-per-tenant implementation
+
+---
+
+**Document Version**: 2.0
+**Last Updated**: [Current Date]
+**Prepared For**: POS System Development (ASP.NET Core + React.js + PostgreSQL)

@@ -1,44 +1,57 @@
 import React, { useState } from 'react';
-import { 
-  Form, 
-  Input, 
-  Button, 
-  Typography, 
-  Card, 
-  message, 
-  theme 
+import {
+  Form,
+  Input,
+  Button,
+  Typography,
+  Card,
+  message,
+  theme,
+  Alert
 } from 'antd';
 import { LockOutlined } from '@ant-design/icons';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { authService } from '../../services/auth/authService';
+import PasswordStrengthMeter from '../../components/auth/PasswordStrengthMeter';
 
 const { Title, Text } = Typography;
 
 const ResetPassword: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const token = searchParams.get('token');
+    const resetToken = searchParams.get('token');
     const [loading, setLoading] = useState(false);
     const { token: themeToken } = theme.useToken();
+    const [password, setPassword] = useState('');
+    const [tokenError, setTokenError] = useState<string | null>(null);
 
     const onFinish = async (values: any) => {
-        if (!token) {
-            message.error('Invalid or missing reset token.');
+        if (!resetToken) {
+            setTokenError('Invalid or missing reset token. Please request a new password reset link.');
             return;
         }
 
         setLoading(true);
+        setTokenError(null);
         try {
             await authService.resetPassword({
-                token: token,
-                password: values.password
+                token: resetToken,
+                password: values.password,
+                confirm_password: values.confirm
             });
-            message.success('Password reset successful! login with new password.');
+            message.success('Password reset successful! Please login with your new password.');
             navigate('/login');
         } catch (error: any) {
             console.error('Reset Password Failed:', error);
-            const errorMsg = error.response?.data?.message || 'Failed to reset password';
-            message.error(errorMsg);
+            const errorData = error.response?.data;
+            const errorMsg = errorData?.message || 'Failed to reset password';
+
+            // Check for token-related errors
+            if (errorMsg.toLowerCase().includes('expired') || errorMsg.toLowerCase().includes('invalid token')) {
+                setTokenError('Your password reset link has expired or is invalid. Please request a new one.');
+            } else {
+                message.error(errorMsg);
+            }
         } finally {
             setLoading(false);
         }
@@ -66,6 +79,38 @@ const ResetPassword: React.FC = () => {
                     <Text type="secondary">Enter your new password below.</Text>
                 </div>
 
+                {/* Token Error Alert */}
+                {tokenError && (
+                    <Alert
+                        message="Reset Link Invalid"
+                        description={
+                            <div>
+                                <p>{tokenError}</p>
+                                <Link to="/forgot-password">Request a new reset link</Link>
+                            </div>
+                        }
+                        type="error"
+                        showIcon
+                        style={{ marginBottom: 24 }}
+                    />
+                )}
+
+                {/* No Token Warning */}
+                {!resetToken && !tokenError && (
+                    <Alert
+                        message="Missing Reset Token"
+                        description={
+                            <div>
+                                <p>No reset token found. Please use the link from your email.</p>
+                                <Link to="/forgot-password">Request a new reset link</Link>
+                            </div>
+                        }
+                        type="warning"
+                        showIcon
+                        style={{ marginBottom: 24 }}
+                    />
+                )}
+
                 <Form
                     name="reset_password"
                     onFinish={onFinish}
@@ -76,17 +121,27 @@ const ResetPassword: React.FC = () => {
                         name="password"
                         rules={[
                             { required: true, message: 'Please input your password!' },
-                            { min: 8, message: 'Password must be at least 8 characters' }
+                            { min: 8, message: 'Password must be at least 8 characters' },
+                            {
+                                pattern: /(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9])/,
+                                message: 'Must include uppercase, lowercase, number, and special character'
+                            }
                         ]}
                         hasFeedback
                     >
-                        <Input.Password prefix={<LockOutlined />} placeholder="New Password" />
+                        <Input.Password
+                            prefix={<LockOutlined />}
+                            placeholder="New Password"
+                            onChange={(e) => setPassword(e.target.value)}
+                        />
                     </Form.Item>
+                    <PasswordStrengthMeter password={password} />
 
                     <Form.Item
                         name="confirm"
                         dependencies={['password']}
                         hasFeedback
+                        style={{ marginTop: 16 }}
                         rules={[
                             { required: true, message: 'Please confirm your password!' },
                             ({ getFieldValue }) => ({
@@ -103,10 +158,20 @@ const ResetPassword: React.FC = () => {
                     </Form.Item>
 
                     <Form.Item>
-                        <Button type="primary" htmlType="submit" block loading={loading}>
+                        <Button
+                            type="primary"
+                            htmlType="submit"
+                            block
+                            loading={loading}
+                            disabled={!resetToken}
+                        >
                             Reset Password
                         </Button>
                     </Form.Item>
+
+                    <div style={{ textAlign: 'center' }}>
+                        <Link to="/login">Back to Login</Link>
+                    </div>
                 </Form>
             </Card>
         </div>

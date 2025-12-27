@@ -11,7 +11,8 @@ import type {
 import type { 
   KioskLoginRequest, 
   KioskUserInfo, 
-  KioskLoginResponse 
+  KioskLoginResponse,
+  KioskEndShiftResponse
 } from '../types/auth/kiosk.types';
 import type { 
   SuperAdminLoginRequest, 
@@ -25,14 +26,17 @@ interface AuthState {
   isLoading: boolean;
   role: string | null;
   isKiosk: boolean;
+  mustChangePassword: boolean;
 }
 
 interface AuthContextType extends AuthState {
-  login: (data: LoginRequest) => Promise<void>;
+  login: (data: LoginRequest) => Promise<LoginResponse | void>;
   register: (data: RegisterRequest) => Promise<void>;
   superAdminLogin: (data: SuperAdminLoginRequest) => Promise<void>;
   kioskLogin: (data: KioskLoginRequest) => Promise<void>;
+
   logout: () => Promise<void>;
+  endShift: () => Promise<KioskEndShiftResponse | void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,6 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading: true,
     role: null,
     isKiosk: false,
+    mustChangePassword: false,
   });
 
   useEffect(() => {
@@ -97,6 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             isLoading: false,
             role: decoded.role || null, // Assuming role is in token claims
             isKiosk: isKiosk,
+            mustChangePassword: false,
         });
 
       } catch (error) {
@@ -112,6 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await authService.login(data);
       handleLoginSuccess(response);
+      return response;
     } catch (error) {
       throw error;
     } finally {
@@ -157,6 +164,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const endShift = async () => {
+      try {
+          const summary = await authService.endShift();
+          // After ending shift, we logout
+          await logout();
+          return summary;
+      } catch (error) {
+          throw error;
+      }
+  };
+
   const logout = async () => {
     try {
       await authService.logout();
@@ -174,6 +192,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             isLoading: false,
             role: null,
             isKiosk: false,
+            mustChangePassword: false,
         });
         // Redirect to login if needed, or let protected routes handle it
         window.location.href = '/login';
@@ -182,6 +201,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Helper to handle state updates after login
   const handleLoginSuccess = (response: LoginResponse) => {
+    // Check Tenant Status if present (Owner/Admin)
+    if (response.tenant) {
+      const status = response.tenant.registration_status?.toLowerCase();
+      // Assume 'active' is the only valid state for login, unless we allow 'pending' access?
+      // Requirement: "display specific messages for: Pending, Rejected, Suspended"
+      // This implies they should NOT be logged in, but shown a message.
+      const validStatuses = ['active'];
+      if (status && !validStatuses.includes(status)) {
+        let errorMsg = 'Your account is currently inactive.';
+        if (status === 'pending') {
+            errorMsg = 'Your account is awaiting admin approval. You will be notified via email once approved.';
+        } else if (status === 'rejected') {
+            errorMsg = 'Your registration was not approved. Please contact support for more information.';
+        } else if (status === 'suspended') {
+             errorMsg = 'Your account has been temporarily suspended. Please contact support.';
+        }
+        throw new Error(errorMsg);
+      }
+    }
     localStorage.setItem('token', response.access_token);
     localStorage.setItem('user', JSON.stringify(response.user));
     if (response.tenant) {
@@ -196,6 +234,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading: false,
         role: response.user.user_type, // or derive from claims
         isKiosk: false,
+        mustChangePassword: response.must_change_password,
     });
   };
 
@@ -211,6 +250,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           isLoading: false,
           role: 'super_admin',
           isKiosk: false,
+          mustChangePassword: false, // Super admin specific?
       });
   };
 
@@ -227,11 +267,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           isLoading: false,
           role: response.user.role || 'employee',
           isKiosk: true,
+          mustChangePassword: response.must_change_pin, // Map pin change to this? Or separate? 
+          // Kiosk types has must_change_pin. Let's map it for consistency if we want global "Force Change" state
       });
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, login, register, superAdminLogin, kioskLogin, logout }}>
+    <AuthContext.Provider value={{ ...state, login, register, superAdminLogin, kioskLogin, logout, endShift }}>
       {children}
     </AuthContext.Provider>
   );

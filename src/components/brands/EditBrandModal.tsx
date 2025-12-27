@@ -98,7 +98,7 @@ const EditBrandModal: React.FC<EditBrandModalProps> = ({
       mapDataToForm={mapDataToForm}
       submitButtonText="Update Brand"
     >
-      {(form: FormInstance, data: Brand | null) => (
+      {(_form: FormInstance, _data: Brand | null) => (
         <>
           <Form.Item label="Brand Image" name="image">
             <Dragger
