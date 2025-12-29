@@ -11,7 +11,7 @@ import PermissionRoute from './PermissionRoute';
 // Public Pages
 import Login from '../pages/public/Login';
 import Signup from '../pages/public/Signup';
-import SuperAdminLogin from '../pages/public/SuperAdminLogin';
+import SuperAdminLogin from '../pages/superadmin/SuperAdminLogin';
 import ForgotPassword from '../pages/public/ForgotPassword';
 import ResetPassword from '../pages/public/ResetPassword';
 import ChangePassword from '../pages/public/ChangePassword';

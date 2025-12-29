@@ -1,22 +1,12 @@
 import React, { useState } from 'react';
-import {
-  Form,
-  Input,
-  Button,
-  Checkbox,
-  Typography,
-  Card,
-  message,
-  Divider,
-  theme,
-  Alert
-} from 'antd';
-import { UserOutlined, LockOutlined, GoogleOutlined, ShopOutlined } from '@ant-design/icons';
-import { Link, useNavigate } from 'react-router-dom';
+import { Typography, Card, message, theme, Alert } from 'antd';
+import { ShopOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import type { LoginRequest, AccountStatus } from '../../types/auth/auth.types';
 import { API_URL } from '../../utils/api';
 import { useApiError } from '../../hooks/useApiError';
+import LoginForm from '../../components/auth/LoginForm';
 
 const { Title, Text } = Typography;
 
@@ -51,18 +41,15 @@ const Login: React.FC = () => {
     const { token } = theme.useToken();
     const [messageApi, contextHolder] = message.useMessage();
     const [statusAlert, setStatusAlert] = useState<{ type: 'warning' | 'error' | 'info'; message: string; reason?: string } | null>(null);
+    const [formError, setFormError] = useState<string | null>(null);
     const apiError = useApiError();
 
-    const onFinish = async (values: any) => {
+    const handleSubmit = async (values: LoginRequest) => {
         setLoading(true);
         setStatusAlert(null);
+        setFormError(null);
         try {
-            const loginData: LoginRequest = {
-                email: values.email,
-                password: values.password,
-                remember_me: values.remember,
-            };
-            const response = await login(loginData);
+            const response = await login(values);
             messageApi.success('Login Successful');
 
             if (response && 'must_change_password' in response && response.must_change_password) {
@@ -70,12 +57,13 @@ const Login: React.FC = () => {
             } else {
                 navigate('/dashboard');
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Login Failed:', error);
+            const err = error as { response?: { data?: { message?: string; status?: AccountStatus; rejection_reason?: string } }; message?: string };
 
             // Check for account status in error response
-            const errorData = error.response?.data;
-            const status = errorData?.status as AccountStatus | undefined;
+            const errorData = err.response?.data;
+            const status = errorData?.status;
             const rejectionReason = errorData?.rejection_reason;
 
             if (status && STATUS_MESSAGES[status]) {
@@ -94,38 +82,42 @@ const Login: React.FC = () => {
                 });
             } else {
                 // Regular error (invalid credentials, etc.)
-                const errorMsg = error.message || errorData?.message || 'Invalid email or password';
-                messageApi.error(errorMsg);
+                const errorMsg = err.message || errorData?.message || 'Invalid email or password';
+                setFormError(errorMsg);
             }
         } finally {
             setLoading(false);
         }
     };
 
+    const handleGoogleLogin = () => {
+        window.location.href = `${API_URL}/auth/google/login`;
+    };
+
     return (
-        <div style={{ 
-            minHeight: '100vh', 
-            background: token.colorBgLayout, 
-            display: 'flex', 
-            justifyContent: 'center', 
+        <div style={{
+            minHeight: '100vh',
+            background: token.colorBgLayout,
+            display: 'flex',
+            justifyContent: 'center',
             alignItems: 'center',
             padding: '24px'
         }}>
             {contextHolder}
-            <Card 
-                style={{ 
-                    width: '100%', 
-                    maxWidth: 420, 
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)' 
+            <Card
+                style={{
+                    width: '100%',
+                    maxWidth: 420,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
                 }}
                 variant="borderless"
             >
-                 <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                    <div style={{ 
-                        height: 48, 
-                        width: 48, 
-                        background: token.colorPrimary, 
-                        borderRadius: 8, 
+                <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                    <div style={{
+                        height: 48,
+                        width: 48,
+                        background: token.colorPrimary,
+                        borderRadius: 8,
                         margin: '0 auto 16px',
                         display: 'flex',
                         alignItems: 'center',
@@ -161,58 +153,12 @@ const Login: React.FC = () => {
                     />
                 )}
 
-                <Form
-                    name="login"
-                    initialValues={{ remember: true }}
-                    onFinish={onFinish}
-                    layout="vertical"
-                    size="large"
-                >
-                    <Form.Item
-                        name="email"
-                        rules={[
-                            { required: true, message: 'Please input your Email!' }, 
-                            { type: 'email', message: 'Invalid Email Format'}
-                        ]}
-                    >
-                        <Input prefix={<UserOutlined />} placeholder="Email" />
-                    </Form.Item>
-
-                    <Form.Item
-                        name="password"
-                        rules={[{ required: true, message: 'Please input your Password!' }]}
-                    >
-                        <Input.Password prefix={<LockOutlined />} placeholder="Password" />
-                    </Form.Item>
-
-                    <Form.Item>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Form.Item name="remember" valuePropName="checked" noStyle>
-                                <Checkbox>Remember me</Checkbox>
-                            </Form.Item>
-                            <Link to="/forgot-password">Forgot password?</Link>
-                        </div>
-                    </Form.Item>
-
-                    <Form.Item>
-                        <Button type="primary" htmlType="submit" block loading={loading}>
-                            Log in
-                        </Button>
-                    </Form.Item>
-                    
-                    <Divider plain><Text type="secondary" style={{ fontSize: 12 }}>OR CONTINUE WITH</Text></Divider>
-
-                     <Form.Item>
-                        <Button block icon={<GoogleOutlined />} onClick={() => window.location.href = `${API_URL}/auth/google/login`}>
-                            Google
-                        </Button>
-                    </Form.Item>
-
-                    <div style={{ textAlign: 'center' }}>
-                         <Text type="secondary">Don't have an account? </Text>
-                        <Link to="/register">Register now</Link>
-                    </div>
-                </Form>
+                <LoginForm
+                    onSubmit={handleSubmit}
+                    onGoogleLogin={handleGoogleLogin}
+                    loading={loading}
+                    error={formError}
+                />
             </Card>
         </div>
     );

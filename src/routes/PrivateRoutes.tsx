@@ -1,7 +1,8 @@
 import React from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Spin } from 'antd';
+import AdminLayout from '../components/common/Layout/AdminLayout';
 
 const PrivateRoutes: React.FC = () => {
     const { isAuthenticated, isLoading, isKiosk, mustChangePassword, role } = useAuth();
@@ -30,7 +31,7 @@ const PrivateRoutes: React.FC = () => {
          return <Navigate to="/kiosk/dashboard" replace />;
     }
 
-    return <Outlet />;
+    return <AdminLayout />;
 };
 
 export default PrivateRoutes;
