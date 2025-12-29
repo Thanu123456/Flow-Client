@@ -9,7 +9,7 @@ import type {
 export const unitService = {
     // Get All Units
     getUnits: async (params: UnitPaginationParams): Promise<UnitResponse> => {
-        const response = await axiosInstance.get("/units", { params });
+        const response = await axiosInstance.get("/admin/units", { params });
 
         // Assuming the backend returns an object with a `data` array and a `total` count
         const { data, total = response.data.length } = response.data;
@@ -25,13 +25,13 @@ export const unitService = {
 
     // Get a specific Unit by ID
     getUnitById: async (id: string): Promise<Unit> => {
-        const response = await axiosInstance.get(`/units/${id}`);
+        const response = await axiosInstance.get(`/admin/units/${id}`);
         return response.data;
     },
 
     // Create a New Unit
     createUnit: async (unitData: UnitFormData): Promise<Unit> => {
-        const response = await axiosInstance.post("/units", unitData, {
+        const response = await axiosInstance.post("/admin/units", unitData, {
             headers: {
                 "Content-Type": "application/json",
             },
@@ -45,7 +45,7 @@ export const unitService = {
         id: string,
         unitData: Partial<UnitFormData>
     ): Promise<Unit> => {
-        const response = await axiosInstance.put(`/units/${id}`, unitData, {
+        const response = await axiosInstance.put(`/admin/units/${id}`, unitData, {
             headers: {
                 "Content-Type": "application/json",
             },
@@ -56,12 +56,12 @@ export const unitService = {
 
     // Delete a Unit
     deleteUnit: async (id: string): Promise<void> => {
-        await axiosInstance.delete(`/units/${id}`);
+        await axiosInstance.delete(`/admin/units/${id}`);
     },
 
     // Export units to PDF
     exportToPDF: async (params: UnitPaginationParams): Promise<Blob> => {
-        const response = await axiosInstance.get("/units/export/pdf", {
+        const response = await axiosInstance.get("/admin/units/export/pdf", {
             params,
             responseType: "arraybuffer",
         });
@@ -70,7 +70,7 @@ export const unitService = {
 
     // Export units to Excel
     exportToExcel: async (params: UnitPaginationParams): Promise<Blob> => {
-        const response = await axiosInstance.get("/units/export/excel", {
+        const response = await axiosInstance.get("/admin/units/export/excel", {
             params,
             responseType: "arraybuffer",
         });

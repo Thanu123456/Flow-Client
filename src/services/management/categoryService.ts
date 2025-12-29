@@ -9,7 +9,7 @@ import type {
 export const categoryService = {
   // Get all categories
   getCategories: async (params: CategoryPaginationParams) => {
-    const response = await axiosInstance.get("/categories", { params });
+    const response = await axiosInstance.get("/admin/categories", { params });
 
     const list: Category[] = (response.data.data ?? response.data).map(
       (c: any) => ({
@@ -30,7 +30,7 @@ export const categoryService = {
 
   // Get category by ID
   getCategoryById: async (id: string): Promise<Category> => {
-    const response = await axiosInstance.get(`/categories/${id}`);
+    const response = await axiosInstance.get(`/admin/categories/${id}`);
     return response.data;
   },
 
@@ -40,7 +40,7 @@ export const categoryService = {
       ...data,
     };
 
-    const response = await axiosInstance.post("/categories", payload);
+    const response = await axiosInstance.post("/admin/categories", payload);
     return response.data;
   },
 
@@ -49,13 +49,13 @@ export const categoryService = {
     id: string,
     data: Partial<CategoryFormData>
   ): Promise<Category> => {
-    const response = await axiosInstance.put(`/categories/${id}`, data);
+    const response = await axiosInstance.put(`/admin/categories/${id}`, data);
     return response.data;
   },
 
   // Delete category
   deleteCategory: async (id: string, deleteData: DeleteCategoryData) => {
-    const response = await axiosInstance.delete(`/categories/${id}`, {
+    const response = await axiosInstance.delete(`/admin/categories/${id}`, {
       data: deleteData,
     });
     return response.data;
@@ -63,7 +63,7 @@ export const categoryService = {
 
   // Export to PDF
   exportToPDF: async (params: CategoryPaginationParams): Promise<Blob> => {
-    const response = await axiosInstance.get(`/categories/export/pdf`, {
+    const response = await axiosInstance.get(`/admin/categories/export/pdf`, {
       params,
       responseType: "arraybuffer",
     });
@@ -72,7 +72,7 @@ export const categoryService = {
 
   // Export to Excel
   exportToExcel: async (params: CategoryPaginationParams): Promise<Blob> => {
-    const response = await axiosInstance.get(`/categories/export/excel`, {
+    const response = await axiosInstance.get(`/admin/categories/export/excel`, {
       params,
       responseType: "arraybuffer",
     });
@@ -83,7 +83,7 @@ export const categoryService = {
 
   // Generate category code
   generateCategoryCode: async (): Promise<string> => {
-    const response = await axiosInstance.get(`/categories/generate-code`);
+    const response = await axiosInstance.get(`/admin/categories/generate-code`);
     return response.data.code;
   },
 };

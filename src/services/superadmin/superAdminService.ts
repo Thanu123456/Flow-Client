@@ -1,9 +1,9 @@
-import api from '../api';
-import type { 
-  DashboardStats, 
-  Registration, 
-  Tenant, 
-  AuditLog 
+import api from '../../utils/api';
+import type {
+  DashboardStats,
+  Registration,
+  Tenant,
+  AuditLog
 } from '../../types/auth/superadmin.types';
 
 export const superAdminService = {

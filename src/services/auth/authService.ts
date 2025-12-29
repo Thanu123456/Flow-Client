@@ -29,24 +29,27 @@ export const authService = {
     return response.data.data;
   },
 
-  // Super Admin Login
+  // Super Admin Login - Backend: POST /superadmin/login
   async superAdminLogin(data: SuperAdminLoginRequest): Promise<SuperAdminLoginResponse> {
-    const response = await api.post<{ data: SuperAdminLoginResponse }>('/auth/super-admin-login', data);
+    const response = await api.post<{ data: SuperAdminLoginResponse }>('/superadmin/login', data);
     return response.data.data;
   },
 
-
-
-  // Kiosk Login
+  // Kiosk Login - Backend: POST /kiosk/login
   async kioskLogin(data: KioskLoginRequest): Promise<KioskLoginResponse> {
-    const response = await api.post<{ data: KioskLoginResponse }>('/auth/kiosk-login', data);
+    const response = await api.post<{ data: KioskLoginResponse }>('/kiosk/login', data);
     return response.data.data;
   },
 
-  // Kiosk End Shift
+  // Kiosk End Shift - Backend: POST /kiosk/end-shift
   async endShift(): Promise<KioskEndShiftResponse> {
-    const response = await api.post<{ data: KioskEndShiftResponse }>('/auth/kiosk/end-shift');
+    const response = await api.post<{ data: KioskEndShiftResponse }>('/kiosk/end-shift');
     return response.data.data;
+  },
+
+  // Kiosk Logout - Backend: POST /kiosk/logout
+  async kioskLogout(): Promise<void> {
+    await api.post('/kiosk/logout');
   },
 
   // Refresh Token

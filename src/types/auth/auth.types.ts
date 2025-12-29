@@ -38,6 +38,9 @@ export interface UserInfo {
   is_super_admin: boolean;
   kiosk_enabled: boolean;
   last_login_at?: string;
+  role_id?: string;
+  role_name?: string;
+  permissions?: string[];
 }
 
 export interface TenantInfo {

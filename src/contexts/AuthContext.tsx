@@ -72,45 +72,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const currentTime = Date.now() / 1000;
 
         if (decoded.exp < currentTime) {
-          // Token expired, try refresh or logout
-          // For now, simpler logout, but interceptor handles refresh logic usually.
-          // If we rely on interceptor to refresh, we might not need to check exp here strictly
-          // unless checking for initial valid session.
-          // Let's rely on stored user info or re-fetch profile if needed.
-          // Since we don't store full user object in localStorage usually, let's decode what we can
-          // or assume we need to re-fetch "me" if API supports it.
-          // Given the requirements, we'll try to restore state from what we have.
-          
-          // However, for strictness:
-          logout();
+          // Token expired, clear state and let user re-login
+          clearAuthState();
           return;
         }
 
-        // We should ideally fetch current user details here
-        // But for now, let's trust we are authenticated if token exists and valid
-        // We might need to store user details in localStorage too to persist across reloads
-        // OR have a /me endpoint. The requirements didn't explicitly detail /me but implied token claims.
-        
         const storedUser = localStorage.getItem('user');
         const storedTenant = localStorage.getItem('tenant');
         const isKiosk = localStorage.getItem('isKiosk') === 'true';
+        const storedRole = localStorage.getItem('role');
+        const storedMustChangePassword = localStorage.getItem('mustChangePassword') === 'true';
+
+        // Determine role from stored value, token claims, or user object
+        let role = storedRole || decoded.role || null;
+        const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+
+        // If role not found, derive from user object
+        if (!role && parsedUser) {
+          if (parsedUser.is_super_admin) {
+            role = 'super_admin';
+          } else if (parsedUser.user_type) {
+            role = parsedUser.user_type;
+          }
+        }
 
         setState({
-            user: storedUser ? JSON.parse(storedUser) : null,
+            user: parsedUser,
             tenant: storedTenant ? JSON.parse(storedTenant) : null,
             isAuthenticated: true,
             isLoading: false,
-            role: decoded.role || null, // Assuming role is in token claims
+            role: role,
             isKiosk: isKiosk,
-            mustChangePassword: false,
+            mustChangePassword: storedMustChangePassword,
         });
 
       } catch (error) {
-        logout();
+        clearAuthState();
       }
     } else {
       setState(prev => ({ ...prev, isLoading: false }));
     }
+  };
+
+  const clearAuthState = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('tenant');
+    localStorage.removeItem('isKiosk');
+    localStorage.removeItem('role');
+    localStorage.removeItem('mustChangePassword');
+    setState({
+      user: null,
+      tenant: null,
+      isAuthenticated: false,
+      isLoading: false,
+      role: null,
+      isKiosk: false,
+      mustChangePassword: false,
+    });
   };
 
   const login = async (data: LoginRequest) => {
@@ -176,26 +195,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    // Capture current role and isKiosk before clearing
+    const currentRole = state.role;
+    const wasKiosk = state.isKiosk;
+
     try {
       await authService.logout();
     } catch (error) {
         console.error("Logout error", error);
     } finally {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('tenant');
-        localStorage.removeItem('isKiosk');
-        setState({
-            user: null,
-            tenant: null,
-            isAuthenticated: false,
-            isLoading: false,
-            role: null,
-            isKiosk: false,
-            mustChangePassword: false,
-        });
-        // Redirect to login if needed, or let protected routes handle it
-        window.location.href = '/login';
+        clearAuthState();
+
+        // Redirect based on user type
+        if (currentRole === 'super_admin') {
+          window.location.href = '/superadmin/login';
+        } else if (wasKiosk) {
+          window.location.href = '/kiosk/login';
+        } else {
+          window.location.href = '/login';
+        }
     }
   };
 
@@ -204,9 +222,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check Tenant Status if present (Owner/Admin)
     if (response.tenant) {
       const status = response.tenant.registration_status?.toLowerCase();
-      // Assume 'active' is the only valid state for login, unless we allow 'pending' access?
-      // Requirement: "display specific messages for: Pending, Rejected, Suspended"
-      // This implies they should NOT be logged in, but shown a message.
       const validStatuses = ['active'];
       if (status && !validStatuses.includes(status)) {
         let errorMsg = 'Your account is currently inactive.';
@@ -220,19 +235,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error(errorMsg);
       }
     }
+
+    // Determine role
+    const role = response.user.is_super_admin ? 'super_admin' : response.user.user_type;
+
+    // Store in localStorage
     localStorage.setItem('token', response.access_token);
     localStorage.setItem('user', JSON.stringify(response.user));
+    localStorage.setItem('role', role);
+    localStorage.setItem('mustChangePassword', String(response.must_change_password));
+    localStorage.setItem('isKiosk', 'false');
     if (response.tenant) {
         localStorage.setItem('tenant', JSON.stringify(response.tenant));
     }
-    localStorage.setItem('isKiosk', 'false');
 
     setState({
         user: response.user,
         tenant: response.tenant || null,
         isAuthenticated: true,
         isLoading: false,
-        role: response.user.user_type, // or derive from claims
+        role: role,
         isKiosk: false,
         mustChangePassword: response.must_change_password,
     });
@@ -241,23 +263,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const handleSuperAdminLoginSuccess = (response: SuperAdminLoginResponse) => {
       localStorage.setItem('token', response.access_token);
       localStorage.setItem('user', JSON.stringify(response.user));
+      localStorage.setItem('role', 'super_admin');
+      localStorage.setItem('mustChangePassword', String(response.must_change_password));
       localStorage.setItem('isKiosk', 'false');
 
       setState({
           user: response.user,
-          tenant: null, // SuperAdmin doesn't start with a specific tenant usually
+          tenant: null, // SuperAdmin doesn't have a specific tenant
           isAuthenticated: true,
           isLoading: false,
           role: 'super_admin',
           isKiosk: false,
-          mustChangePassword: false, // Super admin specific?
+          mustChangePassword: response.must_change_password,
       });
   };
 
   const handleKioskLoginSuccess = (response: KioskLoginResponse) => {
+      const role = response.user.role || 'employee';
+
       localStorage.setItem('token', response.access_token);
       localStorage.setItem('user', JSON.stringify(response.user));
       localStorage.setItem('tenant', JSON.stringify(response.tenant));
+      localStorage.setItem('role', role);
+      localStorage.setItem('mustChangePassword', String(response.must_change_pin));
       localStorage.setItem('isKiosk', 'true');
 
       setState({
@@ -265,10 +293,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           tenant: response.tenant,
           isAuthenticated: true,
           isLoading: false,
-          role: response.user.role || 'employee',
+          role: role,
           isKiosk: true,
-          mustChangePassword: response.must_change_pin, // Map pin change to this? Or separate? 
-          // Kiosk types has must_change_pin. Let's map it for consistency if we want global "Force Change" state
+          mustChangePassword: response.must_change_pin,
       });
   };
 

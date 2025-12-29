@@ -9,7 +9,7 @@ import type {
 export const brandService = {
   // Get All Brands
   getBrands: async (params: BrandPaginationParams): Promise<BrandResponse> => {
-    const response = await axiosInstance.get("/brands", { params });
+    const response = await axiosInstance.get("/admin/brands", { params });
 
     const data: Brand[] = response.data.map((b: any) => ({
       ...b,
@@ -30,7 +30,7 @@ export const brandService = {
   // Get a specific Brand by ID
 
   getBrandById: async (id: string): Promise<Brand> => {
-    const response = await axiosInstance.get(`/brands/${id}`);
+    const response = await axiosInstance.get(`/admin/brands/${id}`);
 
     return {
       ...response.data,
@@ -48,7 +48,7 @@ export const brandService = {
       imageBase64: stripBase64Prefix(brandData.imageUrl),
     };
 
-    const response = await axiosInstance.post("/brands", payload, {
+    const response = await axiosInstance.post("/admin/brands", payload, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -73,7 +73,7 @@ export const brandService = {
       imageBase64: stripBase64Prefix(brandData.imageUrl),
     };
 
-    const response = await axiosInstance.put(`/brands/${id}`, payload, {
+    const response = await axiosInstance.put(`/admin/brands/${id}`, payload, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -88,13 +88,13 @@ export const brandService = {
   // Delete a Brand
 
   deleteBrand: async (id: string): Promise<void> => {
-    await axiosInstance.delete(`/brands/${id}`);
+    await axiosInstance.delete(`/admin/brands/${id}`);
   },
 
   // Export brands to PDF
 
   exportToPDF: async (params: BrandPaginationParams): Promise<Blob> => {
-    const response = await axiosInstance.get("/brands/export/pdf", {
+    const response = await axiosInstance.get("/admin/brands/export/pdf", {
       params,
       responseType: "arraybuffer",
     });
@@ -104,7 +104,7 @@ export const brandService = {
   // Export brands to Excel
 
   exportToExcel: async (params: BrandPaginationParams): Promise<Blob> => {
-    const response = await axiosInstance.get("/brands/export/excel", {
+    const response = await axiosInstance.get("/admin/brands/export/excel", {
       params,
       responseType: "arraybuffer",
     });

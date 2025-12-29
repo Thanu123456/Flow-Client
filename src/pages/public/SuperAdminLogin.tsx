@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { 
-  Form, 
-  Input, 
-  Button, 
-  Checkbox, 
-  Typography, 
-  Card, 
-  message 
+import {
+  Form,
+  Input,
+  Button,
+  Checkbox,
+  Typography,
+  Card,
+  message,
+  Alert
 } from 'antd';
 import { UserOutlined, LockOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useApiError } from '../../hooks/useApiError';
 import type { SuperAdminLoginRequest } from '../../types/auth/superadmin.types';
 
 const { Title, Text } = Typography;
@@ -20,6 +22,7 @@ const SuperAdminLogin: React.FC = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [messageApi, contextHolder] = message.useMessage();
+    const apiError = useApiError();
 
     const onFinish = async (values: any) => {
         setLoading(true);
@@ -28,14 +31,17 @@ const SuperAdminLogin: React.FC = () => {
                 email: values.email,
                 password: values.password,
                 remember_me: values.remember,
-                // mfa_code: values.mfa_code // Implement MFA field if enabled
+                mfa_code: values.mfa_code
             };
             await superAdminLogin(loginData);
             messageApi.success('Super Admin Login Successful');
+
+            // Check if password change is required (handled by route guard)
+            // Navigate to dashboard - route guard will redirect to change-password if needed
             navigate('/superadmin/dashboard');
         } catch (error: any) {
             console.error('Login Failed:', error);
-            const errorMsg = error.response?.data?.message || 'Invalid credentials';
+            const errorMsg = error.response?.data?.message || error.message || 'Invalid credentials';
             messageApi.error(errorMsg);
         } finally {
             setLoading(false);
@@ -43,29 +49,29 @@ const SuperAdminLogin: React.FC = () => {
     };
 
     return (
-        <div style={{ 
-            minHeight: '100vh', 
-            background: '#001529', // Dark background for Super Admin
-            display: 'flex', 
-            justifyContent: 'center', 
+        <div style={{
+            minHeight: '100vh',
+            background: '#001529',
+            display: 'flex',
+            justifyContent: 'center',
             alignItems: 'center',
             padding: '24px'
         }}>
             {contextHolder}
-            <Card 
-                style={{ 
-                    width: '100%', 
-                    maxWidth: 400, 
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)' 
+            <Card
+                style={{
+                    width: '100%',
+                    maxWidth: 400,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
                 }}
                 variant="borderless"
             >
                  <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                    <div style={{ 
-                        height: 48, 
-                        width: 48, 
-                        background: '#f5222d', // Red accent for Admin
-                        borderRadius: 8, 
+                    <div style={{
+                        height: 48,
+                        width: 48,
+                        background: '#f5222d',
+                        borderRadius: 8,
                         margin: '0 auto 16px',
                         display: 'flex',
                         alignItems: 'center',
@@ -77,6 +83,17 @@ const SuperAdminLogin: React.FC = () => {
                     <Text type="secondary">Restricted Access</Text>
                 </div>
 
+                {/* Rate Limiting Alert */}
+                {apiError && apiError.status === 429 && (
+                    <Alert
+                        message="Too Many Attempts"
+                        description={apiError.message}
+                        type="error"
+                        showIcon
+                        style={{ marginBottom: 24 }}
+                    />
+                )}
+
                 <Form
                     name="super_admin_login"
                     initialValues={{ remember: true }}
@@ -87,7 +104,7 @@ const SuperAdminLogin: React.FC = () => {
                     <Form.Item
                         name="email"
                         rules={[
-                            { required: true, message: 'Please input your Email!' }, 
+                            { required: true, message: 'Please input your Email!' },
                             { type: 'email', message: 'Invalid Email Format'}
                         ]}
                     >
@@ -101,10 +118,20 @@ const SuperAdminLogin: React.FC = () => {
                         <Input.Password prefix={<LockOutlined />} placeholder="Password" />
                     </Form.Item>
 
+                    <Form.Item
+                        name="mfa_code"
+                        label={<Text type="secondary" style={{ fontSize: 12 }}>Two-Factor Code (if enabled)</Text>}
+                    >
+                        <Input placeholder="Enter 2FA code" maxLength={6} />
+                    </Form.Item>
+
                     <Form.Item>
-                        <Form.Item name="remember" valuePropName="checked" noStyle>
-                            <Checkbox>Remember me</Checkbox>
-                        </Form.Item>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Form.Item name="remember" valuePropName="checked" noStyle>
+                                <Checkbox>Remember me</Checkbox>
+                            </Form.Item>
+                            <Link to="/forgot-password" style={{ color: '#f5222d' }}>Forgot password?</Link>
+                        </div>
                     </Form.Item>
 
                     <Form.Item>
