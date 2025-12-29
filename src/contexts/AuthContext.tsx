@@ -200,7 +200,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const wasKiosk = state.isKiosk;
 
     try {
-      await authService.logout();
+      // Use different logout endpoint based on user type
+      if (wasKiosk) {
+        await authService.kioskLogout();
+      } else {
+        await authService.logout();
+      }
     } catch (error) {
         console.error("Logout error", error);
     } finally {
