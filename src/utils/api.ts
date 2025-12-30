@@ -29,6 +29,29 @@ api.interceptors.request.use(
   }
 );
 
+// Helper function to get the appropriate login redirect URL based on user type
+const getLoginRedirectUrl = (): string => {
+  const role = localStorage.getItem('role');
+  const isKiosk = localStorage.getItem('isKiosk') === 'true';
+
+  if (role === 'super_admin') {
+    return '/superadmin/login';
+  } else if (isKiosk) {
+    return '/kiosk/login';
+  }
+  return '/login';
+};
+
+// Helper function to clear all auth data
+const clearAuthData = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  localStorage.removeItem('tenant');
+  localStorage.removeItem('role');
+  localStorage.removeItem('isKiosk');
+  localStorage.removeItem('mustChangePassword');
+};
+
 api.interceptors.response.use(
   (response) => {
     return response;
@@ -40,25 +63,25 @@ api.interceptors.response.use(
       try {
         // Attempt refresh
         const response = await api.post('/auth/refresh-token');
-        const { token } = response.data.data; // Adjust based on actual response structure
+        const { token } = response.data.data;
         localStorage.setItem('token', token);
         originalRequest.headers['Authorization'] = `Bearer ${token}`;
         return api(originalRequest);
       } catch (refreshError) {
-        // Refresh failed, logout
-        localStorage.removeItem('token');
-        window.location.href = '/login';
+        // Refresh failed, redirect to appropriate login page
+        const redirectUrl = getLoginRedirectUrl();
+        clearAuthData();
+        window.location.href = redirectUrl;
         return Promise.reject(refreshError);
       }
     }
     if (error.response?.status === 429) {
       const retryAfter = error.response.headers['retry-after'];
-      // You might want to expose this to the UI via a custom event or store
-      const event = new CustomEvent('api-error', { 
-        detail: { 
-          status: 429, 
-          message: `Too many attempts. Please try again ${retryAfter ? 'in ' + retryAfter + ' seconds' : 'later'}.` 
-        } 
+      const event = new CustomEvent('api-error', {
+        detail: {
+          status: 429,
+          message: `Too many attempts. Please try again ${retryAfter ? 'in ' + retryAfter + ' seconds' : 'later'}.`
+        }
       });
       window.dispatchEvent(event);
       return Promise.reject(error);

@@ -1,22 +1,13 @@
 import React, { useState } from 'react';
-import {
-  Form,
-  Input,
-  Button,
-  Checkbox,
-  Typography,
-  Card,
-  message,
-  Divider,
-  theme,
-  Alert
-} from 'antd';
-import { UserOutlined, LockOutlined, GoogleOutlined, ShopOutlined } from '@ant-design/icons';
-import { Link, useNavigate } from 'react-router-dom';
+import { Typography, Card, message, theme, Alert, Button } from 'antd';
+import { ShopOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import type { LoginRequest, AccountStatus } from '../../types/auth/auth.types';
 import { API_URL } from '../../utils/api';
 import { useApiError } from '../../hooks/useApiError';
+import LoginForm from '../../components/auth/LoginForm';
+import { MfaVerification } from '../../components/auth';
 
 const { Title, Text } = Typography;
 
@@ -45,24 +36,29 @@ const STATUS_MESSAGES: Record<AccountStatus, { type: 'warning' | 'error' | 'info
 };
 
 const Login: React.FC = () => {
-    const { login } = useAuth();
+    const { login, mfaRequired, verifyMfaLogin, cancelMfaLogin } = useAuth();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const { token } = theme.useToken();
     const [messageApi, contextHolder] = message.useMessage();
     const [statusAlert, setStatusAlert] = useState<{ type: 'warning' | 'error' | 'info'; message: string; reason?: string } | null>(null);
+    const [formError, setFormError] = useState<string | null>(null);
+    const [mfaError, setMfaError] = useState<string | null>(null);
     const apiError = useApiError();
 
-    const onFinish = async (values: any) => {
+    const handleSubmit = async (values: LoginRequest) => {
         setLoading(true);
         setStatusAlert(null);
+        setFormError(null);
         try {
-            const loginData: LoginRequest = {
-                email: values.email,
-                password: values.password,
-                remember_me: values.remember,
-            };
-            const response = await login(loginData);
+            const response = await login(values);
+
+            // If MFA is required, the auth context will set mfaRequired to true
+            // and we don't navigate yet
+            if (response && 'mfa_required' in response && response.mfa_required) {
+                return; // Stay on login page, MFA verification will be shown
+            }
+
             messageApi.success('Login Successful');
 
             if (response && 'must_change_password' in response && response.must_change_password) {
@@ -70,12 +66,13 @@ const Login: React.FC = () => {
             } else {
                 navigate('/dashboard');
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Login Failed:', error);
+            const err = error as { response?: { data?: { message?: string; status?: AccountStatus; rejection_reason?: string } }; message?: string };
 
             // Check for account status in error response
-            const errorData = error.response?.data;
-            const status = errorData?.status as AccountStatus | undefined;
+            const errorData = err.response?.data;
+            const status = errorData?.status;
             const rejectionReason = errorData?.rejection_reason;
 
             if (status && STATUS_MESSAGES[status]) {
@@ -94,38 +91,60 @@ const Login: React.FC = () => {
                 });
             } else {
                 // Regular error (invalid credentials, etc.)
-                const errorMsg = error.message || errorData?.message || 'Invalid email or password';
-                messageApi.error(errorMsg);
+                const errorMsg = err.message || errorData?.message || 'Invalid email or password';
+                setFormError(errorMsg);
             }
         } finally {
             setLoading(false);
         }
     };
 
+    const handleMfaVerify = async (code: string) => {
+        setMfaError(null);
+        try {
+            await verifyMfaLogin(code);
+            messageApi.success('Login Successful');
+            navigate('/dashboard');
+        } catch (error: any) {
+            const errorMsg = error.response?.data?.message || error.message || 'Invalid verification code';
+            setMfaError(errorMsg);
+            throw error; // Re-throw to let MfaVerification handle the error state
+        }
+    };
+
+    const handleCancelMfa = () => {
+        cancelMfaLogin();
+        setMfaError(null);
+    };
+
+    const handleGoogleLogin = () => {
+        window.location.href = `${API_URL}/auth/google/login`;
+    };
+
     return (
-        <div style={{ 
-            minHeight: '100vh', 
-            background: token.colorBgLayout, 
-            display: 'flex', 
-            justifyContent: 'center', 
+        <div style={{
+            minHeight: '100vh',
+            background: token.colorBgLayout,
+            display: 'flex',
+            justifyContent: 'center',
             alignItems: 'center',
             padding: '24px'
         }}>
             {contextHolder}
-            <Card 
-                style={{ 
-                    width: '100%', 
-                    maxWidth: 420, 
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)' 
+            <Card
+                style={{
+                    width: '100%',
+                    maxWidth: mfaRequired ? 480 : 420,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
                 }}
                 variant="borderless"
             >
-                 <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                    <div style={{ 
-                        height: 48, 
-                        width: 48, 
-                        background: token.colorPrimary, 
-                        borderRadius: 8, 
+                <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                    <div style={{
+                        height: 48,
+                        width: 48,
+                        background: token.colorPrimary,
+                        borderRadius: 8,
                         margin: '0 auto 16px',
                         display: 'flex',
                         alignItems: 'center',
@@ -133,86 +152,65 @@ const Login: React.FC = () => {
                      }}>
                         <ShopOutlined style={{ fontSize: 24, color: '#fff' }} />
                     </div>
-                    <Title level={2} style={{ margin: 0 }}>Welcome Back</Title>
-                    <Text type="secondary">Sign in to your owner/admin account</Text>
+                    {!mfaRequired && (
+                        <>
+                            <Title level={2} style={{ margin: 0 }}>Welcome Back</Title>
+                            <Text type="secondary">Sign in to your owner/admin account</Text>
+                        </>
+                    )}
                 </div>
 
-                {/* Account Status Alert */}
-                {statusAlert && (
-                    <Alert
-                        message={statusAlert.type === 'warning' ? 'Account Pending' : statusAlert.type === 'error' ? 'Account Issue' : 'Notice'}
-                        description={statusAlert.message}
-                        type={statusAlert.type}
-                        showIcon
-                        closable
-                        onClose={() => setStatusAlert(null)}
-                        style={{ marginBottom: 24 }}
-                    />
-                )}
-
-                {/* Rate Limiting Alert */}
-                {apiError && apiError.status === 429 && (
-                    <Alert
-                        message="Too Many Attempts"
-                        description={apiError.message}
-                        type="error"
-                        showIcon
-                        style={{ marginBottom: 24 }}
-                    />
-                )}
-
-                <Form
-                    name="login"
-                    initialValues={{ remember: true }}
-                    onFinish={onFinish}
-                    layout="vertical"
-                    size="large"
-                >
-                    <Form.Item
-                        name="email"
-                        rules={[
-                            { required: true, message: 'Please input your Email!' }, 
-                            { type: 'email', message: 'Invalid Email Format'}
-                        ]}
-                    >
-                        <Input prefix={<UserOutlined />} placeholder="Email" />
-                    </Form.Item>
-
-                    <Form.Item
-                        name="password"
-                        rules={[{ required: true, message: 'Please input your Password!' }]}
-                    >
-                        <Input.Password prefix={<LockOutlined />} placeholder="Password" />
-                    </Form.Item>
-
-                    <Form.Item>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Form.Item name="remember" valuePropName="checked" noStyle>
-                                <Checkbox>Remember me</Checkbox>
-                            </Form.Item>
-                            <Link to="/forgot-password">Forgot password?</Link>
-                        </div>
-                    </Form.Item>
-
-                    <Form.Item>
-                        <Button type="primary" htmlType="submit" block loading={loading}>
-                            Log in
+                {/* MFA Verification View */}
+                {mfaRequired ? (
+                    <div>
+                        <Button
+                            type="text"
+                            icon={<ArrowLeftOutlined />}
+                            onClick={handleCancelMfa}
+                            style={{ marginBottom: 16, padding: 0 }}
+                        >
+                            Back to Login
                         </Button>
-                    </Form.Item>
-                    
-                    <Divider plain><Text type="secondary" style={{ fontSize: 12 }}>OR CONTINUE WITH</Text></Divider>
-
-                     <Form.Item>
-                        <Button block icon={<GoogleOutlined />} onClick={() => window.location.href = `${API_URL}/auth/google/login`}>
-                            Google
-                        </Button>
-                    </Form.Item>
-
-                    <div style={{ textAlign: 'center' }}>
-                         <Text type="secondary">Don't have an account? </Text>
-                        <Link to="/register">Register now</Link>
+                        <MfaVerification
+                            onSubmit={handleMfaVerify}
+                            loading={loading}
+                            error={mfaError}
+                        />
                     </div>
-                </Form>
+                ) : (
+                    <>
+                        {/* Account Status Alert */}
+                        {statusAlert && (
+                            <Alert
+                                message={statusAlert.type === 'warning' ? 'Account Pending' : statusAlert.type === 'error' ? 'Account Issue' : 'Notice'}
+                                description={statusAlert.message}
+                                type={statusAlert.type}
+                                showIcon
+                                closable
+                                onClose={() => setStatusAlert(null)}
+                                style={{ marginBottom: 24 }}
+                            />
+                        )}
+
+                        {/* Rate Limiting Alert */}
+                        {apiError && apiError.status === 429 && (
+                            <Alert
+                                message="Too Many Attempts"
+                                description={apiError.message}
+                                type="error"
+                                showIcon
+                                style={{ marginBottom: 24 }}
+                            />
+                        )}
+
+                        <LoginForm
+                            onSubmit={handleSubmit}
+                            onGoogleLogin={handleGoogleLogin}
+                            loading={loading}
+                            error={formError}
+                        />
+                    </>
+                )}
             </Card>
         </div>
     );

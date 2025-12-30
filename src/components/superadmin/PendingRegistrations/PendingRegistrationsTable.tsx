@@ -45,11 +45,14 @@ const PendingRegistrationsTable: React.FC<Props> = ({
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status: string) => (
-        <Tag color={status === 'pending' ? 'orange' : status === 'approved' ? 'green' : 'red'}>
-          {status.toUpperCase()}
-        </Tag>
-      ),
+      render: (status: string | undefined) => {
+        const statusValue = status || 'pending';
+        return (
+          <Tag color={statusValue === 'pending' ? 'orange' : statusValue === 'approved' ? 'green' : 'red'}>
+            {statusValue.toUpperCase()}
+          </Tag>
+        );
+      },
     },
     {
       title: 'Applied At',
