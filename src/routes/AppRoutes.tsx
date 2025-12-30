@@ -15,6 +15,7 @@ import SuperAdminLogin from '../pages/superadmin/SuperAdminLogin';
 import ForgotPassword from '../pages/public/ForgotPassword';
 import ResetPassword from '../pages/public/ResetPassword';
 import ChangePassword from '../pages/public/ChangePassword';
+import EmailVerification from '../pages/public/EmailVerification';
 
 // Kiosk Pages
 import KioskLogin from '../pages/kiosk/KioskLogin';
@@ -23,6 +24,10 @@ import KioskPOS from '../pages/kiosk/KioskPOS';
 // Admin Pages
 import Dashboard from '../pages/admin/Dashboard';
 import Brands from '../pages/management/Brands';
+import Categories from '../pages/management/Categories';
+import SubCategories from '../pages/management/SubCategories';
+import Units from '../pages/management/Units';
+import Warehouses from '../pages/management/Warehouses';
 import Roles from '../pages/management/Roles';
 import Users from '../pages/management/Users';
 
@@ -48,6 +53,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/superadmin/login" element={<SuperAdminLogin />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/verify-email" element={<EmailVerification />} />
       </Route>
 
       {/* Kiosk Login - public, separate from PublicRoutes to avoid redirect loop */}
@@ -57,7 +63,13 @@ const AppRoutes: React.FC = () => {
       <Route element={<PrivateRoutes />}>
          <Route path="/change-password" element={<ChangePassword />} />
          <Route path="/dashboard" element={<Dashboard />} />
+
+         {/* Product Management Routes */}
          <Route path="/brands" element={<Brands />} />
+         <Route path="/categories" element={<Categories />} />
+         <Route path="/subcategories" element={<SubCategories />} />
+         <Route path="/units" element={<Units />} />
+         <Route path="/warehouses" element={<Warehouses />} />
 
          {/* Management Routes with Permission Guards */}
          <Route element={<PermissionRoute requiredPermission={PERMISSIONS.USERS_ROLES} />}>

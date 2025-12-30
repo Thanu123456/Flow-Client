@@ -24,9 +24,14 @@ const Signup: React.FC = () => {
 
             Modal.success({
                 title: 'Registration Submitted Successfully!',
-                content: 'Your account is pending approval from our admin team. You will be notified via email once approved.',
-                onOk: () => navigate('/login'),
-                okText: 'Go to Login'
+                content: (
+                    <div>
+                        <p>We've sent a verification email to <strong>{values.email}</strong>.</p>
+                        <p>Please verify your email address, then wait for admin approval. You will be notified via email once your account is approved.</p>
+                    </div>
+                ),
+                onOk: () => navigate(`/verify-email?email=${encodeURIComponent(values.email)}`),
+                okText: 'Check Email Verification'
             });
 
         } catch (error: unknown) {

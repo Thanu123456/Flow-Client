@@ -1,22 +1,23 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { authService } from '../services/auth/authService';
-import type { 
-  LoginRequest, 
-  RegisterRequest, 
-  UserInfo, 
-  TenantInfo, 
-  LoginResponse 
+import type {
+  LoginRequest,
+  RegisterRequest,
+  UserInfo,
+  TenantInfo,
+  LoginResponse,
+  MfaVerifyLoginRequest
 } from '../types/auth/auth.types';
-import type { 
-  KioskLoginRequest, 
-  KioskUserInfo, 
+import type {
+  KioskLoginRequest,
+  KioskUserInfo,
   KioskLoginResponse,
   KioskEndShiftResponse
 } from '../types/auth/kiosk.types';
-import type { 
-  SuperAdminLoginRequest, 
-  SuperAdminLoginResponse 
+import type {
+  SuperAdminLoginRequest,
+  SuperAdminLoginResponse
 } from '../types/auth/superadmin.types';
 
 interface AuthState {
@@ -27,6 +28,12 @@ interface AuthState {
   role: string | null;
   isKiosk: boolean;
   mustChangePassword: boolean;
+  // Email verification state
+  emailVerified: boolean;
+  // MFA state
+  mfaEnabled: boolean;
+  mfaRequired: boolean;
+  mfaToken: string | null;
 }
 
 interface AuthContextType extends AuthState {
@@ -34,7 +41,9 @@ interface AuthContextType extends AuthState {
   register: (data: RegisterRequest) => Promise<void>;
   superAdminLogin: (data: SuperAdminLoginRequest) => Promise<void>;
   kioskLogin: (data: KioskLoginRequest) => Promise<void>;
-
+  verifyMfaLogin: (code: string) => Promise<void>;
+  cancelMfaLogin: () => void;
+  refreshEmailVerificationStatus: () => Promise<void>;
   logout: () => Promise<void>;
   endShift: () => Promise<KioskEndShiftResponse | void>;
 }
@@ -58,6 +67,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     role: null,
     isKiosk: false,
     mustChangePassword: false,
+    emailVerified: true,
+    mfaEnabled: false,
+    mfaRequired: false,
+    mfaToken: null,
   });
 
   useEffect(() => {
@@ -82,6 +95,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const isKiosk = localStorage.getItem('isKiosk') === 'true';
         const storedRole = localStorage.getItem('role');
         const storedMustChangePassword = localStorage.getItem('mustChangePassword') === 'true';
+        const storedEmailVerified = localStorage.getItem('emailVerified') !== 'false';
+        const storedMfaEnabled = localStorage.getItem('mfaEnabled') === 'true';
 
         // Determine role from stored value, token claims, or user object
         let role = storedRole || decoded.role || null;
@@ -104,6 +119,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             role: role,
             isKiosk: isKiosk,
             mustChangePassword: storedMustChangePassword,
+            emailVerified: storedEmailVerified,
+            mfaEnabled: storedMfaEnabled,
+            mfaRequired: false,
+            mfaToken: null,
         });
 
       } catch (error) {
@@ -121,6 +140,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('isKiosk');
     localStorage.removeItem('role');
     localStorage.removeItem('mustChangePassword');
+    localStorage.removeItem('emailVerified');
+    localStorage.removeItem('mfaEnabled');
     setState({
       user: null,
       tenant: null,
@@ -129,19 +150,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       role: null,
       isKiosk: false,
       mustChangePassword: false,
+      emailVerified: true,
+      mfaEnabled: false,
+      mfaRequired: false,
+      mfaToken: null,
     });
   };
 
   const login = async (data: LoginRequest) => {
     setState(prev => ({ ...prev, isLoading: true }));
     try {
-      const response = await authService.login(data);
+      const response = await authService.login(data) as any;
+
+      // Check if MFA is required
+      if (response.mfa_required && response.mfa_token) {
+        setState(prev => ({
+          ...prev,
+          isLoading: false,
+          mfaRequired: true,
+          mfaToken: response.mfa_token,
+        }));
+        return response;
+      }
+
       handleLoginSuccess(response);
       return response;
     } catch (error) {
       throw error;
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  const verifyMfaLogin = async (code: string) => {
+    if (!state.mfaToken) {
+      throw new Error('No MFA token available');
+    }
+
+    setState(prev => ({ ...prev, isLoading: true }));
+    try {
+      const response = await authService.verifyMfaLogin({
+        mfa_token: state.mfaToken,
+        code,
+      });
+      handleLoginSuccess(response);
+    } catch (error) {
+      throw error;
+    } finally {
+      setState(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  const cancelMfaLogin = () => {
+    setState(prev => ({
+      ...prev,
+      mfaRequired: false,
+      mfaToken: null,
+    }));
+  };
+
+  const refreshEmailVerificationStatus = async () => {
+    try {
+      const result = await authService.checkEmailVerificationStatus();
+      localStorage.setItem('emailVerified', String(result.verified));
+      setState(prev => ({ ...prev, emailVerified: result.verified }));
+    } catch (error) {
+      console.error('Failed to check email verification status', error);
     }
   };
 
@@ -305,7 +379,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, login, register, superAdminLogin, kioskLogin, logout, endShift }}>
+    <AuthContext.Provider value={{
+      ...state,
+      login,
+      register,
+      superAdminLogin,
+      kioskLogin,
+      verifyMfaLogin,
+      cancelMfaLogin,
+      refreshEmailVerificationStatus,
+      logout,
+      endShift
+    }}>
       {children}
     </AuthContext.Provider>
   );

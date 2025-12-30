@@ -4,16 +4,22 @@ import type {
   LoginResponse,
   RegisterRequest,
   RegisterResponse,
-  ResetPasswordRequest
+  ResetPasswordRequest,
+  MfaSetupResponse,
+  MfaStatusResponse,
+  MfaLoginResponse,
+  MfaVerifyLoginRequest,
+  EmailVerificationResponse,
+  ResendVerificationResponse
 } from '../../types/auth/auth.types';
-import type { 
-  KioskLoginRequest, 
+import type {
+  KioskLoginRequest,
   KioskLoginResponse,
   KioskEndShiftResponse
 } from '../../types/auth/kiosk.types';
-import type { 
-  SuperAdminLoginRequest, 
-  SuperAdminLoginResponse 
+import type {
+  SuperAdminLoginRequest,
+  SuperAdminLoginResponse
 } from '../../types/auth/superadmin.types';
 
 export const authService = {
@@ -82,5 +88,63 @@ export const authService = {
   // Change Password (Authenticated)
   async changePassword(data: any): Promise<void> {
     await api.post('/auth/change-password', data);
+  },
+
+  // ==================== MFA/2FA Methods ====================
+
+  // Setup MFA - Returns QR code and secret
+  async setupMfa(): Promise<MfaSetupResponse> {
+    const response = await api.post<{ data: MfaSetupResponse }>('/auth/mfa/setup');
+    return response.data.data;
+  },
+
+  // Verify and Enable MFA
+  async verifyAndEnableMfa(code: string): Promise<{ message: string }> {
+    const response = await api.post<{ data: { message: string } }>('/auth/mfa/verify', { code });
+    return response.data.data;
+  },
+
+  // Disable MFA
+  async disableMfa(code: string): Promise<{ message: string }> {
+    const response = await api.post<{ data: { message: string } }>('/auth/mfa/disable', { code });
+    return response.data.data;
+  },
+
+  // Get MFA Status
+  async getMfaStatus(): Promise<MfaStatusResponse> {
+    const response = await api.get<{ data: MfaStatusResponse }>('/auth/mfa/status');
+    return response.data.data;
+  },
+
+  // Verify MFA during login (when MFA is required)
+  async verifyMfaLogin(data: MfaVerifyLoginRequest): Promise<LoginResponse> {
+    const response = await api.post<{ data: LoginResponse }>('/auth/mfa/verify-login', data);
+    return response.data.data;
+  },
+
+  // Generate new backup codes
+  async regenerateBackupCodes(code: string): Promise<{ backup_codes: string[] }> {
+    const response = await api.post<{ data: { backup_codes: string[] } }>('/auth/mfa/backup-codes', { code });
+    return response.data.data;
+  },
+
+  // ==================== Email Verification Methods ====================
+
+  // Verify email with token
+  async verifyEmail(token: string): Promise<EmailVerificationResponse> {
+    const response = await api.post<{ data: EmailVerificationResponse }>('/auth/verify-email', { token });
+    return response.data.data;
+  },
+
+  // Resend verification email
+  async resendVerificationEmail(email: string): Promise<ResendVerificationResponse> {
+    const response = await api.post<{ data: ResendVerificationResponse }>('/auth/resend-verification', { email });
+    return response.data.data;
+  },
+
+  // Check email verification status
+  async checkEmailVerificationStatus(): Promise<{ verified: boolean }> {
+    const response = await api.get<{ data: { verified: boolean } }>('/auth/email-status');
+    return response.data.data;
   }
 };

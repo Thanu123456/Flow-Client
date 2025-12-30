@@ -1,7 +1,8 @@
 import React from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Spin } from 'antd';
+import SuperAdminLayout from '../components/common/Layout/SuperAdminLayout';
 
 const SuperAdminRoutes: React.FC = () => {
     const { isAuthenticated, isLoading, role, mustChangePassword } = useAuth();
@@ -25,7 +26,7 @@ const SuperAdminRoutes: React.FC = () => {
         return <Navigate to="/superadmin/change-password" replace />;
     }
 
-    return <Outlet />;
+    return <SuperAdminLayout />;
 };
 
 export default SuperAdminRoutes;
