@@ -1,27 +1,33 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
-// Layouts - Placeholder for now, typically MainLayout, KioskLayout
+// Route Guards
 import PublicRoutes from './PublicRoutes';
 import PrivateRoutes from './PrivateRoutes';
 import SuperAdminRoutes from './SuperAdminRoutes';
 import KioskRoutes from './KioskRoutes';
+import PermissionRoute from './PermissionRoute';
 
 // Public Pages
 import Login from '../pages/public/Login';
 import Signup from '../pages/public/Signup';
-import SuperAdminLogin from '../pages/public/SuperAdminLogin';
+import SuperAdminLogin from '../pages/superadmin/SuperAdminLogin';
 import ForgotPassword from '../pages/public/ForgotPassword';
 import ResetPassword from '../pages/public/ResetPassword';
 import ChangePassword from '../pages/public/ChangePassword';
+import EmailVerification from '../pages/public/EmailVerification';
 
 // Kiosk Pages
 import KioskLogin from '../pages/kiosk/KioskLogin';
 import KioskPOS from '../pages/kiosk/KioskPOS';
 
 // Admin Pages
-import Dashboard from '../pages/admin/Dashboard'; 
+import Dashboard from '../pages/admin/Dashboard';
 import Brands from '../pages/management/Brands';
+import Categories from '../pages/management/Categories';
+import SubCategories from '../pages/management/SubCategories';
+import Units from '../pages/management/Units';
+import Warehouses from '../pages/management/Warehouses';
 import Roles from '../pages/management/Roles';
 import Users from '../pages/management/Users';
 
@@ -32,8 +38,6 @@ import TenantManagement from '../pages/superadmin/TenantManagement';
 import SystemLogs from '../pages/superadmin/SystemLogs';
 import SystemSettings from '../pages/superadmin/SystemSettings';
 
-// Guard Components
-import PermissionRoute from './PermissionRoute';
 import { PERMISSIONS } from '../types/auth/permissions';
 
 const AppRoutes: React.FC = () => {
@@ -42,25 +46,31 @@ const AppRoutes: React.FC = () => {
       {/* Root redirects to login */}
       <Route path="/" element={<Navigate to="/login" replace />} />
 
-      {/* Public Routes */}
+      {/* Public Routes - for unauthenticated users */}
       <Route element={<PublicRoutes />}>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Signup />} />
         <Route path="/superadmin/login" element={<SuperAdminLogin />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/brands" element={<Brands />} />
-        
-        {/* Kiosk Login is public but specific */}
-        <Route path="/kiosk" element={<Navigate to="/kiosk/login" replace />} />
-        <Route path="/kiosk/login" element={<KioskLogin />} />
+        <Route path="/verify-email" element={<EmailVerification />} />
       </Route>
+
+      {/* Kiosk Login - public, separate from PublicRoutes to avoid redirect loop */}
+      <Route path="/kiosk/login" element={<KioskLogin />} />
 
       {/* Owner/Admin Private Routes */}
       <Route element={<PrivateRoutes />}>
          <Route path="/change-password" element={<ChangePassword />} />
          <Route path="/dashboard" element={<Dashboard />} />
-         
+
+         {/* Product Management Routes */}
+         <Route path="/brands" element={<Brands />} />
+         <Route path="/categories" element={<Categories />} />
+         <Route path="/subcategories" element={<SubCategories />} />
+         <Route path="/units" element={<Units />} />
+         <Route path="/warehouses" element={<Warehouses />} />
+
          {/* Management Routes with Permission Guards */}
          <Route element={<PermissionRoute requiredPermission={PERMISSIONS.USERS_ROLES} />}>
             <Route path="/roles" element={<Roles />} />
@@ -68,13 +78,13 @@ const AppRoutes: React.FC = () => {
          <Route element={<PermissionRoute requiredPermission={PERMISSIONS.USERS_VIEW} />}>
             <Route path="/users" element={<Users />} />
          </Route>
-         
-         {/* Add other protected admin routes here */}
       </Route>
 
       {/* Super Admin Private Routes */}
       <Route path="/superadmin" element={<SuperAdminRoutes />}>
+         <Route index element={<Navigate to="dashboard" replace />} />
          <Route path="dashboard" element={<SuperAdminDashboard />} />
+         <Route path="change-password" element={<ChangePassword />} />
          <Route path="registrations" element={<PendingRegistrations />} />
          <Route path="tenants" element={<TenantManagement />} />
          <Route path="logs" element={<SystemLogs />} />
@@ -83,6 +93,7 @@ const AppRoutes: React.FC = () => {
 
       {/* Kiosk Private Routes */}
       <Route path="/kiosk" element={<KioskRoutes />}>
+         <Route index element={<Navigate to="dashboard" replace />} />
          <Route path="dashboard" element={<KioskPOS />} />
       </Route>
 

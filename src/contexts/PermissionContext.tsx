@@ -23,7 +23,7 @@ export const usePermission = () => {
 };
 
 export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, role } = useAuth();
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -36,33 +36,36 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       return;
     }
 
-    const loadPermissions = async () => {
-      // Logic to load permissions
-      // 1. If UserType is 'owner' or 'super_admin', grant all permissions
-      // Type guard to check if user has user_type (UserInfo) vs KioskUserInfo
-      const isOwnerOrAdmin = 'user_type' in user && (user.user_type === 'owner' || user.is_super_admin);
-      
-      if (isOwnerOrAdmin) {
-        // We can represent "all" as a special flag or just return true in hasPermission
-        // But for consistency, let's keep the array empty and handle it in checks
+    const loadPermissions = () => {
+      // Check if user is owner or super_admin - grant all permissions
+      const isSuperAdmin = role === 'super_admin';
+      const isOwner = 'user_type' in user && user.user_type === 'owner';
+      const hasAdminFlag = 'is_super_admin' in user && user.is_super_admin;
+
+      if (isSuperAdmin || isOwner || hasAdminFlag) {
+        // Grant all permissions to owners and super admins
         setPermissions(Object.values(PERMISSIONS));
       } else {
-        // 2. If Employee, we need to fetch permissions from API
-        // For now, if API does not return them, we might be stuck.
-        // TODO: Implement API fetch for permissions if not present in User object
-        // const fetchedPermissions = await authService.getMyPermissions();
-        // setPermissions(fetchedPermissions);
-        
-        // Placeholder for now:
-        setPermissions([]); 
+        // For employees, check if permissions are included in user object
+        if ('permissions' in user && Array.isArray(user.permissions)) {
+          // Use permissions from user object (sent from backend)
+          setPermissions(user.permissions as Permission[]);
+        } else {
+          // Default: no special permissions for employees without assigned permissions
+          // They will only have access to routes not protected by PermissionRoute
+          setPermissions([]);
+        }
       }
       setLoading(false);
     };
 
     loadPermissions();
-  }, [user, isAuthenticated, authLoading]);
+  }, [user, isAuthenticated, authLoading, role]);
 
-  const isAdmin = !!user && 'user_type' in user && (user.user_type === 'owner' || user.is_super_admin);
+  // Check if user is admin (owner or super_admin)
+  const isAdmin = role === 'super_admin' ||
+    (!!user && 'user_type' in user && user.user_type === 'owner') ||
+    (!!user && 'is_super_admin' in user && user.is_super_admin);
 
   const hasPermission = (permission: Permission): boolean => {
     if (isAdmin) return true;

@@ -38,6 +38,9 @@ export interface UserInfo {
   is_super_admin: boolean;
   kiosk_enabled: boolean;
   last_login_at?: string;
+  role_id?: string;
+  role_name?: string;
+  permissions?: string[];
 }
 
 export interface TenantInfo {
@@ -79,4 +82,52 @@ export interface AccountStatusResponse {
   status: AccountStatus;
   rejection_reason?: string;
   message: string;
+}
+
+// MFA/2FA Types
+export interface MfaSetupResponse {
+  secret: string;
+  qr_code_url: string;
+  backup_codes: string[];
+  issuer: string;
+  account_name: string;
+}
+
+export interface MfaVerifyRequest {
+  code: string;
+}
+
+export interface MfaStatusResponse {
+  mfa_enabled: boolean;
+  mfa_method: 'totp' | 'email' | null;
+  backup_codes_remaining: number;
+}
+
+export interface MfaLoginResponse extends LoginResponse {
+  mfa_required: boolean;
+  mfa_token?: string;
+}
+
+export interface MfaVerifyLoginRequest {
+  mfa_token: string;
+  code: string;
+}
+
+// Email Verification Types
+export interface EmailVerificationRequest {
+  token: string;
+}
+
+export interface EmailVerificationResponse {
+  message: string;
+  verified: boolean;
+}
+
+export interface ResendVerificationRequest {
+  email: string;
+}
+
+export interface ResendVerificationResponse {
+  message: string;
+  sent: boolean;
 }

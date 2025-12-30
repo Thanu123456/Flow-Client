@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Form, Input, Button, Card, Typography, message, Modal, Layout, theme } from 'antd';
 import { LockOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import PasswordStrengthMeter from '../../components/auth/PasswordStrengthMeter';
 import { authService } from '../../services/auth/authService';
@@ -11,7 +10,6 @@ const { Content } = Layout;
 
 const ChangePassword: React.FC = () => {
     const { logout, mustChangePassword } = useAuth();
-    const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const { token } = theme.useToken();
     const [password, setPassword] = useState('');
@@ -24,13 +22,12 @@ const ChangePassword: React.FC = () => {
                 new_password: values.new_password,
                 confirm_password: values.confirm_password,
             });
-            
+
             Modal.success({
                 title: 'Password Changed Successfully',
                 content: 'Please login again with your new password.',
                 onOk: async () => {
-                    await logout(); // Logout to force re-login or update state if needed
-                    navigate('/login');
+                    await logout();
                 },
             });
 

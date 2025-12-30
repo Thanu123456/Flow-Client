@@ -47,17 +47,26 @@ const TenantsTable: React.FC<Props> = ({
       title: 'Schema',
       dataIndex: 'schema_name',
       key: 'schema_name',
-      render: (schema: string) => <code>{schema}</code>
+      render: (schema: string | undefined) => schema ? <code>{schema}</code> : <span style={{ color: '#999' }}>-</span>
     },
     {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status: string) => (
-        <Tag color={status === 'active' ? 'green' : status === 'suspended' ? 'red' : 'default'}>
-          {status.toUpperCase()}
-        </Tag>
-      ),
+      render: (status: string | undefined) => {
+        const statusValue = status || 'pending';
+        const colorMap: Record<string, string> = {
+          active: 'green',
+          suspended: 'red',
+          pending: 'orange',
+          rejected: 'red'
+        };
+        return (
+          <Tag color={colorMap[statusValue] || 'default'}>
+            {statusValue.toUpperCase()}
+          </Tag>
+        );
+      },
     },
     {
       title: 'Created',
