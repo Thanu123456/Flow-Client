@@ -25,10 +25,10 @@ const ViewUnitModal: React.FC<ViewUnitModalProps> = ({
       {unit && (
         <Descriptions bordered column={1}>
           <Descriptions.Item label="Unit Name">
-            {unit.unitName}
+            {unit.name}
           </Descriptions.Item>
           <Descriptions.Item label="Short Name">
-            {unit.shortUnitName}
+            {unit.shortName}
           </Descriptions.Item>
           <Descriptions.Item label="Status">
             <Badge

@@ -18,11 +18,10 @@ const AddUnitModal: React.FC<AddUnitModalProps> = ({
 }) => {
   const handleSubmit = async (values: any) => {
     const unitData: UnitFormData = {
-      unitName: values.unitName,
-      shortUnitName: values.shortUnitName,
+      name: values.unitName,
+      shortName: values.shortUnitName,
       status: values.status ? "active" : "inactive",
     };
-    console.log(unitData);
 
     await unitService.createUnit(unitData);
   };

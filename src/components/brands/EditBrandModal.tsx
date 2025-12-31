@@ -100,7 +100,12 @@ const EditBrandModal: React.FC<EditBrandModalProps> = ({
     >
       {(_form: FormInstance, _data: Brand | null) => (
         <>
-          <Form.Item label="Brand Image" name="image">
+          <Form.Item
+            label="Brand Image"
+            name="image"
+            valuePropName="fileList"
+            getValueFromEvent={(e) => e && e.fileList}
+          >
             <Dragger
               name="image"
               multiple={false}
