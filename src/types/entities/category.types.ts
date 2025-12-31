@@ -36,7 +36,3 @@ export interface CategoryResponse {
   limit: number;
   totalPages: number;
 }
-
-export interface DeleteCategoryData {
-  password: string;
-}

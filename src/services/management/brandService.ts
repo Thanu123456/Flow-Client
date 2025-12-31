@@ -11,7 +11,7 @@ const transformBrand = (b: any): Brand => ({
   id: b.id,
   name: b.name,
   description: b.description || undefined,
-  imageUrl: b.logo_url || undefined,
+  imageUrl: b.image_url || undefined,
   status: b.is_active ? "active" : "inactive",
   productCount: b.product_count || 0,
   createdAt: b.created_at,
@@ -65,7 +65,7 @@ export const brandService = {
     const payload = {
       name: brandData.name,
       description: brandData.description || undefined,
-      logo_url: brandData.imageUrl || undefined,
+      image_url: brandData.imageUrl || undefined,
       is_active: brandData.status === "active",
     };
 
@@ -82,7 +82,7 @@ export const brandService = {
     const payload: any = {};
     if (brandData.name !== undefined) payload.name = brandData.name;
     if (brandData.description !== undefined) payload.description = brandData.description;
-    if (brandData.imageUrl !== undefined) payload.logo_url = brandData.imageUrl;
+    if (brandData.imageUrl !== undefined) payload.image_url = brandData.imageUrl;
     if (brandData.status !== undefined) payload.is_active = brandData.status === "active";
 
     const response = await axiosInstance.put(`/admin/brands/${id}`, payload);

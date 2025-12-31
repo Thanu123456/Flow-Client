@@ -136,7 +136,12 @@ const EditSubCategoryModal: React.FC<EditSubCategoryModalProps> = ({
             </Select>
           </Form.Item>
 
-          <Form.Item label="SubCategory Image" name="image">
+          <Form.Item
+            label="SubCategory Image"
+            name="image"
+            valuePropName="fileList"
+            getValueFromEvent={(e) => e && e.fileList}
+          >
             <Dragger
               name="image"
               multiple={false}

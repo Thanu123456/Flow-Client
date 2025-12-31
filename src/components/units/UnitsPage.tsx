@@ -100,7 +100,11 @@ const UnitsPage: React.FC<UnitsPageProps> = ({
 
   const handleAddSuccess = () => getUnits(paginationParams);
   const handleEditSuccess = () => getUnits(paginationParams);
-  const handleDeleteSuccess = () => getUnits(paginationParams);
+  const handleDeleteSuccess = () => {
+    setDeleteModalVisible(false);
+    setSelectedUnit(null);
+    getUnits(paginationParams);
+  };
 
   const handleProductCountClick = (unitId: string) => {
     navigate(`/products?unitId=${unitId}`);

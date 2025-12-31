@@ -32,8 +32,8 @@ const EditUnitModal: React.FC<EditUnitModalProps> = ({
 
   const handleSubmit = async (values: any, originalData: Unit) => {
     const unitData: Partial<UnitFormData> = {
-      unitName: values.unitName,
-      shortUnitName: values.shortUnitName,
+      name: values.unitName,
+      shortName: values.shortUnitName,
       status: values.status ? "active" : "inactive",
     };
 
@@ -41,8 +41,8 @@ const EditUnitModal: React.FC<EditUnitModalProps> = ({
   };
 
   const mapDataToForm = (unit: Unit) => ({
-    unitName: unit.unitName,
-    shortUnitName: unit.shortUnitName,
+    unitName: unit.name,
+    shortUnitName: unit.shortName,
     status: unit.status === "active",
   });
 
