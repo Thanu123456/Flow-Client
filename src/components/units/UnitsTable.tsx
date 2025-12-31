@@ -42,16 +42,16 @@ const UnitsTable: React.FC<UnitsTableProps> = ({
   const columns: TableColumn<Unit>[] = [
     {
       title: <div className="text-center w-full">Unit Name</div>,
-      dataIndex: "unitName",
-      key: "unitName",
-      sorter: (a: Unit, b: Unit) => a.unitName.localeCompare(b.shortUnitName),
+      dataIndex: "name",
+      key: "name",
+      sorter: (a: Unit, b: Unit) => a.name.localeCompare(b.name),
       sortDirections: ["ascend", "descend"] as SortOrder[],
       render: (text: string) => text,
     },
     {
       title: <div className="text-center w-full">Short Name</div>,
-      dataIndex: "shortUnitName",
-      key: "shortUnitName",
+      dataIndex: "shortName",
+      key: "shortName",
       align: "center" as const,
       render: (text: string) => text,
     },

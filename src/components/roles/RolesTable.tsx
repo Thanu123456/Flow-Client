@@ -1,6 +1,6 @@
 import React from 'react';
 import { Table, Tag, Button, Space, Tooltip, Popconfirm } from 'antd';
-import { EditOutlined, DeleteOutlined, KeyOutlined } from '@ant-design/icons';
+import { EditOutlined, DeleteOutlined, KeyOutlined, EyeOutlined } from '@ant-design/icons';
 import type { Role } from '../../types/entities/role.types';
 
 interface Props {
@@ -8,15 +8,22 @@ interface Props {
   loading: boolean;
   onEdit: (role: Role) => void;
   onDelete: (id: string) => void;
-  onManagePermissions: (role: Role) => void;
+  onViewPermissions: (role: Role) => void;
+  pagination?: {
+    current: number;
+    pageSize: number;
+    total: number;
+    onChange: (page: number, pageSize: number) => void;
+  };
 }
 
-const RolesTable: React.FC<Props> = ({ 
-  data, 
-  loading, 
-  onEdit, 
-  onDelete, 
-  onManagePermissions 
+const RolesTable: React.FC<Props> = ({
+  data,
+  loading,
+  onEdit,
+  onDelete,
+  onViewPermissions,
+  pagination,
 }) => {
   const columns = [
     {
@@ -26,7 +33,7 @@ const RolesTable: React.FC<Props> = ({
       render: (text: string, record: Role) => (
         <Space>
           {text}
-          {record.is_system && <Tag color="blue">System</Tag>}
+          {record.isSystem && <Tag color="blue">System</Tag>}
         </Space>
       ),
     },
@@ -34,20 +41,21 @@ const RolesTable: React.FC<Props> = ({
       title: 'Description',
       dataIndex: 'description',
       key: 'description',
+      render: (text: string) => text || '-',
     },
     {
       title: 'Users',
-      dataIndex: 'user_count',
-      key: 'user_count',
+      dataIndex: 'userCount',
+      key: 'userCount',
       render: (count: number) => count || 0,
     },
     {
       title: 'Status',
-      dataIndex: 'is_active',
-      key: 'is_active',
+      dataIndex: 'isActive',
+      key: 'isActive',
       render: (isActive: boolean) => (
         <Tag color={isActive ? 'green' : 'red'}>
-          {isActive ? 'ACTIVE' : 'INACTIVE'}
+          {isActive ? 'Active' : 'Inactive'}
         </Tag>
       ),
     },
@@ -56,36 +64,42 @@ const RolesTable: React.FC<Props> = ({
       key: 'actions',
       render: (_: any, record: Role) => (
         <Space size="middle">
-          <Tooltip title="Manage Permissions">
-            <Button 
-                type="text" 
-                icon={<KeyOutlined />} 
-                onClick={() => onManagePermissions(record)} 
+          <Tooltip title="View Permissions">
+            <Button
+              type="text"
+              icon={<EyeOutlined />}
+              onClick={() => onViewPermissions(record)}
             />
           </Tooltip>
-          <Tooltip title="Edit">
-            <Button 
-                type="text" 
-                icon={<EditOutlined />} 
-                onClick={() => onEdit(record)} 
-                disabled={record.is_system}
+          <Tooltip title={record.isSystem ? "System roles cannot be edited" : "Edit"}>
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => onEdit(record)}
+              disabled={record.isSystem}
             />
           </Tooltip>
-          <Tooltip title="Delete">
+          <Tooltip title={
+            record.isSystem
+              ? "System roles cannot be deleted"
+              : record.userCount > 0
+                ? "Cannot delete role with assigned users"
+                : "Delete"
+          }>
             <Popconfirm
-                title="Delete Role"
-                description="Are you sure you want to delete this role?"
-                onConfirm={() => onDelete(record.id)}
-                disabled={record.is_system || (record.user_count || 0) > 0}
-                okText="Delete"
-                cancelText="Cancel"
-                okButtonProps={{ danger: true }}
+              title="Delete Role"
+              description="Are you sure you want to delete this role?"
+              onConfirm={() => onDelete(record.id)}
+              disabled={record.isSystem || record.userCount > 0}
+              okText="Delete"
+              cancelText="Cancel"
+              okButtonProps={{ danger: true }}
             >
-                <Button 
-                    type="text" 
-                    icon={<DeleteOutlined style={{ color: record.is_system || (record.user_count || 0) > 0 ? undefined : '#ff4d4f' }} />} 
-                    disabled={record.is_system || (record.user_count || 0) > 0}
-                />
+              <Button
+                type="text"
+                icon={<DeleteOutlined style={{ color: record.isSystem || record.userCount > 0 ? undefined : '#ff4d4f' }} />}
+                disabled={record.isSystem || record.userCount > 0}
+              />
             </Popconfirm>
           </Tooltip>
         </Space>
@@ -99,7 +113,14 @@ const RolesTable: React.FC<Props> = ({
       dataSource={data}
       rowKey="id"
       loading={loading}
-      pagination={false}
+      pagination={pagination ? {
+        current: pagination.current,
+        pageSize: pagination.pageSize,
+        total: pagination.total,
+        onChange: pagination.onChange,
+        showSizeChanger: true,
+        showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} roles`,
+      } : false}
     />
   );
 };

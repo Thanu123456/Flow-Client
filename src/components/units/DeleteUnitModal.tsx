@@ -54,7 +54,7 @@ const DeleteUnitModal: React.FC<DeleteUnitModalProps> = ({
     >
       <p>
         Are you sure you want to delete the unit "
-        <strong>{unit?.unitName}</strong>
+        <strong>{unit?.name}</strong>
         "?
       </p>
       <p style={{ color: "#ff4d4f" }}>This action cannot be undone.</p>
