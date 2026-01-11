@@ -15,7 +15,10 @@ interface DummySidebarProps {
   onClose: () => void;
 }
 
-const DummySidebar: React.FC<DummySidebarProps> = ({ open, onClose: _onClose }) => {
+const DummySidebar: React.FC<DummySidebarProps> = ({
+  open,
+  onClose: _onClose,
+}) => {
   const sidebarWidth = open ? 280 : 70;
 
   const menuItems = [
@@ -38,6 +41,11 @@ const DummySidebar: React.FC<DummySidebarProps> = ({ open, onClose: _onClose }) 
       key: "subCategories",
       icon: <ShoppingOutlined />,
       label: "Sub Categories",
+    },
+    {
+      key: "variations",
+      icon: <ShoppingOutlined />,
+      label: "Variations",
     },
     { key: "users", icon: <UserOutlined />, label: "Users" },
     { key: "settings", icon: <SettingOutlined />, label: "Settings" },
