@@ -593,8 +593,13 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
           }
 
           /* Scrollbar Styles */
+          aside {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+          }
+
           aside::-webkit-scrollbar {
-            width: 6px;
+            width: 4px;
           }
 
           aside::-webkit-scrollbar-track {
@@ -602,12 +607,16 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
           }
 
           aside::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+          }
+
+          aside:hover::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.2);
-            border-radius: 3px;
           }
 
           aside::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.35) !important;
           }
 
           /* Submenu Arrow */

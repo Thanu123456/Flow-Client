@@ -46,11 +46,18 @@ const VariationsPage: React.FC = () => {
     const params = {
       ...paginationParams,
       search: debouncedSearchTerm,
-      status: statusFilter,
+      status:
+        statusFilter === "active"
+          ? true
+          : statusFilter === "inactive"
+            ? false
+            : undefined,
     };
+
     setPaginationParams(params);
     getVariations(params);
   }, [debouncedSearchTerm, statusFilter, getVariations]);
+
 
   const handlePageChange = (page: number, pageSize: number) => {
     const params = { ...paginationParams, page, limit: pageSize };
@@ -122,7 +129,7 @@ const VariationsPage: React.FC = () => {
             onChange: setStatusFilter,
             options: [
               { label: "Active", value: "active" },
-              { label: "Inactive", value: "inactive" },
+              { label: "In-active", value: "inactive" },
             ],
           },
         ]}

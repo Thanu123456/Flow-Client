@@ -1,0 +1,9 @@
+// POTENTIAL FIX if backend uses different IDs for each value row
+
+// Change line 79 from:
+const varId = row.id;
+
+// To group by name instead:
+const varKey = `${row.name}`.toLowerCase().trim();
+
+// And update the map operations to use varKey instead of varId

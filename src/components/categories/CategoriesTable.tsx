@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Button, Space, Badge, Tooltip, message } from "antd";
+import { Button, Space, Badge, Tooltip } from "antd";
 import { EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
 import type { SortOrder } from "antd/es/table/interface";
 import type { Category } from "../../types/entities/category.types";
@@ -22,7 +22,6 @@ interface CategoriesTableProps {
   onEdit: (category: Category) => void;
   onSubCategoryCountClick: (category: Category) => void;
   refreshData: () => void;
-  userRole?: string; // 'owner' | 'manager' | 'staff'
 }
 
 const CategoriesTable: React.FC<CategoriesTableProps> = ({
@@ -33,7 +32,6 @@ const CategoriesTable: React.FC<CategoriesTableProps> = ({
   onEdit,
   onSubCategoryCountClick,
   refreshData,
-  userRole = "staff",
 }) => {
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
 
@@ -51,10 +49,6 @@ const CategoriesTable: React.FC<CategoriesTableProps> = ({
   };
 
   const showDeleteModal = (category: Category) => {
-    if (userRole !== "owner") {
-      message.warning("Only owners can delete categories");
-      return;
-    }
     setCategoryToDelete(category);
     setDeleteModalVisible(true);
   };
@@ -90,28 +84,26 @@ const CategoriesTable: React.FC<CategoriesTableProps> = ({
     },
     {
       title: <div className="text-center w-full"># Sub-Cats</div>,
-      dataIndex: "subCategoryCount",
-      key: "subCategoryCount",
+      dataIndex: "subcategoryCount",
+      key: "subcategoryCount",
       align: "center" as const,
       sorter: (a: Category, b: Category) =>
-        (a.subCategoryCount ?? 0) - (b.subCategoryCount ?? 0),
+        (a.subcategoryCount ?? 0) - (b.subcategoryCount ?? 0),
       sortDirections: ["ascend", "descend"] as SortOrder[],
       render: (count: number, record: Category) => (
-        <Tooltip title="Click to view sub-categories">
-          <Badge
-            count={count || 0}
-            showZero
-            style={{
-              backgroundColor: count > 0 ? "#52c41a" : "#d9d9d9",
-              cursor: count > 0 ? "pointer" : "default",
-            }}
-            onClick={() => {
-              if (count > 0) {
-                onSubCategoryCountClick(record);
-              }
-            }}
-          />
-        </Tooltip>
+        <Badge
+          count={count || 0}
+          showZero
+          style={{
+            backgroundColor: count > 0 ? "#52c41a" : "#d9d9d9",
+            cursor: count > 0 ? "pointer" : "default",
+          }}
+          onClick={() => {
+            if (count > 0) {
+              onSubCategoryCountClick(record);
+            }
+          }}
+        />
       ),
     },
     {
@@ -137,11 +129,10 @@ const CategoriesTable: React.FC<CategoriesTableProps> = ({
       onFilter: (value, record) => record.status === value,
       render: (status: string) => (
         <span
-          className={`px-3 py-1 rounded-lg text-sm border ${
-            status === "active"
-              ? "border-green-500 text-green-500 bg-green-50/70"
-              : "border-red-500 text-red-500 bg-red-50/70"
-          }`}
+          className={`px-3 py-1 rounded-lg text-sm border ${status === "active"
+            ? "border-green-500 text-green-500 bg-green-50/70"
+            : "border-red-500 text-red-500 bg-red-50/70"
+            }`}
         >
           {status === "active" ? "Active" : "Inactive"}
         </span>
@@ -174,11 +165,8 @@ const CategoriesTable: React.FC<CategoriesTableProps> = ({
           <div
             className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer"
             onClick={() => showDeleteModal(record)}
-            style={{ opacity: userRole !== "owner" ? 0.5 : 1 }}
           >
-            <Tooltip
-              title={userRole === "owner" ? "Delete" : "Only owners can delete"}
-            >
+            <Tooltip title="Delete">
               <DeleteOutlined style={{ color: "red" }} />
             </Tooltip>
           </div>

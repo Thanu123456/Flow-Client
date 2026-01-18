@@ -42,6 +42,7 @@ export interface DeleteModalProps<T = any> extends BaseModalProps {
   getImageUrl?: (data: T | null) => string | undefined;
   getName?: (data: T | null) => string | undefined;
   customMessage?: ReactNode;
+  showImage?: boolean;
 }
 
 export interface ConfirmModalProps<T = any> extends BaseModalProps {

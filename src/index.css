@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-.custom-blue-header .ant-table-thead > tr > th {
+.custom-blue-header .ant-table-thead>tr>th {
   padding-top: 6px !important;
   padding-bottom: 6px !important;
   height: 32px !important;
@@ -20,4 +20,55 @@
   width: 0 !important;
   min-width: 0 !important;
   padding: 0 !important;
+}
+
+/* Premium Minimal Scrollbar for Tables and Containers */
+.ant-table-body,
+.ant-table-content,
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+}
+
+.ant-table-body::-webkit-scrollbar,
+.ant-table-content::-webkit-scrollbar,
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.ant-table-body::-webkit-scrollbar-track,
+.ant-table-content::-webkit-scrollbar-track,
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ant-table-body::-webkit-scrollbar-thumb,
+.ant-table-content::-webkit-scrollbar-thumb,
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+}
+
+.ant-table-body:hover::-webkit-scrollbar-thumb,
+.ant-table-content:hover::-webkit-scrollbar-thumb,
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.ant-table-body::-webkit-scrollbar-thumb:hover,
+.ant-table-content::-webkit-scrollbar-thumb:hover,
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Dark mode adjustment if needed */
+[data-theme='dark'] .ant-table-body,
+[data-theme='dark'] .ant-table-content {
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+[data-theme='dark'] .ant-table-body::-webkit-scrollbar-thumb,
+[data-theme='dark'] .ant-table-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.05);
 }

@@ -56,19 +56,11 @@ const AddSubCategoryModal: React.FC<AddSubCategoryModalProps> = ({
 
   const handleImageChange = (info: any) => {
     const { fileList } = info;
-
     if (fileList.length > 0) {
       const file = fileList[0].originFileObj;
-
-      if (!["image/jpeg", "image/png"].includes(file.type)) {
-        return;
-      }
-      if (file.size > 2 * 1024 * 1024) {
-        return;
-      }
-
+      if (!["image/jpeg", "image/png"].includes(file.type)) return;
+      if (file.size > 2 * 1024 * 1024) return;
       setImageFile(file);
-
       const reader = new FileReader();
       reader.onload = () => setImagePreview(reader.result as string);
       reader.readAsDataURL(file);
@@ -88,7 +80,6 @@ const AddSubCategoryModal: React.FC<AddSubCategoryModalProps> = ({
     };
 
     await subcategoryService.createSubcategory(subcategoryData);
-
     setImageFile(null);
     setImagePreview(null);
   };
@@ -122,7 +113,7 @@ const AddSubCategoryModal: React.FC<AddSubCategoryModalProps> = ({
               showSearch
               optionFilterProp="children"
             >
-              {categories.map((cat) => (
+              {categories.map((cat: { id: string; name: string }) => (
                 <Select.Option key={cat.id} value={cat.id}>
                   {cat.name}
                 </Select.Option>
@@ -148,17 +139,11 @@ const AddSubCategoryModal: React.FC<AddSubCategoryModalProps> = ({
                 <img
                   src={imagePreview}
                   alt="SubCategory"
-                  style={{
-                    width: "100%",
-                    maxHeight: "200px",
-                    objectFit: "contain",
-                  }}
+                  style={{ width: "100%", maxHeight: "200px", objectFit: "contain" }}
                 />
               ) : (
                 <div>
-                  <p className="ant-upload-drag-icon">
-                    <InboxOutlined />
-                  </p>
+                  <p className="ant-upload-drag-icon"><InboxOutlined /></p>
                   <p className="ant-upload-text">Click or drag file to upload</p>
                   <p className="ant-upload-hint">JPEG, PNG up to 2 MB</p>
                 </div>

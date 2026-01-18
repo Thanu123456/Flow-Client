@@ -1,6 +1,7 @@
 export interface Category {
   id: string;
   name: string;
+  code: string;
   imageUrl?: string;
   description?: string;
   status: "active" | "inactive";
@@ -12,6 +13,7 @@ export interface Category {
 
 export interface CategoryFormData {
   name: string;
+  code?: string;
   imageUrl?: string;
   description?: string;
   status: "active" | "inactive";
