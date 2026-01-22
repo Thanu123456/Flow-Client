@@ -31,6 +31,8 @@ import Warehouses from "../pages/management/Warehouses";
 import Roles from "../pages/management/Roles";
 import Users from "../pages/management/Users";
 import Variations from "../pages/management/Variations";
+import Customers from "../pages/management/Customers";
+import Suppliers from "../pages/management/Suppliers";
 
 // Super Admin Pages
 import SuperAdminDashboard from "../pages/superadmin/SuperAdminDashboard";
@@ -87,6 +89,24 @@ const AppRoutes: React.FC = () => {
           }
         >
           <Route path="/users" element={<Users />} />
+        </Route>
+
+        {/* Customer Management Routes */}
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.CUSTOMERS_VIEW} />
+          }
+        >
+          <Route path="/customers" element={<Customers />} />
+        </Route>
+
+        {/* Supplier Management Routes */}
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.SUPPLIERS_VIEW} />
+          }
+        >
+          <Route path="/suppliers" element={<Suppliers />} />
         </Route>
       </Route>
 
