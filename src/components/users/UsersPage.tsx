@@ -9,6 +9,7 @@ import AddUserModal from './AddUserModal';
 import EditUserModal from './EditUserModal';
 import UserDetailsModal from './UserDetailsModal';
 import ResetPINModal from './ResetPINModal';
+import UserActivityLog from './UserActivityLog';
 import BulkActions from './BulkActions';
 import type { User } from '../../types/entities/user.types';
 import { useDebounce } from '../../hooks/ui/useDebounce';
@@ -24,6 +25,7 @@ const UsersPage: React.FC = () => {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [viewModalVisible, setViewModalVisible] = useState(false);
   const [resetPINModalVisible, setResetPINModalVisible] = useState(false);
+  const [activityLogVisible, setActivityLogVisible] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   // Selection states
@@ -89,6 +91,11 @@ const UsersPage: React.FC = () => {
   const handleResetPIN = (user: User) => {
     setSelectedUser(user);
     setResetPINModalVisible(true);
+  };
+
+  const handleViewActivity = (user: User) => {
+    setSelectedUser(user);
+    setActivityLogVisible(true);
   };
 
   const handleAddSuccess = () => {
@@ -245,6 +252,7 @@ const UsersPage: React.FC = () => {
           onDelete={handleDelete}
           onResetPIN={handleResetPIN}
           onView={handleView}
+          onViewActivity={handleViewActivity}
           pagination={{
             current: pagination.page,
             pageSize: pagination.limit,
@@ -287,6 +295,15 @@ const UsersPage: React.FC = () => {
           setSelectedUser(null);
         }}
         onSuccess={handleResetPINSuccess}
+      />
+
+      <UserActivityLog
+        visible={activityLogVisible}
+        user={selectedUser}
+        onClose={() => {
+          setActivityLogVisible(false);
+          setSelectedUser(null);
+        }}
       />
     </div>
   );

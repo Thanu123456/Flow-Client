@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Form, Input, Switch, Spin, message, Alert } from 'antd';
+import { Modal, Form, Input, Switch, Spin, Alert, App } from 'antd';
 import { useRoleStore } from '../../store/management/roleStore';
 import PermissionTree from './PermissionTree';
 import type { Role, RoleFormData } from '../../types/entities/role.types';
@@ -19,6 +19,7 @@ const EditRoleModal: React.FC<EditRoleModalProps> = ({
   onCancel,
   onSuccess,
 }) => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const { updateRole, getPermissionsByModule, permissionModules } = useRoleStore();
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>([]);
