@@ -1,6 +1,6 @@
 import React from 'react';
-import { Table, Tag, Button, Space, Tooltip, Popconfirm, Avatar, Checkbox } from 'antd';
-import { EditOutlined, DeleteOutlined, KeyOutlined, UserOutlined, EyeOutlined } from '@ant-design/icons';
+import { Table, Tag, Button, Space, Tooltip, Popconfirm, Avatar } from 'antd';
+import { EditOutlined, DeleteOutlined, KeyOutlined, UserOutlined, EyeOutlined, HistoryOutlined } from '@ant-design/icons';
 import type { User } from '../../types/entities/user.types';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -16,6 +16,7 @@ interface Props {
   onDelete: (id: string) => void;
   onResetPIN: (user: User) => void;
   onView: (user: User) => void;
+  onViewActivity?: (user: User) => void;
   pagination?: {
     current: number;
     pageSize: number;
@@ -33,6 +34,7 @@ const UsersTable: React.FC<Props> = ({
   onDelete,
   onResetPIN,
   onView,
+  onViewActivity,
   pagination,
 }) => {
   const columns = [
@@ -107,6 +109,15 @@ const UsersTable: React.FC<Props> = ({
               onClick={() => onView(record)}
             />
           </Tooltip>
+          {onViewActivity && (
+            <Tooltip title="Activity Log">
+              <Button
+                type="text"
+                icon={<HistoryOutlined />}
+                onClick={() => onViewActivity(record)}
+              />
+            </Tooltip>
+          )}
           {record.userType !== 'owner' && (
             <>
               {record.kioskEnabled && (

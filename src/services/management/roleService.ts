@@ -43,17 +43,18 @@ export const roleService = {
 
     const response = await axiosInstance.get("/admin/roles", { params: backendParams });
 
-    const rolesData = response.data.roles || response.data.data || response.data || [];
+    const rolesData = response.data.data || response.data.roles || response.data || [];
     const roles: Role[] = Array.isArray(rolesData)
       ? rolesData.map(transformRole)
       : [];
 
+    const meta = response.data.meta;
     return {
       data: roles,
-      total: response.data.total || roles.length,
-      page: response.data.page || params.page,
-      limit: response.data.per_page || params.limit,
-      totalPages: response.data.total_pages || Math.ceil((response.data.total || roles.length) / params.limit),
+      total: meta?.total || roles.length,
+      page: meta?.page || params.page,
+      limit: meta?.per_page || params.limit,
+      totalPages: meta?.total_pages || Math.ceil((meta?.total || roles.length) / params.limit),
     };
   },
 
@@ -62,14 +63,14 @@ export const roleService = {
     const response = await axiosInstance.get("/admin/roles", {
       params: { per_page: 100, include_system: true },
     });
-    const rolesData = response.data.roles || response.data.data || response.data || [];
+    const rolesData = response.data.data || response.data.roles || response.data || [];
     return Array.isArray(rolesData) ? rolesData.map(transformRole) : [];
   },
 
   // Get role by ID
   getRoleById: async (id: string): Promise<Role> => {
     const response = await axiosInstance.get(`/admin/roles/${id}`);
-    const roleData = response.data.role || response.data.data || response.data;
+    const roleData = response.data.data || response.data.role || response.data;
     return transformRole(roleData);
   },
 
@@ -83,7 +84,7 @@ export const roleService = {
     };
 
     const response = await axiosInstance.post("/admin/roles", payload);
-    const createdRole = response.data.role || response.data.data || response.data;
+    const createdRole = response.data.data || response.data.role || response.data;
     return transformRole(createdRole);
   },
 
@@ -96,7 +97,7 @@ export const roleService = {
     if (data.permissionIds !== undefined) payload.permission_ids = data.permissionIds;
 
     const response = await axiosInstance.put(`/admin/roles/${id}`, payload);
-    const updatedRole = response.data.role || response.data.data || response.data;
+    const updatedRole = response.data.data || response.data.role || response.data;
     return transformRole(updatedRole);
   },
 
@@ -116,14 +117,14 @@ export const roleService = {
   getPermissions: async (module?: string): Promise<Permission[]> => {
     const params = module ? { module } : undefined;
     const response = await axiosInstance.get("/admin/permissions", { params });
-    const permissionsData = response.data.permissions || response.data.data || response.data || [];
+    const permissionsData = response.data.data || response.data.permissions || response.data || [];
     return Array.isArray(permissionsData) ? permissionsData.map(transformPermission) : [];
   },
 
   // Get permissions grouped by module
   getPermissionsByModule: async (): Promise<PermissionModule[]> => {
     const response = await axiosInstance.get("/admin/permissions");
-    const permissionsData = response.data.permissions || response.data.data || response.data || [];
+    const permissionsData = response.data.data || response.data.permissions || response.data || [];
 
     // Group permissions by module
     const moduleMap = new Map<string, Permission[]>();
