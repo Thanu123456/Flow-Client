@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Form, Input, Switch, Spin, message } from 'antd';
+import { Modal, Form, Input, Switch, Spin, App } from 'antd';
 import { useRoleStore } from '../../store/management/roleStore';
 import PermissionTree from './PermissionTree';
 import type { RoleFormData } from '../../types/entities/role.types';
@@ -17,6 +17,7 @@ const AddRoleModal: React.FC<AddRoleModalProps> = ({
   onCancel,
   onSuccess,
 }) => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const { createRole, getPermissionsByModule, permissionModules } = useRoleStore();
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>([]);
@@ -71,7 +72,7 @@ const AddRoleModal: React.FC<AddRoleModalProps> = ({
       cancelText="Cancel"
       confirmLoading={submitting}
       width={700}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}

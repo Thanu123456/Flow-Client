@@ -6,11 +6,11 @@ import {
   Select,
   Switch,
   InputNumber,
-  message,
   Divider,
   Row,
   Col,
   Typography,
+  App,
 } from 'antd';
 import { useUserStore } from '../../store/management/userStore';
 import { useRoleStore } from '../../store/management/roleStore';
@@ -33,6 +33,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   onCancel,
   onSuccess,
 }) => {
+  const { message } = App.useApp();
   const [form] = Form.useForm<UserFormData>();
   const [submitting, setSubmitting] = useState(false);
   const [kioskEnabled, setKioskEnabled] = useState(false);
@@ -99,7 +100,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       onOk={handleSubmit}
       confirmLoading={submitting}
       width={700}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical">
         <Divider orientation="left">Personal Information</Divider>

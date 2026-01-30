@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Input, Button, Space, Select, message, Row, Col } from 'antd';
+import { Card, Input, Button, Space, Select, Row, Col, App } from 'antd';
 import { PlusOutlined, ReloadOutlined, FileExcelOutlined, FilePdfOutlined } from '@ant-design/icons';
 import { useRoleStore } from '../../store/management/roleStore';
 import { roleService } from '../../services/management/roleService';
@@ -13,6 +13,7 @@ import { useDebounce } from '../../hooks/ui/useDebounce';
 const { Search } = Input;
 
 const RolesPage: React.FC = () => {
+  const { message } = App.useApp();
   const { roles, loading, pagination, getRoles, deleteRole } = useRoleStore();
 
   // Modal states
