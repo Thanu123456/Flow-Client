@@ -6,11 +6,11 @@ import {
   Select,
   Switch,
   InputNumber,
-  message,
   Divider,
   Row,
   Col,
   Typography,
+  App,
 } from 'antd';
 import { useUserStore } from '../../store/management/userStore';
 import { useRoleStore } from '../../store/management/roleStore';
@@ -31,6 +31,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
   onCancel,
   onSuccess,
 }) => {
+  const { message } = App.useApp();
   const [form] = Form.useForm<UserFormData>();
   const [submitting, setSubmitting] = useState(false);
   const [kioskEnabled, setKioskEnabled] = useState(false);
@@ -87,7 +88,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
       onOk={handleSubmit}
       confirmLoading={submitting}
       width={700}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}
@@ -270,13 +271,13 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
                   label="PIN"
                   rules={[
                     { required: kioskEnabled, message: 'Please enter PIN' },
-                    { len: 4, message: 'PIN must be exactly 4 digits' },
+                    { min: 4, max: 6, message: 'PIN must be 4-6 digits' },
                     { pattern: /^\d+$/, message: 'PIN must contain only digits' },
                   ]}
                 >
                   <Input.Password
-                    placeholder="4-digit PIN"
-                    maxLength={4}
+                    placeholder="4-6 digit PIN"
+                    maxLength={6}
                   />
                 </Form.Item>
               </Col>
@@ -298,8 +299,8 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
                   ]}
                 >
                   <Input.Password
-                    placeholder="Confirm 4-digit PIN"
-                    maxLength={4}
+                    placeholder="Confirm PIN"
+                    maxLength={6}
                   />
                 </Form.Item>
               </Col>

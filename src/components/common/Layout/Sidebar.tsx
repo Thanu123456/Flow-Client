@@ -20,6 +20,7 @@ import {
   FileTextOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  SafetyCertificateOutlined,
 } from "@ant-design/icons";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -53,6 +54,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     if (path.startsWith("/inventory")) return "inventory";
     if (path.startsWith("/warehouses")) return "warehouses";
     if (path.startsWith("/variations")) return "variations";
+    if (path.startsWith("/warranties")) return "warranties";
     if (path.startsWith("/sales")) return "sales";
     if (path.startsWith("/pos")) return "pos";
     if (path.startsWith("/purchases")) return "purchases";
@@ -79,6 +81,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
         "/inventory",
         "/warehouses",
         "/variations",
+        "/warranties",
       ].some((p) => path.startsWith(p))
     ) {
       keys.push("inventory-management");
@@ -168,6 +171,14 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
           label: <Link to="/units">Units</Link>,
         }
       );
+    }
+
+    if (isOwner || hasPermission(PERMISSIONS.WARRANTIES_VIEW)) {
+      inventoryItems.push({
+        key: "warranties",
+        icon: <SafetyCertificateOutlined />,
+        label: <Link to="/warranties">Warranties</Link>,
+      });
     }
 
     if (inventoryItems.length > 0) {

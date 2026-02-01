@@ -23,20 +23,20 @@ import KioskPOS from "../pages/kiosk/KioskPOS";
 
 // Admin Pages
 import Dashboard from "../pages/admin/Dashboard";
-import {
-  Brands,
-  Categories,
-  SubCategories,
-  Units,
-  Warehouses,
-  Roles,
-  Users,
-  Variations,
-  Customers,
-  Suppliers,
-  Products,
-  AddProduct,
-} from "../pages/management";
+
+import Brands from "../pages/management/Brands";
+import Categories from "../pages/management/Categories";
+import SubCategories from "../pages/management/SubCategories";
+import Units from "../pages/management/Units";
+import Warehouses from "../pages/management/Warehouses";
+import Roles from "../pages/management/Roles";
+import Users from "../pages/management/Users";
+import Variations from "../pages/management/Variations";
+import Customers from "../pages/management/Customers";
+import Suppliers from "../pages/management/Suppliers";
+import Warranties from "../pages/management/Warranties";
+import Products from "../pages/management/Products";
+import AddProduct from "../pages/management/AddProduct";
 
 // Super Admin Pages
 import SuperAdminDashboard from "../pages/superadmin/SuperAdminDashboard";
@@ -127,6 +127,15 @@ const AppRoutes: React.FC = () => {
           }
         >
           <Route path="/suppliers" element={<Suppliers />} />
+        </Route>
+
+        {/* Warranty Management Routes */}
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.WARRANTIES_VIEW} />
+          }
+        >
+          <Route path="/warranties" element={<Warranties />} />
         </Route>
       </Route>
 

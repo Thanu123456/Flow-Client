@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, Form, Input, message, Typography, Alert } from 'antd';
+import { Modal, Form, Input, Typography, Alert, App } from 'antd';
 import { useUserStore } from '../../store/management/userStore';
 import type { User } from '../../types/entities/user.types';
 
@@ -23,6 +23,7 @@ const ResetPINModal: React.FC<ResetPINModalProps> = ({
   onCancel,
   onSuccess,
 }) => {
+  const { message } = App.useApp();
   const [form] = Form.useForm<ResetPINFormData>();
   const [submitting, setSubmitting] = useState(false);
 
@@ -68,7 +69,7 @@ const ResetPINModal: React.FC<ResetPINModalProps> = ({
       onOk={handleSubmit}
       confirmLoading={submitting}
       width={400}
-      destroyOnClose
+      destroyOnHidden
     >
       <Alert
         message={
@@ -96,13 +97,13 @@ const ResetPINModal: React.FC<ResetPINModalProps> = ({
           label="New PIN"
           rules={[
             { required: true, message: 'Please enter new PIN' },
-            { len: 4, message: 'PIN must be exactly 4 digits' },
+            { min: 4, max: 6, message: 'PIN must be 4-6 digits' },
             { pattern: /^\d+$/, message: 'PIN must contain only digits' },
           ]}
         >
           <Input.Password
-            placeholder="Enter 4-digit PIN"
-            maxLength={4}
+            placeholder="Enter 4-6 digit PIN"
+            maxLength={6}
             autoComplete="new-password"
           />
         </Form.Item>
@@ -124,8 +125,8 @@ const ResetPINModal: React.FC<ResetPINModalProps> = ({
           ]}
         >
           <Input.Password
-            placeholder="Confirm 4-digit PIN"
-            maxLength={4}
+            placeholder="Confirm PIN"
+            maxLength={6}
             autoComplete="new-password"
           />
         </Form.Item>

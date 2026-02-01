@@ -10,8 +10,8 @@ import {
   Tag,
   Descriptions,
   Spin,
-  message,
-  Popconfirm
+  Popconfirm,
+  App
 } from 'antd';
 import {
   SafetyOutlined,
@@ -25,13 +25,14 @@ import { authService } from '../../services/auth/authService';
 import type { MfaStatusResponse } from '../../types/auth/auth.types';
 import MfaSetup from './MfaSetup';
 
-const { Title, Text, Paragraph } = Typography;
+const { Text, Paragraph } = Typography;
 
 interface MfaSettingsProps {
   onStatusChange?: (enabled: boolean) => void;
 }
 
 const MfaSettings: React.FC<MfaSettingsProps> = ({ onStatusChange }) => {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(true);
   const [mfaStatus, setMfaStatus] = useState<MfaStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -244,7 +245,7 @@ const MfaSettings: React.FC<MfaSettingsProps> = ({ onStatusChange }) => {
         onCancel={() => setShowSetupModal(false)}
         footer={null}
         width={700}
-        destroyOnClose
+        destroyOnHidden
       >
         <MfaSetup
           onComplete={handleSetupComplete}

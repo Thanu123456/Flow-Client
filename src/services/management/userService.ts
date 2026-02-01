@@ -178,4 +178,49 @@ export const userService = {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
   },
+
+  // Get user activity log
+  getUserActivity: async (
+    userId: string,
+    params: { page: number; limit: number }
+  ): Promise<{
+    data: Array<{
+      id: string;
+      action: string;
+      description: string;
+      ipAddress?: string;
+      userAgent?: string;
+      createdAt: string;
+    }>;
+    total: number;
+    page: number;
+    limit: number;
+  }> => {
+    const backendParams = {
+      page: params.page,
+      per_page: params.limit,
+    };
+    const response = await axiosInstance.get(`/admin/users/${userId}/activity`, {
+      params: backendParams,
+    });
+
+    const activitiesData = response.data.activities || response.data.data || response.data || [];
+    const activities = Array.isArray(activitiesData)
+      ? activitiesData.map((a: any) => ({
+          id: a.id,
+          action: a.action,
+          description: a.description,
+          ipAddress: a.ip_address || a.ipAddress,
+          userAgent: a.user_agent || a.userAgent,
+          createdAt: a.created_at || a.createdAt,
+        }))
+      : [];
+
+    return {
+      data: activities,
+      total: response.data.total || activities.length,
+      page: response.data.page || params.page,
+      limit: response.data.per_page || params.limit,
+    };
+  },
 };
