@@ -23,16 +23,20 @@ import KioskPOS from "../pages/kiosk/KioskPOS";
 
 // Admin Pages
 import Dashboard from "../pages/admin/Dashboard";
-import Brands from "../pages/management/Brands";
-import Categories from "../pages/management/Categories";
-import SubCategories from "../pages/management/SubCategories";
-import Units from "../pages/management/Units";
-import Warehouses from "../pages/management/Warehouses";
-import Roles from "../pages/management/Roles";
-import Users from "../pages/management/Users";
-import Variations from "../pages/management/Variations";
-import Customers from "../pages/management/Customers";
-import Suppliers from "../pages/management/Suppliers";
+import {
+  Brands,
+  Categories,
+  SubCategories,
+  Units,
+  Warehouses,
+  Roles,
+  Users,
+  Variations,
+  Customers,
+  Suppliers,
+  Products,
+  AddProduct,
+} from "../pages/management";
 
 // Super Admin Pages
 import SuperAdminDashboard from "../pages/superadmin/SuperAdminDashboard";
@@ -68,6 +72,22 @@ const AppRoutes: React.FC = () => {
         <Route path="/dashboard" element={<Dashboard />} />
 
         {/* Product Management Routes */}
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.INVENTORY_VIEW} />
+          }
+        >
+          <Route path="/products" element={<Products />} />
+          <Route path="/inventory" element={<Navigate to="/products" replace />} />
+        </Route>
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.INVENTORY_ADD} />
+          }
+        >
+          <Route path="/products/add" element={<AddProduct />} />
+        </Route>
+
         <Route path="/brands" element={<Brands />} />
         <Route path="/categories" element={<Categories />} />
         <Route path="/subcategories" element={<SubCategories />} />
