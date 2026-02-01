@@ -33,6 +33,7 @@ import Users from "../pages/management/Users";
 import Variations from "../pages/management/Variations";
 import Customers from "../pages/management/Customers";
 import Suppliers from "../pages/management/Suppliers";
+import Warranties from "../pages/management/Warranties";
 
 // Super Admin Pages
 import SuperAdminDashboard from "../pages/superadmin/SuperAdminDashboard";
@@ -107,6 +108,15 @@ const AppRoutes: React.FC = () => {
           }
         >
           <Route path="/suppliers" element={<Suppliers />} />
+        </Route>
+
+        {/* Warranty Management Routes */}
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.WARRANTIES_VIEW} />
+          }
+        >
+          <Route path="/warranties" element={<Warranties />} />
         </Route>
       </Route>
 
