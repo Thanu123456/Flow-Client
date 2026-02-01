@@ -76,21 +76,11 @@ const VariationsTable: React.FC<VariationsTableProps> = ({
       key: "values",
       render: (_: any, record: Variation) => (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-          {record.values.slice(0, 3).map((value) => (
+          {record.values.map((value) => (
             <Tag key={value.id} color="geekblue">
               {value.value}
             </Tag>
           ))}
-          {record.values.length > 3 && (
-            <Tooltip
-              title={record.values
-                .slice(3)
-                .map((v) => v.value)
-                .join(", ")}
-            >
-              <Tag color="blue">+{record.values.length - 3} more</Tag>
-            </Tooltip>
-          )}
         </div>
       ),
     },
@@ -102,9 +92,17 @@ const VariationsTable: React.FC<VariationsTableProps> = ({
       sortDirections: ["ascend", "descend"] as SortOrder[],
       render: (_: any, record: Variation) => (
         <Badge
-          count={record.values.length}
+          count={record.values?.length || 0}
           showZero
-          style={{ backgroundColor: "#52c41a" }}
+          style={{
+            backgroundColor: (record.values?.length || 0) > 0 ? "#52c41a" : "#d9d9d9",
+            cursor: (record.values?.length || 0) > 0 ? "pointer" : "default",
+          }}
+          onClick={() => {
+            if ((record.values?.length || 0) > 0) {
+              showViewModal(record);
+            }
+          }}
         />
       ),
     },
@@ -121,11 +119,10 @@ const VariationsTable: React.FC<VariationsTableProps> = ({
       onFilter: (value, record) => record.status === value,
       render: (status: string) => (
         <span
-          className={`px-3 py-1 rounded-lg text-sm border ${
-            status === "active"
-              ? "border-green-500 text-green-500 bg-green-50/70"
-              : "border-red-500 text-red-500 bg-red-50/70"
-          }`}
+          className={`px-3 py-1 rounded-lg text-sm border ${status === "active"
+            ? "border-green-500 text-green-500 bg-green-50/70"
+            : "border-red-500 text-red-500 bg-red-50/70"
+            }`}
         >
           {status === "active" ? "Active" : "Inactive"}
         </span>
@@ -141,7 +138,18 @@ const VariationsTable: React.FC<VariationsTableProps> = ({
       sorter: (a: Variation, b: Variation) =>
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
       sortDirections: ["ascend", "descend"] as SortOrder[],
-      render: (date: string) => dayjs(date).format("DD MMM YYYY"),
+      render: (date: string) => (date && date !== "0001-01-01T00:00:00Z" ? dayjs(date).format("DD MMM YYYY HH:mm") : "N/A"),
+    },
+    {
+      title: "Updated At",
+      dataIndex: "updatedAt",
+      key: "updatedAt",
+      width: 150,
+      align: "center" as const,
+      sorter: (a: Variation, b: Variation) =>
+        new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime(),
+      sortDirections: ["ascend", "descend"] as SortOrder[],
+      render: (date: string) => (date && date !== "0001-01-01T00:00:00Z" ? dayjs(date).format("DD MMM YYYY HH:mm") : "N/A"),
     },
     {
       title: <div className="text-center w-full">Actions</div>,

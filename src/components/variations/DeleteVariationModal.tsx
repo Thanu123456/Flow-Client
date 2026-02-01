@@ -1,5 +1,4 @@
 import React from "react";
-import { message } from "antd";
 import { DeleteModal } from "../common/Modal";
 import { useVariationStore } from "../../store/management/variationStore";
 import type { Variation } from "../../types/entities/variation.types";
@@ -32,6 +31,7 @@ const DeleteVariationModal: React.FC<DeleteVariationModalProps> = ({
       onSuccess={onSuccess}
       onDelete={handleDelete}
       getName={(variation) => variation?.name}
+      showImage={false}
       customMessage={
         variation && (
           <>

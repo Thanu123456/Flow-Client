@@ -18,6 +18,7 @@ function DeleteModal<T = any>({
   getImageUrl,
   getName,
   customMessage,
+  showImage = true,
   ...restProps
 }: DeleteModalProps<T>) {
   const { message } = App.useApp();
@@ -77,20 +78,21 @@ function DeleteModal<T = any>({
           size={16}
           style={{ width: "100%" }}
         >
-          {imageUrl ? (
-            <Image
-              width={120}
-              height={120}
-              src={imageUrl}
-              alt={name || "Item"}
-              style={{ objectFit: "contain", borderRadius: 8 }}
-              preview={false}
-            />
-          ) : (
-            <div className="w-24 h-24 flex items-center justify-center rounded-md border-2 border-dashed border-red-400 bg-gray-50">
-              <FaRegImages size={28} className="text-gray-400" />
-            </div>
-          )}
+          {showImage &&
+            (imageUrl ? (
+              <Image
+                width={120}
+                height={120}
+                src={imageUrl}
+                alt={name || "Item"}
+                style={{ objectFit: "contain", borderRadius: 8 }}
+                preview={false}
+              />
+            ) : (
+              <div className="w-24 h-24 flex items-center justify-center rounded-md border-2 border-dashed border-red-400 bg-gray-50">
+                <FaRegImages size={28} className="text-gray-400" />
+              </div>
+            ))}
           <p>
             {customMessage || (
               <>

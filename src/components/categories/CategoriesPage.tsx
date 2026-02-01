@@ -21,14 +21,12 @@ import { CommonButton } from "../common/Button";
 import { useNavigate } from "react-router-dom";
 
 interface CategoriesPageProps {
-  userRole?: string; // 'owner' | 'manager' | 'staff'
   onHeaderCollapseChange?: (collapsed: boolean) => void;
   sidebarOpen?: boolean;
   setSidebarOpen?: (open: boolean) => void;
 }
 
 const CategoriesPage: React.FC<CategoriesPageProps> = ({
-  userRole = "staff",
   onHeaderCollapseChange,
   sidebarOpen: _sidebarOpen = false,
   setSidebarOpen: _setSidebarOpen,
@@ -80,18 +78,10 @@ const CategoriesPage: React.FC<CategoriesPageProps> = ({
   const handleRefresh = () => getCategories(paginationParams);
 
   const handleAddCategory = () => {
-    if (userRole === "staff") {
-      message.warning("You don't have permission to add categories");
-      return;
-    }
     setAddModalVisible(true);
   };
 
   const handleEditCategory = (category: Category) => {
-    if (userRole === "staff") {
-      message.warning("You don't have permission to edit categories");
-      return;
-    }
     setSelectedCategory(category);
     setEditModalVisible(true);
   };
@@ -165,12 +155,6 @@ const CategoriesPage: React.FC<CategoriesPageProps> = ({
               type="primary"
               icon={<PlusOutlined />}
               onClick={handleAddCategory}
-              disabled={userRole === "staff"}
-              tooltip={
-                userRole === "staff"
-                  ? "You don't have permission to add categories"
-                  : "Add new category"
-              }
             >
               Add Category
             </CommonButton>
@@ -205,7 +189,6 @@ const CategoriesPage: React.FC<CategoriesPageProps> = ({
           onEdit={handleEditCategory}
           onSubCategoryCountClick={handleSubCategoryCountClick}
           refreshData={handleRefresh}
-          userRole={userRole}
         />
       </PageLayout>
 

@@ -32,7 +32,7 @@ function AddModal<T = any>({
         form.setFieldsValue(initialValues);
       }
     }
-  }, [visible, form, initialValues]);
+  }, [visible, form]);
 
   const handleSubmit = async () => {
     try {

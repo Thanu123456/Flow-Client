@@ -85,7 +85,7 @@ const EditSubCategoryModal: React.FC<EditSubCategoryModalProps> = ({
       reader.readAsDataURL(file);
     });
 
-  const handleSubmit = async (values: any, originalData: Subcategory) => {
+  const handleSubmit = async (values: any, _originalData: Subcategory) => {
     const subcategoryData: Partial<SubcategoryFormData> = {
       categoryId: values.categoryId,
       name: values.name,
@@ -94,7 +94,7 @@ const EditSubCategoryModal: React.FC<EditSubCategoryModalProps> = ({
       imageUrl: imageFile ? await fileToBase64(imageFile) : imagePreview ?? undefined,
     };
 
-    await updateSubcategory(originalData.id, subcategoryData);
+    await updateSubcategory(_originalData.id, subcategoryData);
   };
 
   const mapDataToForm = (subcategory: Subcategory) => ({
@@ -128,7 +128,7 @@ const EditSubCategoryModal: React.FC<EditSubCategoryModalProps> = ({
               showSearch
               optionFilterProp="children"
             >
-              {categories.map((cat) => (
+              {categories.map((cat: { id: string; name: string }) => (
                 <Select.Option key={cat.id} value={cat.id}>
                   {cat.name}
                 </Select.Option>
@@ -154,17 +154,11 @@ const EditSubCategoryModal: React.FC<EditSubCategoryModalProps> = ({
                 <img
                   src={imagePreview}
                   alt="SubCategory"
-                  style={{
-                    width: "100%",
-                    maxHeight: "200px",
-                    objectFit: "contain",
-                  }}
+                  style={{ width: "100%", maxHeight: "200px", objectFit: "contain" }}
                 />
               ) : (
                 <div>
-                  <p className="ant-upload-drag-icon">
-                    <InboxOutlined />
-                  </p>
+                  <p className="ant-upload-drag-icon"><InboxOutlined /></p>
                   <p className="ant-upload-text">Click or drag file to upload</p>
                   <p className="ant-upload-hint">JPEG, PNG up to 2 MB</p>
                 </div>

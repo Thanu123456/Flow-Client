@@ -29,7 +29,7 @@ function EditModal<T = any>({
       const formValues = mapDataToForm ? mapDataToForm(data) : data;
       form.setFieldsValue(formValues);
     }
-  }, [visible, data, form, mapDataToForm]);
+  }, [visible, data, form]); // Removed mapDataToForm from dependencies
 
   const handleSubmit = async () => {
     if (!data) return;

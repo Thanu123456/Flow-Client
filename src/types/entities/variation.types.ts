@@ -2,6 +2,7 @@ export interface VariationValue {
   id: string;
   value: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Variation {
@@ -24,7 +25,7 @@ export interface VariationPaginationParams {
   page: number;
   limit: number;
   search?: string;
-  status?: "active" | "inactive";
+  status?: boolean;
 }
 
 export interface VariationResponse {
@@ -33,4 +34,10 @@ export interface VariationResponse {
   page: number;
   limit: number;
   totalPages: number;
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
