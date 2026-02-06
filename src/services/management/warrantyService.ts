@@ -11,8 +11,8 @@ const transformWarranty = (data: any): Warranty => ({
   name: data.name,
   description: data.description,
   duration: data.duration,
-  duration_unit: data.duration_unit,
-  status: data.is_active ? "active" : "inactive",
+  period: data.period,
+  isActive: data.is_active,
   createdAt: data.created_at,
   updatedAt: data.updated_at,
 });
@@ -54,19 +54,38 @@ export const warrantyService = {
       name: data.name,
       description: data.description,
       duration: data.duration,
-      duration_unit: data.duration_unit,
-      is_active: data.status === "active"
+      period: data.period,
+      is_active: data.isActive
     });
   },
 
   updateWarranty: async (id: string, data: Partial<WarrantyFormData>): Promise<void> => {
     await axiosInstance.put(`/admin/warranties/${id}`, {
-      ...data,
-      is_active: data.status ? data.status === "active" : undefined
+      name: data.name,
+      description: data.description,
+      duration: data.duration,
+      period: data.period,
+      is_active: data.isActive
     });
   },
 
   deleteWarranty: async (id: string): Promise<void> => {
     await axiosInstance.delete(`/admin/warranties/${id}`);
+  },
+
+  exportToPDF: async (params: WarrantyPaginationParams): Promise<Blob> => {
+    const response = await axiosInstance.get("/admin/warranties/export/pdf", {
+      params,
+      responseType: 'blob'
+    });
+    return response.data;
+  },
+
+  exportToExcel: async (params: WarrantyPaginationParams): Promise<Blob> => {
+    const response = await axiosInstance.get("/admin/warranties/export/excel", {
+      params,
+      responseType: 'blob'
+    });
+    return response.data;
   }
 };

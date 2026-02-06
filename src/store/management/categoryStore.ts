@@ -67,6 +67,7 @@ export const useCategoryStore = create<CategoryState>()(
       getAllCategories: async () => {
         try {
           const categories = await categoryService.getAllCategories();
+          set({ categories });
           return categories;
         } catch (error: any) {
           const errorMessage = error.response?.data?.message || error.message || "Failed to fetch categories";

@@ -15,19 +15,34 @@ const splitValueString = (val: any): string[] => {
 
 // Helper to transform backend variation value to frontend type
 const transformVariationValue = (v: any): VariationValue[] => {
+  // If v is a string (comma-separated values without proper IDs), we have a problem
+  // but let's try to handle it gracefully
   if (typeof v === "string") {
-    return splitValueString(v).map(val => ({
-      id: val,
+    return splitValueString(v).map((val, idx) => ({
+      id: `temp-${idx}-${val}`, // Mark as temp ID - these won't work for submission
       value: val,
     }));
   }
 
+  // Prioritize the backend's proper UUID id field
+  const backendId = v.id || v.ID || v.value_id || v.option_id;
   const valStr = String(v.value || v.Value || v.name || v.Name || v.values_name || v.option_value || v.OptionValue || "");
-  const splitValues = splitValueString(valStr);
 
+  // If we have a proper backend ID, use it
+  if (backendId) {
+    return [{
+      id: String(backendId),
+      value: valStr || JSON.stringify(v),
+      createdAt: v.created_at || v.createdAt || v.CreatedAt || v.Created_at || "",
+      updatedAt: v.updated_at || v.updatedAt || v.UpdatedAt || v.Updated_at || "",
+    }];
+  }
+
+  // Fallback: split comma-separated values if no proper ID
+  const splitValues = splitValueString(valStr);
   if (splitValues.length > 1) {
     return splitValues.map((val, idx) => ({
-      id: String(v.id || v.ID || v.value_id || "") + "-" + idx,
+      id: `temp-${idx}-${val}`, // Mark as temp ID
       value: val,
       createdAt: v.created_at || v.createdAt || v.CreatedAt || v.Created_at || "",
       updatedAt: v.updated_at || v.updatedAt || v.UpdatedAt || v.Updated_at || "",
@@ -35,7 +50,7 @@ const transformVariationValue = (v: any): VariationValue[] => {
   }
 
   return [{
-    id: String(v.id || v.ID || v.value_id || v.value || v.Value || Math.random().toString()),
+    id: `temp-${valStr}`, // Mark as temp ID
     value: valStr || JSON.stringify(v),
     createdAt: v.created_at || v.createdAt || v.CreatedAt || v.Created_at || "",
     updatedAt: v.updated_at || v.updatedAt || v.UpdatedAt || v.Updated_at || "",
@@ -183,44 +198,40 @@ export const variationService = {
     };
   },
 
-  // Get all variations (no pagination)
+  // Get all variations (no pagination) - returns variations with proper option UUIDs
   getAllVariations: async (): Promise<Variation[]> => {
     const response = await axiosInstance.get("/admin/variations/all");
     const variationsData = response.data.data || response.data.variations || response.data || [];
 
-    // Use the same grouping logic as getVariations for consistency
-    const variationsMap = new Map<string, any>();
     const items = Array.isArray(variationsData) ? variationsData : [variationsData];
 
-    items.forEach((row: any) => {
-      const varName = String(row.name || row.Name || "Unnamed Variation");
-      const groupKey = varName.toLowerCase().trim();
-      if (!variationsMap.has(groupKey)) {
-        variationsMap.set(groupKey, { ...row, values: [] });
-      }
-      const variation = variationsMap.get(groupKey);
-      const val = row.values_name || row.value_name || row.value || row.Value || row.option_value;
-      if (val) variation.values.push(val);
-      if (Array.isArray(row.values)) variation.values = [...variation.values, ...row.values];
+    // The backend now returns variations with options array containing proper UUIDs
+    return items.map((v: any) => {
+      // Transform options to values with proper IDs
+      const values: VariationValue[] = [];
+      const options = v.options || v.Options || [];
 
-      // Preserve the most recent updated_at timestamp from all rows
-      const rowUpdatedAt = row.updated_at || row.updatedAt || row.UpdatedAt || row.Updated_at || "";
-      const currentUpdatedAt = variation.updated_at || variation.updatedAt || "";
-      if (rowUpdatedAt && (!currentUpdatedAt || new Date(rowUpdatedAt) > new Date(currentUpdatedAt))) {
-        variation.updated_at = rowUpdatedAt;
-        variation.updatedAt = rowUpdatedAt;
-      }
+      options.forEach((opt: any) => {
+        values.push({
+          id: String(opt.id || opt.ID),
+          value: String(opt.value || opt.Value || opt.name || opt.Name || ""),
+          createdAt: opt.created_at || opt.createdAt || "",
+          updatedAt: opt.updated_at || opt.updatedAt || "",
+        });
+      });
 
-      // Also preserve created_at if missing
-      const rowCreatedAt = row.created_at || row.createdAt || row.CreatedAt || row.Created_at || "";
-      if (rowCreatedAt && !variation.created_at && !variation.createdAt) {
-        variation.created_at = rowCreatedAt;
-        variation.createdAt = rowCreatedAt;
-      }
+      return {
+        id: String(v.id || v.ID || ""),
+        name: String(v.name || v.Name || "Unnamed Variation"),
+        values: values,
+        valuesCount: values.length,
+        status: (v.is_active === true || v.is_active === "true" || v.status === "active") ? "active" : "inactive",
+        createdAt: v.created_at || v.createdAt || "",
+        updatedAt: v.updated_at || v.updatedAt || "",
+      };
     });
-
-    return Array.from(variationsMap.values()).map(transformVariation);
   },
+
 
   // Get variation by ID
   getVariationById: async (id: string): Promise<Variation> => {

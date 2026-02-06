@@ -1,10 +1,12 @@
+export type WarrantyPeriod = "month" | "year";
+
 export interface Warranty {
   id: string;
   name: string;
   description?: string;
-  duration: number; // in months or days? DB likely has it. Assuming months.
-  duration_unit: "days" | "months" | "years";
-  status: "active" | "inactive";
+  duration: number;
+  period: WarrantyPeriod;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -13,8 +15,8 @@ export interface WarrantyFormData {
   name: string;
   description?: string;
   duration: number;
-  duration_unit: "days" | "months" | "years";
-  status: "active" | "inactive";
+  period: WarrantyPeriod;
+  isActive: boolean;
 }
 
 export interface WarrantyPaginationParams {

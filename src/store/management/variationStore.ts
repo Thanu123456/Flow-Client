@@ -17,6 +17,7 @@ interface VariationState {
     totalPages: number;
   };
   getVariations: (params: VariationPaginationParams) => Promise<void>;
+  getAllVariations: () => Promise<Variation[]>;
   getVariationById: (id: string) => Promise<Variation>;
   createVariation: (data: VariationFormData) => Promise<void>;
   updateVariation: (
@@ -52,6 +53,17 @@ export const useVariationStore = create<VariationState>((set) => ({
         error: error.response?.data?.message || "Failed to fetch variations",
         loading: false,
       });
+    }
+  },
+
+  getAllVariations: async () => {
+    try {
+      const variations = await variationService.getAllVariations();
+      set({ variations });
+      return variations;
+    } catch (error: any) {
+      set({ error: error.response?.data?.message || "Failed to fetch variations" });
+      return [];
     }
   },
 

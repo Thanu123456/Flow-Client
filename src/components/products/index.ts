@@ -1,12 +1,13 @@
-// export { default as ProductsPage } from "./ProductsPage";
-// export { default as ProductsTable } from "./ProductsTable";
+export { default as ProductsPage } from "./ProductsPage";
+export { default as ProductsTable } from "./ProductsTable";
 export { default as AddProductPage } from "./AddProductPage";
-// export { default as EditProductPage } from "./EditProductPage";
-// export { default as ImportProducts } from "./ImportProducts";
-// export { default as ProductDetailsModal } from "./ProductDetailsModal";
+export { default as EditProductPage } from "./EditProductPage";
+export { default as ImportProducts } from "./ImportProducts";
+export { default as ProductDetailsModal } from "./ProductDetailsModal";
 export { default as SingleProductForm } from "./SingleProductForm";
 export { default as VariableProductForm } from "./VariableProductForm";
 export { default as VariationFields } from "./VariationFields";
 export { default as BasicDetailsForm } from "./BasicDetailsForm";
 export { default as PricingFields } from "./PricingFields";
 export { default as DiscountFields } from "./DiscountFields";
+

@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { Table, Tag, Space, Button, Tooltip, Image, Popconfirm, message } from "antd";
-import { EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
 import { useProductStore } from "../../store/inventory/productStore";
 import type { Product } from "../../types/entities/product.types";
 import { useNavigate } from "react-router-dom";
+import ProductDetailsModal from "./ProductDetailsModal";
 
 const ProductsTable: React.FC = () => {
     const navigate = useNavigate();
     const { products, loading, pagination, getProducts, deleteProduct } = useProductStore();
     const [pageSize, setPageSize] = useState(10);
+    const [viewModalVisible, setViewModalVisible] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
     useEffect(() => {
         getProducts({ page: 1, limit: pageSize });
@@ -115,7 +118,10 @@ const ProductsTable: React.FC = () => {
                         <Button
                             type="text"
                             icon={<EyeOutlined />}
-                            onClick={() => console.log("View", record.id)}
+                            onClick={() => {
+                                setSelectedProduct(record);
+                                setViewModalVisible(true);
+                            }}
                         />
                     </Tooltip>
                     <Tooltip title="Edit">
@@ -142,20 +148,30 @@ const ProductsTable: React.FC = () => {
     ];
 
     return (
-        <Table
-            columns={columns}
-            dataSource={products}
-            rowKey="id"
-            loading={loading}
-            pagination={{
-                current: pagination.page,
-                pageSize: pagination.limit,
-                total: pagination.total,
-                showSizeChanger: true,
-                showTotal: (total) => `Total ${total} items`,
-            }}
-            onChange={handleTableChange}
-        />
+        <>
+            <Table
+                columns={columns}
+                dataSource={products}
+                rowKey="id"
+                loading={loading}
+                pagination={{
+                    current: pagination.page,
+                    pageSize: pagination.limit,
+                    total: pagination.total,
+                    showSizeChanger: true,
+                    showTotal: (total) => `Total ${total} items`,
+                }}
+                onChange={handleTableChange}
+            />
+            <ProductDetailsModal
+                visible={viewModalVisible}
+                product={selectedProduct}
+                onClose={() => {
+                    setViewModalVisible(false);
+                    setSelectedProduct(null);
+                }}
+            />
+        </>
     );
 };
 

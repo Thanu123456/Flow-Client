@@ -37,6 +37,8 @@ import Suppliers from "../pages/management/Suppliers";
 import Warranties from "../pages/management/Warranties";
 import Products from "../pages/management/Products";
 import AddProduct from "../pages/management/AddProduct";
+import EditProduct from "../pages/management/EditProduct";
+
 
 // Super Admin Pages
 import SuperAdminDashboard from "../pages/superadmin/SuperAdminDashboard";
@@ -86,6 +88,13 @@ const AppRoutes: React.FC = () => {
           }
         >
           <Route path="/products/add" element={<AddProduct />} />
+        </Route>
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.INVENTORY_EDIT} />
+          }
+        >
+          <Route path="/products/edit/:id" element={<EditProduct />} />
         </Route>
 
         <Route path="/brands" element={<Brands />} />

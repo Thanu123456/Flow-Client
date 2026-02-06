@@ -25,6 +25,7 @@ interface BrandState {
   filters: BrandFilters;
 
   getBrands: (params: BrandPaginationParams) => Promise<void>;
+  getAllBrands: () => Promise<Brand[]>;
   getBrandById: (id: string) => Promise<void>;
   createBrand: (brandData: BrandFormData) => Promise<Brand>;
   updateBrand: (
@@ -74,6 +75,18 @@ export const useBrandStore = create<BrandState>()(
             error: err.response?.data?.message || "Failed to fetch brand",
             loading: false,
           });
+        }
+      },
+
+      // Get all brands for dropdowns
+      getAllBrands: async () => {
+        try {
+          const brands = await brandService.getAllBrands();
+          set({ brands });
+          return brands;
+        } catch (err: any) {
+          set({ error: err.response?.data?.message || "Failed to fetch brands" });
+          return [];
         }
       },
 

@@ -1,11 +1,19 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button, Card, Space, Breadcrumb, Input } from "antd";
 import { PlusOutlined, SearchOutlined, ExportOutlined, ImportOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import ProductsTable from "./ProductsTable";
+import ImportProducts from "./ImportProducts";
 
 const ProductsPage: React.FC = () => {
     const navigate = useNavigate();
+    const [importModalVisible, setImportModalVisible] = useState(false);
+    const [searchText, setSearchText] = useState("");
+
+    const handleExport = () => {
+        // Implement export logic here if needed
+        console.log("Exporting products...");
+    };
 
     return (
         <div style={{ padding: "24px" }}>
@@ -20,8 +28,18 @@ const ProductsPage: React.FC = () => {
                     />
                 </div>
                 <Space>
-                    <Button icon={<ImportOutlined />}>Import</Button>
-                    <Button icon={<ExportOutlined />}>Export</Button>
+                    <Button
+                        icon={<ImportOutlined />}
+                        onClick={() => setImportModalVisible(true)}
+                    >
+                        Import
+                    </Button>
+                    <Button
+                        icon={<ExportOutlined />}
+                        onClick={handleExport}
+                    >
+                        Export
+                    </Button>
                     <Button
                         type="primary"
                         icon={<PlusOutlined />}
@@ -38,12 +56,23 @@ const ProductsPage: React.FC = () => {
                         placeholder="Search products..."
                         prefix={<SearchOutlined style={{ color: "rgba(0,0,0,.25)" }} />}
                         style={{ width: 300 }}
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
                     />
                 </div>
                 <ProductsTable />
             </Card>
+
+            <ImportProducts
+                visible={importModalVisible}
+                onClose={() => setImportModalVisible(false)}
+                onSuccess={() => {
+                    // Refresh products table logic if needed
+                }}
+            />
         </div>
     );
 };
 
 export default ProductsPage;
+

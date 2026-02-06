@@ -41,7 +41,15 @@ const PricingFields: React.FC<PricingFieldsProps> = ({ prefix }) => {
                                 <CalculatorOutlined className="text-slate-400" /> Cost Price
                             </span>
                         }
-                        rules={[{ required: true, message: "Required" }]}
+                        rules={[
+                            { required: true, message: "Required" },
+                            {
+                                validator: (_, value) =>
+                                    value > 0
+                                        ? Promise.resolve()
+                                        : Promise.reject(new Error("Cost must be > 0"))
+                            }
+                        ]}
                         initialValue={0}
                     >
                         <InputNumber

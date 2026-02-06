@@ -106,6 +106,7 @@ const VariationFields: React.FC<VariationFieldsProps> = ({ name, remove, optionL
                     ghost
                     className="pricing-collapse bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm"
                     expandIconPosition="right"
+                    defaultActiveKey={["1"]}
                 >
                     <Panel
                         header={

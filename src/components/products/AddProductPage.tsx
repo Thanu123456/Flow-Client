@@ -27,11 +27,45 @@ const AddProductPage: React.FC = () => {
 
     const onFinish = async (values: CreateProductRequest) => {
         try {
-            await createProduct(values);
+            console.log("Submitting values:", JSON.stringify(values, null, 2));
+
+            // Sanitize values to prevent 400 Bad Request on empty strings for UUIDs
+            const sanitizedValues = { ...values };
+
+            // Helper to clean specific optional fields
+            const cleanOptionalUuid = (val: any) => (val === "" ? null : val);
+
+            sanitizedValues.brand_id = cleanOptionalUuid(sanitizedValues.brand_id);
+            sanitizedValues.warehouse_id = cleanOptionalUuid(sanitizedValues.warehouse_id);
+            sanitizedValues.warranty_id = cleanOptionalUuid(sanitizedValues.warranty_id);
+
+            if (sanitizedValues.single_product) {
+                if (sanitizedValues.single_product.image_url === "") sanitizedValues.single_product.image_url = undefined;
+            }
+            if (sanitizedValues.variable_product?.variations) {
+                sanitizedValues.variable_product.variations.forEach((v: any) => {
+                    if (v.image_url === "") v.image_url = undefined;
+                });
+            }
+
+            console.log("Sanitized values:", JSON.stringify(sanitizedValues, null, 2));
+
+            await createProduct(sanitizedValues);
             message.success("Product created successfully");
             navigate("/products");
         } catch (error: any) {
-            console.error(error);
+            console.error("Create product failed:", error);
+            const errorMsg = error.response?.data?.message || "Failed to create product. Check console for details.";
+            // If there are detailed validation errors
+            if (error.response?.data?.error) {
+                if (typeof error.response.data.error === 'string') {
+                    message.error(error.response.data.error);
+                } else {
+                    message.error(`${error.response.data.error.message}: ${error.response.data.error.details}`);
+                }
+            } else {
+                message.error(errorMsg);
+            }
         }
     };
 

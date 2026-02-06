@@ -12,15 +12,29 @@ import VariationFields from "./VariationFields";
 const { Text } = Typography;
 
 const VariableProductForm: React.FC = () => {
-    const { variations, getVariations } = useVariationStore();
+    const { variations, getAllVariations } = useVariationStore();
     const [selectedVariationId, setSelectedVariationId] = useState<string | null>(null);
     const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
 
     const form = Form.useFormInstance();
 
     useEffect(() => {
-        getVariations({ page: 1, limit: 100 });
-    }, []);
+        // Use getAllVariations to get variations with proper option UUIDs
+        getAllVariations();
+
+        // Sync with form values for editing
+        const initialVarId = form.getFieldValue(["variable_product", "variation_id"]);
+        const initialVariations = form.getFieldValue(["variable_product", "variations"]) || [];
+
+        if (initialVarId) {
+            setSelectedVariationId(initialVarId);
+        }
+
+        if (initialVariations.length > 0) {
+            const optionIds = initialVariations.map((v: any) => v.variation_option_ids?.[0]).filter(Boolean);
+            setSelectedOptionIds(optionIds);
+        }
+    }, [getAllVariations]);
 
     const handleVariationChange = (id: string) => {
         setSelectedVariationId(id);
@@ -45,10 +59,20 @@ const VariableProductForm: React.FC = () => {
         optionIds.forEach(optId => {
             const exists = newVariations.find((v: any) => v.variation_option_ids && v.variation_option_ids[0] === optId);
             if (!exists) {
+                // Initialize with all required fields to prevent validation errors
                 newVariations.push({
                     variation_option_ids: [optId],
-                    cost_price: 0,
-                    quantity_alert: 5
+                    sku: "",
+                    barcode: "",
+                    cost_price: 0.01, // Use 0.01 as minimum to pass required validation
+                    wholesale_price: 0,
+                    retail_price: 0,
+                    our_price: 0,
+                    discount_type: "",
+                    discount_value: 0,
+                    discount_applies_to: [],
+                    quantity_alert: 5,
+                    image_url: ""
                 });
             }
         });
@@ -59,6 +83,7 @@ const VariableProductForm: React.FC = () => {
             }
         });
     };
+
 
     return (
         <Card
