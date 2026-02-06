@@ -39,7 +39,12 @@ const AddProductPage: React.FC = () => {
             sanitizedValues.warehouse_id = cleanOptionalUuid(sanitizedValues.warehouse_id);
             sanitizedValues.warranty_id = cleanOptionalUuid(sanitizedValues.warranty_id);
 
+
+
+            if (sanitizedValues.image_url === "") sanitizedValues.image_url = undefined;
+
             if (sanitizedValues.single_product) {
+                // image_url is now at top level, but keep this for backward safety if form structure changes
                 if (sanitizedValues.single_product.image_url === "") sanitizedValues.single_product.image_url = undefined;
             }
             if (sanitizedValues.variable_product?.variations) {

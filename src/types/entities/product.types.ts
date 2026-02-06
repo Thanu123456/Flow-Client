@@ -15,6 +15,7 @@ export interface CreateProductRequest {
     product_type: ProductType;
     single_product?: SingleProductRequest;
     variable_product?: VariableProductRequest;
+    image_url?: string;
 }
 
 export interface SingleProductRequest {

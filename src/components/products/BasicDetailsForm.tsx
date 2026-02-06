@@ -5,8 +5,10 @@ import {
     TagsOutlined,
     AppstoreOutlined,
     GlobalOutlined,
-    SafetyCertificateOutlined
+    SafetyCertificateOutlined,
+    PictureOutlined
 } from "@ant-design/icons";
+import ImageUpload from "../common/Upload/ImageUpload";
 import { useCategoryStore } from "../../store/management/categoryStore";
 import { useSubcategoryStore } from "../../store/management/subCategoryStore";
 import { useBrandStore } from "../../store/management/brandStore";
@@ -113,6 +115,22 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
                                 placeholder="Provide a detailed description of the product..."
                                 className="rounded-lg"
                             />
+                        </Form.Item>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100">
+                        <Text className="text-xs font-normal uppercase text-slate-400 mb-4 block tracking-wider">
+                            Product Image
+                        </Text>
+                        <Form.Item
+                            name="image_url"
+                            label={
+                                <span className="flex items-center gap-1 font-normal">
+                                    <PictureOutlined className="text-slate-400" /> Main Product Image
+                                </span>
+                            }
+                        >
+                            <ImageUpload placeholder="Upload or drop high-quality product image" />
                         </Form.Item>
                     </div>
 
@@ -244,7 +262,7 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
                     </div>
                 </div>
             </Card>
-        </Spin>
+        </Spin >
     );
 };
 

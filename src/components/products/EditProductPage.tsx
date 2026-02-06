@@ -37,6 +37,7 @@ const EditProductPage: React.FC = () => {
                     unit_id: product.unitId,
                     warehouse_id: product.warehouseId,
                     warranty_id: product.warrantyId,
+                    image_url: product.imageUrl,
                 };
 
                 if (product.productType === "single") {
