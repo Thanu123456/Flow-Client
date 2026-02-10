@@ -37,6 +37,7 @@ const UsersTable: React.FC<Props> = ({
   onViewActivity,
   pagination,
 }) => {
+  console.log('UsersTable Data:', data);
   const columns = [
     {
       title: 'User',

@@ -17,6 +17,7 @@ interface UnitState {
 
     // Actions
     getUnits: (params: UnitPaginationParams) => Promise<void>;
+    getAllUnits: () => Promise<Unit[]>;
     getUnitById: (id: string) => Promise<Unit | null>;
     createUnit: (unitData: UnitFormData) => Promise<void>;
     updateUnit: (id: string, unitData: Partial<UnitFormData>) => Promise<void>;
@@ -68,6 +69,18 @@ export const useUnitStore = create<UnitState>()(
                     const errorMessage = error.response?.data?.message || error.message || "Failed to fetch unit";
                     set({ error: errorMessage });
                     return null;
+                }
+            },
+
+            getAllUnits: async () => {
+                try {
+                    const units = await unitService.getAllUnits();
+                    set({ units });
+                    return units;
+                } catch (error: any) {
+                    const errorMessage = error.response?.data?.message || error.message || "Failed to fetch units";
+                    set({ error: errorMessage });
+                    return [];
                 }
             },
 

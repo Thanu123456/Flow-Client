@@ -4,133 +4,88 @@ import type {
   WarrantyFormData,
   WarrantyPaginationParams,
   WarrantyResponse,
-  WarrantySummary,
 } from "../../types/entities/warranty.types";
 
-// Helper to transform backend warranty response to frontend Warranty type
-const transformWarranty = (w: any): Warranty => ({
-  id: w.id,
-  name: w.name,
-  duration: w.duration,
-  period: w.period,
-  description: w.description || undefined,
-  isActive: w.is_active ?? true,
-  createdAt: w.created_at,
-  updatedAt: w.updated_at,
-});
-
-// Helper to transform warranty summary
-const transformWarrantySummary = (w: any): WarrantySummary => ({
-  id: w.id,
-  name: w.name,
-  duration: w.duration,
-  period: w.period,
+const transformWarranty = (data: any): Warranty => ({
+  id: data.id,
+  name: data.name,
+  description: data.description,
+  duration: data.duration,
+  period: data.period,
+  isActive: data.is_active,
+  createdAt: data.created_at,
+  updatedAt: data.updated_at,
 });
 
 export const warrantyService = {
-  // Get all warranties with pagination
   getWarranties: async (params: WarrantyPaginationParams): Promise<WarrantyResponse> => {
-    const backendParams: any = {
+    const backendParams = {
       page: params.page,
       per_page: params.limit,
-      search: params.search || undefined,
-      include_inactive: params.includeInactive || undefined,
-      sort_by: params.sortBy || undefined,
+      search: params.search,
+      include_inactive: params.status !== "active",
     };
-
     const response = await axiosInstance.get("/admin/warranties", { params: backendParams });
-
-    const warrantiesData = response.data.warranties || response.data.data || response.data || [];
-    const warranties: Warranty[] = Array.isArray(warrantiesData)
-      ? warrantiesData.map(transformWarranty)
-      : [];
+    const data = response.data.warranties || response.data.data || [];
+    const warranties = Array.isArray(data) ? data.map(transformWarranty) : [];
 
     return {
       data: warranties,
       total: response.data.total || warranties.length,
-      page: response.data.page || params.page,
-      limit: response.data.per_page || params.limit,
-      totalPages: response.data.total_pages || Math.ceil((response.data.total || warranties.length) / params.limit),
+      page: response.data.page || 1,
+      limit: response.data.per_page || 10,
+      totalPages: response.data.total_pages || 1
     };
   },
 
-  // Get warranty by ID
+  getAllWarranties: async (): Promise<Warranty[]> => {
+    const response = await axiosInstance.get("/admin/warranties/all");
+    const data = response.data.warranties || response.data.data || [];
+    return Array.isArray(data) ? data.map(transformWarranty) : [];
+  },
+
   getWarrantyById: async (id: string): Promise<Warranty> => {
     const response = await axiosInstance.get(`/admin/warranties/${id}`);
-    const warrantyData = response.data.warranty || response.data.data || response.data;
-    return transformWarranty(warrantyData);
+    return transformWarranty(response.data.data || response.data);
   },
 
-  // Create warranty
-  createWarranty: async (data: WarrantyFormData): Promise<Warranty> => {
-    const payload: any = {
+  createWarranty: async (data: WarrantyFormData): Promise<void> => {
+    await axiosInstance.post("/admin/warranties", {
       name: data.name,
+      description: data.description,
       duration: data.duration,
       period: data.period,
-      description: data.description || undefined,
-      is_active: data.isActive,
-    };
-
-    const response = await axiosInstance.post("/admin/warranties", payload);
-    const createdWarranty = response.data.warranty || response.data.data || response.data;
-    return transformWarranty(createdWarranty);
+      is_active: data.isActive
+    });
   },
 
-  // Update warranty
-  updateWarranty: async (id: string, data: Partial<WarrantyFormData>): Promise<Warranty> => {
-    const payload: any = {};
-    if (data.name !== undefined) payload.name = data.name;
-    if (data.duration !== undefined) payload.duration = data.duration;
-    if (data.period !== undefined) payload.period = data.period;
-    if (data.description !== undefined) payload.description = data.description;
-    if (data.isActive !== undefined) payload.is_active = data.isActive;
-
-    const response = await axiosInstance.put(`/admin/warranties/${id}`, payload);
-    const updatedWarranty = response.data.warranty || response.data.data || response.data;
-    return transformWarranty(updatedWarranty);
+  updateWarranty: async (id: string, data: Partial<WarrantyFormData>): Promise<void> => {
+    await axiosInstance.put(`/admin/warranties/${id}`, {
+      name: data.name,
+      description: data.description,
+      duration: data.duration,
+      period: data.period,
+      is_active: data.isActive
+    });
   },
 
-  // Delete warranty
   deleteWarranty: async (id: string): Promise<void> => {
     await axiosInstance.delete(`/admin/warranties/${id}`);
   },
 
-  // Get all active warranties (for dropdowns)
-  getAllWarranties: async (): Promise<WarrantySummary[]> => {
-    const response = await axiosInstance.get("/admin/warranties/all");
-    const warrantiesData = response.data.warranties || response.data.data || response.data || [];
-    return Array.isArray(warrantiesData) ? warrantiesData.map(transformWarrantySummary) : [];
-  },
-
-  // Export warranties to PDF
   exportToPDF: async (params: WarrantyPaginationParams): Promise<Blob> => {
-    const backendParams = {
-      page: params.page,
-      per_page: params.limit,
-      search: params.search || undefined,
-      include_inactive: params.includeInactive || undefined,
-    };
     const response = await axiosInstance.get("/admin/warranties/export/pdf", {
-      params: backendParams,
-      responseType: "arraybuffer",
+      params,
+      responseType: 'blob'
     });
-    return new Blob([response.data], { type: "application/pdf" });
+    return response.data;
   },
 
-  // Export warranties to Excel
   exportToExcel: async (params: WarrantyPaginationParams): Promise<Blob> => {
-    const backendParams = {
-      page: params.page,
-      per_page: params.limit,
-      search: params.search || undefined,
-      include_inactive: params.includeInactive || undefined,
-    };
     const response = await axiosInstance.get("/admin/warranties/export/excel", {
-      params: backendParams,
-      responseType: "arraybuffer",
+      params,
+      responseType: 'blob'
     });
-    return new Blob([response.data], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
-  },
+    return response.data;
+  }
 };

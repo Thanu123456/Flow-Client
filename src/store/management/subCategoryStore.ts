@@ -78,10 +78,11 @@ export const useSubcategoryStore = create<SubcategoryState>()(
       getSubcategoriesByCategory: async (categoryId) => {
         try {
           const subcategories = await subcategoryService.getSubcategoriesByCategory(categoryId);
+          set({ subcategories });
           return subcategories;
         } catch (error: any) {
           const errorMessage = error.response?.data?.message || error.message || "Failed to fetch subcategories";
-          set({ error: errorMessage });
+          set({ error: errorMessage, subcategories: [] });
           return [];
         }
       },

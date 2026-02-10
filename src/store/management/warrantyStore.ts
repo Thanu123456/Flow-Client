@@ -5,13 +5,10 @@ import type {
   Warranty,
   WarrantyFormData,
   WarrantyPaginationParams,
-  WarrantySummary,
 } from "../../types/entities/warranty.types";
 
 interface WarrantyState {
   warranties: Warranty[];
-  allWarranties: WarrantySummary[];
-  selectedWarranty: Warranty | null;
   loading: boolean;
   error: string | null;
   pagination: {
@@ -20,13 +17,13 @@ interface WarrantyState {
     limit: number;
     totalPages: number;
   };
+
   getWarranties: (params: WarrantyPaginationParams) => Promise<void>;
-  getWarrantyById: (id: string) => Promise<Warranty>;
+  getAllWarranties: () => Promise<void>;
+  getWarrantyById: (id: string) => Promise<Warranty | null>;
   createWarranty: (data: WarrantyFormData) => Promise<void>;
   updateWarranty: (id: string, data: Partial<WarrantyFormData>) => Promise<void>;
   deleteWarranty: (id: string) => Promise<void>;
-  getAllWarranties: () => Promise<void>;
-  setSelectedWarranty: (warranty: Warranty | null) => void;
   clearError: () => void;
 }
 
@@ -34,8 +31,6 @@ export const useWarrantyStore = create<WarrantyState>()(
   devtools(
     (set) => ({
       warranties: [],
-      allWarranties: [],
-      selectedWarranty: null,
       loading: false,
       error: null,
       pagination: {
@@ -55,7 +50,7 @@ export const useWarrantyStore = create<WarrantyState>()(
               total: response.total,
               page: response.page,
               limit: response.limit,
-              totalPages: response.totalPages,
+              totalPages: response.totalPages
             },
             loading: false,
           });
@@ -67,73 +62,61 @@ export const useWarrantyStore = create<WarrantyState>()(
         }
       },
 
-      getWarrantyById: async (id) => {
-        set({ loading: true, error: null });
+      getAllWarranties: async () => {
+        // This populates the list for dropdowns. 
+        // Assuming we use the same list state or different? 
+        // Usually for dropdowns we might want a separate state or just replace the main list if pagination not used on that page.
+        // But BasicDetailsForm uses 'warranties' which comes from this store.
+        // I'll update 'warranties' with ALL data.
         try {
-          const warranty = await warrantyService.getWarrantyById(id);
-          set({ selectedWarranty: warranty, loading: false });
-          return warranty;
+          const data = await warrantyService.getAllWarranties();
+          set({ warranties: data });
         } catch (error: any) {
-          set({
-            error: error.response?.data?.message || "Failed to fetch warranty",
-            loading: false,
-          });
-          throw error;
+          console.error(error);
+        }
+      },
+
+      getWarrantyById: async (id) => {
+        try {
+          return await warrantyService.getWarrantyById(id);
+        } catch (error: any) {
+          set({ error: error.message });
+          return null;
         }
       },
 
       createWarranty: async (data) => {
-        set({ loading: true, error: null });
+        set({ loading: true });
         try {
           await warrantyService.createWarranty(data);
           set({ loading: false });
         } catch (error: any) {
-          set({
-            error: error.response?.data?.message || "Failed to create warranty",
-            loading: false,
-          });
+          set({ loading: false, error: error.message });
           throw error;
         }
       },
 
       updateWarranty: async (id, data) => {
-        set({ loading: true, error: null });
+        set({ loading: true });
         try {
           await warrantyService.updateWarranty(id, data);
           set({ loading: false });
         } catch (error: any) {
-          set({
-            error: error.response?.data?.message || "Failed to update warranty",
-            loading: false,
-          });
+          set({ loading: false, error: error.message });
           throw error;
         }
       },
 
       deleteWarranty: async (id) => {
-        set({ loading: true, error: null });
+        set({ loading: true });
         try {
           await warrantyService.deleteWarranty(id);
           set({ loading: false });
         } catch (error: any) {
-          set({
-            error: error.response?.data?.message || "Failed to delete warranty",
-            loading: false,
-          });
+          set({ loading: false, error: error.message });
           throw error;
         }
       },
-
-      getAllWarranties: async () => {
-        try {
-          const warranties = await warrantyService.getAllWarranties();
-          set({ allWarranties: warranties });
-        } catch (error: any) {
-          console.error("Failed to fetch all warranties:", error);
-        }
-      },
-
-      setSelectedWarranty: (warranty) => set({ selectedWarranty: warranty }),
 
       clearError: () => set({ error: null }),
     }),

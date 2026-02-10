@@ -78,6 +78,7 @@ export const useWarehouseStore = create<WarehouseState>()(
       getAllWarehouses: async () => {
         try {
           const warehouses = await warehouseService.getAllWarehouses();
+          set({ warehouses });
           return warehouses;
         } catch (error: any) {
           const errorMessage = error.response?.data?.message || error.message || "Failed to fetch warehouses";
