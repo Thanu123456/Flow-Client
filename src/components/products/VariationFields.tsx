@@ -1,5 +1,5 @@
 import React from "react";
-import { Form, Input, InputNumber, Card, Button, Collapse, Space, Row, Col, Typography, Divider } from "antd";
+import { Form, Input, InputNumber, Card, Button, Collapse, Space, Row, Col, Typography, Divider, message } from "antd";
 import {
     DeleteOutlined,
     BarcodeOutlined,
@@ -10,9 +10,11 @@ import {
 import PricingFields from "./PricingFields";
 import DiscountFields from "./DiscountFields";
 import ImageUpload from "../common/Upload/ImageUpload";
+import { generateBarcode } from "../../utils/helpers/barcode";
+import { productService } from "../../services/inventory/productService";
 
 const { Panel } = Collapse;
-const { Text } = Typography;
+const { Text: AntText } = Typography;
 
 interface VariationFieldsProps {
     name: number;
@@ -21,7 +23,54 @@ interface VariationFieldsProps {
 }
 
 const VariationFields: React.FC<VariationFieldsProps> = ({ name, remove, optionLabel }) => {
-    const prefix = ["variable_product", "variations", name];
+    const form = Form.useFormInstance();
+    const [messageApi, contextHolder] = message.useMessage();
+    const prefix: (string | number)[] = [name]; // Fix: items must be relative to the index within Form.List
+    const fullPrefix = ["variable_product", "variations", name]; // Absolute path for hooks and setFields
+
+    React.useEffect(() => {
+        console.log(`VariationFields mount [#${name}]:`, {
+            fullPrefix,
+            formValue: form.getFieldValue(fullPrefix),
+            allValues: form.getFieldsValue()
+        });
+
+        const autoGenerate = async () => {
+            const currentSku = form.getFieldValue([...fullPrefix, "sku"]);
+            const currentBarcode = form.getFieldValue([...fullPrefix, "barcode"]);
+
+            let updates: any = {};
+            let needsUpdate = false;
+
+            if (!currentSku) {
+                try {
+                    const sku = await productService.generateSKU();
+                    updates.sku = sku;
+                    needsUpdate = true;
+                } catch (error) {
+                    console.error("Failed to auto-generate SKU:", error);
+                }
+            }
+
+            if (!currentBarcode) {
+                updates.barcode = generateBarcode();
+                needsUpdate = true;
+            }
+
+            if (needsUpdate) {
+                console.log(`Auto-generating identifying fields for variation #${name}:`, updates);
+                const fieldsToSet = [];
+                if (updates.sku) fieldsToSet.push({ name: [...fullPrefix, "sku"], value: updates.sku });
+                if (updates.barcode) fieldsToSet.push({ name: [...fullPrefix, "barcode"], value: updates.barcode });
+
+                if (fieldsToSet.length > 0) {
+                    form.setFields(fieldsToSet);
+                }
+            }
+        };
+
+        autoGenerate();
+    }, [form, name]);
 
     return (
         <Card
@@ -44,25 +93,52 @@ const VariationFields: React.FC<VariationFieldsProps> = ({ name, remove, optionL
                 </Button>
             }
             className="shadow-sm border-slate-100 rounded-lg overflow-hidden border-l-4 border-l-purple-400"
-            headStyle={{ borderBottom: '1px solid #f1f5f9', background: '#fcfcfd' }}
+            styles={{ header: { borderBottom: '1px solid #f1f5f9', background: '#fcfcfd' } }}
         >
+            {contextHolder}
             <Space direction="vertical" style={{ width: "100%" }} size="middle" className="p-2">
-                {/* Hidden field to store option IDs */}
-                <Form.Item name={[...prefix, "variation_option_ids"]} hidden>
-                    <Input />
-                </Form.Item>
+                {/* Hidden field to store option IDs. Using just Form.Item to preserve the array type from setFieldsValue */}
+                <Form.Item name={[...prefix, "variation_option_ids"]} hidden />
 
                 <div className="bg-slate-50 p-6 rounded-xl border border-slate-100">
-                    <Text className="text-[10px] font-normal uppercase text-slate-400 mb-4 block tracking-widest">
+                    <AntText className="text-[10px] font-normal uppercase text-slate-400 mb-4 block tracking-widest">
                         Inventory Identifiers
-                    </Text>
+                    </AntText>
                     <Row gutter={[24, 16]}>
                         <Col span={8}>
                             <Form.Item
                                 name={[...prefix, "sku"]}
                                 label={<span className="text-xs font-normal text-slate-600">SKU</span>}
                             >
-                                <Input placeholder="Optional SKU" className="rounded-lg h-10 px-3 border-slate-200" />
+                                <Input
+                                    placeholder="Generate unique SKU"
+                                    className="rounded-lg h-10 px-3 border-slate-200"
+                                    addonAfter={
+                                        <Button
+                                            type="text"
+                                            size="small"
+                                            onClick={async () => {
+                                                try {
+                                                    const skuVal = await productService.generateSKU();
+                                                    console.log(`Manually generated SKU for variation #${name}:`, skuVal);
+                                                    form.setFields([
+                                                        {
+                                                            name: [...fullPrefix, "sku"],
+                                                            value: skuVal,
+                                                            errors: []
+                                                        }
+                                                    ]);
+                                                    messageApi.success("SKU generated");
+                                                } catch (error) {
+                                                    messageApi.error("Failed to generate SKU");
+                                                }
+                                            }}
+                                            className="text-xs text-purple-500 hover:text-purple-600 font-medium"
+                                        >
+                                            Generate
+                                        </Button>
+                                    }
+                                />
                             </Form.Item>
                         </Col>
                         <Col span={8}>
@@ -74,7 +150,31 @@ const VariationFields: React.FC<VariationFieldsProps> = ({ name, remove, optionL
                                     </span>
                                 }
                             >
-                                <Input placeholder="Scan/Enter Barcode" className="rounded-lg h-10 px-3 border-slate-200" />
+                                <Input
+                                    placeholder="Leave blank to auto-generate (999...)"
+                                    className="rounded-lg h-10 px-3 border-slate-200"
+                                    addonAfter={
+                                        <Button
+                                            type="text"
+                                            size="small"
+                                            onClick={() => {
+                                                const newBarcodeValue = generateBarcode();
+                                                console.log(`Manually generated Barcode for variation #${name}:`, newBarcodeValue);
+                                                form.setFields([
+                                                    {
+                                                        name: [...fullPrefix, "barcode"],
+                                                        value: newBarcodeValue,
+                                                        errors: []
+                                                    }
+                                                ]);
+                                                messageApi.success("Barcode generated");
+                                            }}
+                                            className="text-xs text-purple-500 hover:text-purple-600 font-medium"
+                                        >
+                                            Generate
+                                        </Button>
+                                    }
+                                />
                             </Form.Item>
                         </Col>
                         <Col span={8}>
@@ -90,13 +190,26 @@ const VariationFields: React.FC<VariationFieldsProps> = ({ name, remove, optionL
                                 <InputNumber min={0} style={{ width: "100%" }} className="rounded-lg h-10 border-slate-200" />
                             </Form.Item>
                         </Col>
+                        <Col span={8}>
+                            <Form.Item
+                                name={[...prefix, "current_stock"]}
+                                label={<span className="text-xs font-normal text-slate-600">Current Stock</span>}
+                                initialValue={0}
+                            >
+                                <InputNumber
+                                    disabled
+                                    style={{ width: "100%" }}
+                                    className="rounded-lg h-10 border-slate-200 bg-slate-50"
+                                />
+                            </Form.Item>
+                        </Col>
                     </Row>
                 </div>
 
                 <div className="py-4">
-                    <Text className="text-[10px] font-normal uppercase text-slate-400 mb-4 block tracking-widest">
+                    <AntText className="text-[10px] font-normal uppercase text-slate-400 mb-4 block tracking-widest">
                         Variation Image
-                    </Text>
+                    </AntText>
                     <Form.Item name={[...prefix, "image_url"]}>
                         <ImageUpload placeholder="Drop variation-specific image here" />
                     </Form.Item>
@@ -118,7 +231,7 @@ const VariationFields: React.FC<VariationFieldsProps> = ({ name, remove, optionL
                         key="1"
                     >
                         <div className="p-4 space-y-8 bg-slate-50/30">
-                            <PricingFields prefix={prefix} />
+                            <PricingFields prefix={prefix} absolutePrefix={fullPrefix} />
                             <Divider dashed className="my-0 border-slate-200" />
                             <DiscountFields prefix={prefix} />
                         </div>

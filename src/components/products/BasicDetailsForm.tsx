@@ -53,6 +53,14 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
         loadDropdownData();
     }, [getAllCategories, getAllBrands, getAllUnits, getAllWarehouses, getAllWarranties]);
 
+    // Auto-load subcategories if a category is already selected (e.g., when editing)
+    useEffect(() => {
+        const categoryId = form.getFieldValue("category_id");
+        if (categoryId && subcategories.length === 0) {
+            getSubcategoriesByCategory(categoryId);
+        }
+    }, [form, getSubcategoriesByCategory, subcategories.length]);
+
     const handleCategoryChange = (categoryId: string) => {
         form.setFieldsValue({ subcategory_id: undefined });
         if (categoryId) {
@@ -71,7 +79,7 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
                     </span>
                 }
                 className="shadow-md border-slate-200 rounded-xl overflow-hidden"
-                headStyle={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}
+                styles={{ header: { backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' } }}
             >
                 <div className="space-y-6">
                     <div>

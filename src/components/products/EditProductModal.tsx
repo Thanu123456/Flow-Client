@@ -50,7 +50,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ visible, product, o
                     <Input />
                 </Form.Item>
                 <Form.Item name="retail_price" label="Retail Price">
-                    <InputNumber style={{ width: "100%" }} prefix="$" />
+                    <InputNumber style={{ width: "100%" }} prefix="Rs." />
                 </Form.Item>
                 <Form.Item name="quantity_alert" label="Low Stock Alert">
                     <InputNumber style={{ width: "100%" }} />
