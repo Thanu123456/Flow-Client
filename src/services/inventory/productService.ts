@@ -12,7 +12,7 @@ const transformProduct = (p: any): Product => ({
     name: p.name,
     description: p.description,
     sku: p.sku,
-    barcode: p.barcode,
+    barcode: p.barcode || p.Barcode,
     productType: p.product_type,
     categoryId: p.category_id,
     categoryName: p.category_name,
@@ -30,8 +30,9 @@ const transformProduct = (p: any): Product => ({
 
     costPrice: p.cost_price,
     wholesalePrice: p.wholesale_price,
-    retailPrice: p.retail_price,
-    ourPrice: p.our_price,
+    // List API returns 'price' which is typically retail/our price. Use it as fallback.
+    retailPrice: p.retail_price ?? p.price,
+    ourPrice: p.our_price ?? p.price,
 
     discountType: p.discount_type,
     discountValue: p.discount_value,
@@ -55,7 +56,7 @@ const transformProduct = (p: any): Product => ({
             value: o.value,
         })),
         sku: v.sku,
-        barcode: v.barcode,
+        barcode: v.barcode || v.Barcode,
         costPrice: v.cost_price,
         wholesalePrice: v.wholesale_price,
         retailPrice: v.retail_price,
@@ -132,6 +133,12 @@ export const productService = {
     // Delete product
     deleteProduct: async (id: string): Promise<void> => {
         await axiosInstance.delete(`/admin/products/${id}`);
+    },
+
+    // Check SKU availability (Generate SKU)
+    generateSKU: async (): Promise<string> => {
+        const response = await axiosInstance.get("/admin/products/generate-sku");
+        return response.data.sku || response.data.data?.sku;
     },
 
     // ExportPDF, ExportExcel, Import can be added later

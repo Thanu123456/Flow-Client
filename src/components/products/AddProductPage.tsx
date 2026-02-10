@@ -35,16 +35,38 @@ const AddProductPage: React.FC = () => {
             // Helper to clean specific optional fields
             const cleanOptionalUuid = (val: any) => (val === "" ? null : val);
 
+            sanitizedValues.category_id = cleanOptionalUuid(sanitizedValues.category_id);
+            sanitizedValues.subcategory_id = cleanOptionalUuid(sanitizedValues.subcategory_id);
             sanitizedValues.brand_id = cleanOptionalUuid(sanitizedValues.brand_id);
+            sanitizedValues.unit_id = cleanOptionalUuid(sanitizedValues.unit_id);
             sanitizedValues.warehouse_id = cleanOptionalUuid(sanitizedValues.warehouse_id);
             sanitizedValues.warranty_id = cleanOptionalUuid(sanitizedValues.warranty_id);
 
+            if (sanitizedValues.variable_product) {
+                sanitizedValues.variable_product.variation_id = cleanOptionalUuid(sanitizedValues.variable_product.variation_id);
+            }
+
+
+
+            if (sanitizedValues.image_url === "") sanitizedValues.image_url = undefined;
+
             if (sanitizedValues.single_product) {
+                // simple cleanup
                 if (sanitizedValues.single_product.image_url === "") sanitizedValues.single_product.image_url = undefined;
+
+                // Default our_price (Selling Price) to retail_price if not set (0 or undefined)
+                const sp = sanitizedValues.single_product;
+                if (!sp.our_price || sp.our_price === 0) {
+                    sp.our_price = sp.retail_price;
+                }
             }
             if (sanitizedValues.variable_product?.variations) {
                 sanitizedValues.variable_product.variations.forEach((v: any) => {
                     if (v.image_url === "") v.image_url = undefined;
+                    // Default our_price (Selling Price) to retail_price if not set
+                    if (!v.our_price || v.our_price === 0) {
+                        v.our_price = v.retail_price;
+                    }
                 });
             }
 

@@ -8,7 +8,7 @@ import ProductDetailsModal from "./ProductDetailsModal";
 
 const ProductsTable: React.FC = () => {
     const navigate = useNavigate();
-    const { products, loading, pagination, getProducts, deleteProduct } = useProductStore();
+    const { products, loading, pagination, getProducts, deleteProduct, getProductById } = useProductStore();
     const [pageSize, setPageSize] = useState(10);
     const [viewModalVisible, setViewModalVisible] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -51,6 +51,7 @@ const ProductsTable: React.FC = () => {
                     <div>
                         <div style={{ fontWeight: 600 }}>{record.name}</div>
                         <div style={{ fontSize: 12, color: "#8c8c8c" }}>SKU: {record.sku}</div>
+                        {record.barcode && <div style={{ fontSize: 12, color: "#8c8c8c" }}>Barcode: {record.barcode}</div>}
                     </div>
                 </Space>
             ),
@@ -75,8 +76,8 @@ const ProductsTable: React.FC = () => {
             key: "prices",
             render: (record: Product) => (
                 <div>
-                    <div>Retail: <span style={{ fontWeight: 600 }}>${record.retailPrice?.toFixed(2) || "0.00"}</span></div>
-                    <div style={{ fontSize: 12, color: "#8c8c8c" }}>Cost: ${record.costPrice?.toFixed(2) || "0.00"}</div>
+                    <div>Retail: <span style={{ fontWeight: 600 }}>Rs. {record.retailPrice?.toFixed(2) || "0.00"}</span></div>
+                    <div style={{ fontSize: 12, color: "#8c8c8c" }}>Cost: Rs. {record.costPrice?.toFixed(2) || "0.00"}</div>
                 </div>
             ),
         },
@@ -118,9 +119,14 @@ const ProductsTable: React.FC = () => {
                         <Button
                             type="text"
                             icon={<EyeOutlined />}
-                            onClick={() => {
-                                setSelectedProduct(record);
-                                setViewModalVisible(true);
+                            onClick={async () => {
+                                try {
+                                    const fullProduct = await getProductById(record.id);
+                                    setSelectedProduct(fullProduct);
+                                    setViewModalVisible(true);
+                                } catch (error) {
+                                    message.error("Failed to fetch product details");
+                                }
                             }}
                         />
                     </Tooltip>

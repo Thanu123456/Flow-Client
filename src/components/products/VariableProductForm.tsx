@@ -7,9 +7,10 @@ import {
     WarningOutlined
 } from "@ant-design/icons";
 import { useVariationStore } from "../../store/management/variationStore";
+import { generateBarcode } from "../../utils/helpers/barcode";
 import VariationFields from "./VariationFields";
 
-const { Text } = Typography;
+const { Text: AntText } = Typography;
 
 const VariableProductForm: React.FC = () => {
     const { variations, getAllVariations } = useVariationStore();
@@ -19,28 +20,33 @@ const VariableProductForm: React.FC = () => {
     const form = Form.useFormInstance();
 
     useEffect(() => {
-        // Use getAllVariations to get variations with proper option UUIDs
-        getAllVariations();
+        const init = async () => {
+            await getAllVariations();
 
-        // Sync with form values for editing
-        const initialVarId = form.getFieldValue(["variable_product", "variation_id"]);
-        const initialVariations = form.getFieldValue(["variable_product", "variations"]) || [];
+            // Sync with form values for editing/initial state
+            const variableProduct = form.getFieldValue("variable_product");
+            const initialVarId = variableProduct?.variation_id;
+            const initialVariations = variableProduct?.variations || [];
 
-        if (initialVarId) {
-            setSelectedVariationId(initialVarId);
-        }
+            if (initialVarId) {
+                setSelectedVariationId(initialVarId);
+            }
 
-        if (initialVariations.length > 0) {
-            const optionIds = initialVariations.map((v: any) => v.variation_option_ids?.[0]).filter(Boolean);
-            setSelectedOptionIds(optionIds);
-        }
-    }, [getAllVariations]);
+            if (initialVariations.length > 0) {
+                const optionIds = initialVariations.map((v: any) => v.variation_option_ids?.[0]).filter(Boolean);
+                setSelectedOptionIds(optionIds);
+            }
+        };
+        init();
+    }, [getAllVariations, form]);
 
     const handleVariationChange = (id: string) => {
         setSelectedVariationId(id);
         setSelectedOptionIds([]);
         form.setFieldsValue({
             variable_product: {
+                ...form.getFieldValue("variable_product"),
+                variation_id: id,
                 variations: []
             }
         });
@@ -63,7 +69,7 @@ const VariableProductForm: React.FC = () => {
                 newVariations.push({
                     variation_option_ids: [optId],
                     sku: "",
-                    barcode: "",
+                    barcode: generateBarcode(),
                     cost_price: 0.01, // Use 0.01 as minimum to pass required validation
                     wholesale_price: 0,
                     retail_price: 0,
@@ -79,6 +85,7 @@ const VariableProductForm: React.FC = () => {
 
         form.setFieldsValue({
             variable_product: {
+                ...form.getFieldValue("variable_product"),
                 variations: newVariations
             }
         });
@@ -94,13 +101,13 @@ const VariableProductForm: React.FC = () => {
                 </span>
             }
             className="shadow-md border-slate-200 rounded-xl overflow-hidden mt-6"
-            headStyle={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}
+            styles={{ header: { backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' } }}
         >
             <div className="space-y-6">
                 <div>
-                    <Text className="text-xs font-normal uppercase text-slate-400 mb-4 block tracking-wider">
+                    <AntText className="text-xs font-normal uppercase text-slate-400 mb-4 block tracking-wider">
                         Step 1: Define Variation Structure
-                    </Text>
+                    </AntText>
                     <Row gutter={[24, 0]}>
                         <Col span={12}>
                             <Form.Item

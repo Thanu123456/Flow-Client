@@ -24,15 +24,21 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({ visible, prod
             key: "sku",
         },
         {
+            title: "Barcode",
+            dataIndex: "barcode",
+            key: "barcode",
+        },
+        {
             title: "Retail Price",
             dataIndex: "retailPrice",
             key: "retailPrice",
-            render: (price: number) => `$${price?.toFixed(2) || "0.00"}`,
+            render: (price: number) => `Rs. ${price?.toFixed(2) || "0.00"}`,
         },
         {
             title: "Stock",
             dataIndex: "currentStock",
             key: "currentStock",
+            render: (stock: number) => `${stock || 0} ${product.unitShortName || ""}`
         }
     ];
 
@@ -80,12 +86,12 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({ visible, prod
                 <>
                     <Divider orientation="left">Pricing & Stock</Divider>
                     <Descriptions bordered size="small" column={2}>
-                        <Descriptions.Item label="SKU">{product.sku}</Descriptions.Item>
+                        <Descriptions.Item label="Sku">{product.sku}</Descriptions.Item>
                         <Descriptions.Item label="Barcode">{product.barcode || "-"}</Descriptions.Item>
-                        <Descriptions.Item label="Cost Price">${product.costPrice?.toFixed(2)}</Descriptions.Item>
-                        <Descriptions.Item label="Retail Price">${product.retailPrice?.toFixed(2)}</Descriptions.Item>
-                        <Descriptions.Item label="Wholesale Price">${product.wholesalePrice?.toFixed(2)}</Descriptions.Item>
-                        <Descriptions.Item label="Our Price">${product.ourPrice?.toFixed(2)}</Descriptions.Item>
+                        <Descriptions.Item label="Cost Price">Rs. {product.costPrice?.toFixed(2)}</Descriptions.Item>
+                        <Descriptions.Item label="Retail Price">Rs. {product.retailPrice?.toFixed(2)}</Descriptions.Item>
+                        <Descriptions.Item label="Wholesale Price">Rs. {product.wholesalePrice?.toFixed(2)}</Descriptions.Item>
+                        <Descriptions.Item label="Our Price">Rs. {product.ourPrice?.toFixed(2)}</Descriptions.Item>
                         <Descriptions.Item label="Current Stock">{product.currentStock} {product.unitShortName}</Descriptions.Item>
                         <Descriptions.Item label="Alert Quantity">{product.quantityAlert}</Descriptions.Item>
                     </Descriptions>
