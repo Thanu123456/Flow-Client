@@ -28,6 +28,8 @@ import {
   DashboardOutlined,
   CloseOutlined,
 } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../../contexts/AuthContext";
 
 const { Header: AntHeader } = Layout;
 const { Text } = Typography;
@@ -52,6 +54,8 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({
   sidebarOpen = true,
   setSidebarOpen,
 }) => {
+  const { user, logout, isKiosk, endShift } = useAuth();
+  const navigate = useNavigate();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,13 +63,6 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({
 
   const [unreadMessages] = useState(1);
   const [unreadNotifications] = useState(3);
-
-  const user = {
-    name: "John Doe",
-    email: "john@example.com",
-    avatar: null,
-    role: "Admin",
-  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -119,14 +116,34 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({
     onMenuClick();
   };
 
+  const handleMenuClick: MenuProps["onClick"] = async ({ key }) => {
+    if (key === "logout") {
+      if (isKiosk) {
+        await endShift();
+      } else {
+        await logout();
+      }
+    } else if (key === "dashboard") {
+      navigate(isKiosk ? "/kiosk/dashboard" : "/dashboard");
+    } else if (key === "profile") {
+      navigate("/profile");
+    } else if (key === "settings") {
+      navigate("/settings");
+    } else if (key === "change-password") {
+      navigate(isKiosk ? "/kiosk/change-password" : "/change-password");
+    }
+  };
+
   const userMenuItems: MenuProps["items"] = [
     {
       key: "profile-info",
       label: (
         <div className="px-3 py-2">
-          <div className="font-semibold text-gray-800">{user.name}</div>
-          <div className="text-xs text-gray-500">{user.email}</div>
-          <div className="text-xs text-gray-400 mt-1">{user.role}</div>
+          <div className="font-semibold text-gray-800">
+            {'full_name' in (user || {}) ? (user as any).full_name : (user as any)?.name || 'User'}
+          </div>
+          <div className="text-xs text-gray-500">{(user as any)?.email || ''}</div>
+          <div className="text-xs text-gray-400 mt-1">{(user as any)?.role || (user as any)?.user_type || 'Staff'}</div>
         </div>
       ),
       disabled: true,
@@ -137,7 +154,7 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({
     { key: "settings", icon: <SettingOutlined />, label: "Settings" },
     { key: "change-password", icon: <KeyOutlined />, label: "Change Password" },
     { type: "divider" },
-    { key: "logout", icon: <LogoutOutlined />, label: "Logout", danger: true },
+    { key: "logout", icon: <LogoutOutlined />, label: isKiosk ? "End Shift" : "Logout", danger: true },
   ];
 
   return (
@@ -227,15 +244,15 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({
           />
 
           <Dropdown
-            menu={{ items: userMenuItems }}
+            menu={{ items: userMenuItems, onClick: handleMenuClick }}
             trigger={["click"]}
             placement="bottomRight"
           >
             <div className="cursor-pointer">
               <Avatar
                 size={40}
-                src={user.avatar}
-                icon={!user.avatar && <UserOutlined />}
+                src={(user as any)?.avatar}
+                icon={!(user as any)?.avatar && <UserOutlined />}
                 className="bg-gradient-to-br from-orange-400 to-orange-600 ring-4 ring-white shadow-md hover:ring-gray-200 transition-all"
               />
             </div>

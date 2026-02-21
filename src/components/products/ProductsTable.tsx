@@ -1,41 +1,37 @@
-import React, { useEffect, useState } from "react";
-import { Table, Tag, Space, Button, Tooltip, Image, Popconfirm, message } from "antd";
+import React, { useState } from "react";
+import { Tag, Space, Button, Tooltip, Image, Popconfirm, message } from "antd";
 import { EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
 import { useProductStore } from "../../store/inventory/productStore";
 import type { Product } from "../../types/entities/product.types";
 import { useNavigate } from "react-router-dom";
 import ProductDetailsModal from "./ProductDetailsModal";
+import { CommonTable } from "../common/Table";
+import type { TableColumn } from "../common/Table/Table.types";
 
 const ProductsTable: React.FC = () => {
     const navigate = useNavigate();
     const { products, loading, pagination, getProducts, deleteProduct, getProductById } = useProductStore();
-    const [pageSize, setPageSize] = useState(10);
     const [viewModalVisible, setViewModalVisible] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-    useEffect(() => {
-        getProducts({ page: 1, limit: pageSize });
-    }, [getProducts, pageSize]);
-
-    const handleTableChange = (pagination: any) => {
+    const handlePageChange = (page: number, pageSize: number) => {
         getProducts({
-            page: pagination.current,
-            limit: pagination.pageSize,
+            page,
+            limit: pageSize,
         });
-        setPageSize(pagination.pageSize);
     };
 
     const handleDelete = async (id: string) => {
         try {
             await deleteProduct(id);
             message.success("Product deleted successfully");
-            getProducts({ page: pagination.page, limit: pageSize });
+            getProducts({ page: pagination.page, limit: pagination.limit });
         } catch (error) {
             message.error("Failed to delete product");
         }
     };
 
-    const columns = [
+    const columns: TableColumn<Product>[] = [
         {
             title: "Product",
             key: "product",
@@ -104,6 +100,7 @@ const ProductsTable: React.FC = () => {
             title: "Status",
             dataIndex: "status",
             key: "status",
+            align: "center",
             render: (status: string) => (
                 <Tag color={status === "active" ? "green" : "red"}>
                     {status.toUpperCase()}
@@ -113,6 +110,7 @@ const ProductsTable: React.FC = () => {
         {
             title: "Actions",
             key: "actions",
+            align: "center",
             render: (record: Product) => (
                 <Space size="middle">
                     <Tooltip title="View Details">
@@ -133,7 +131,7 @@ const ProductsTable: React.FC = () => {
                     <Tooltip title="Edit">
                         <Button
                             type="text"
-                            icon={<EditOutlined />}
+                            icon={<EditOutlined style={{ color: "#1890ff" }} />}
                             onClick={() => navigate(`/products/edit/${record.id}`)}
                         />
                     </Tooltip>
@@ -155,19 +153,13 @@ const ProductsTable: React.FC = () => {
 
     return (
         <>
-            <Table
+            <CommonTable<Product>
                 columns={columns}
                 dataSource={products}
                 rowKey="id"
                 loading={loading}
-                pagination={{
-                    current: pagination.page,
-                    pageSize: pagination.limit,
-                    total: pagination.total,
-                    showSizeChanger: true,
-                    showTotal: (total) => `Total ${total} items`,
-                }}
-                onChange={handleTableChange}
+                pagination={pagination}
+                onPageChange={handlePageChange}
             />
             <ProductDetailsModal
                 visible={viewModalVisible}

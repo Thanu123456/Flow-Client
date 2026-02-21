@@ -18,6 +18,8 @@ const EditProductPage: React.FC = () => {
     const { getProductById, updateProduct, loading } = useProductStore();
     const [fetching, setFetching] = useState(true);
     const [productType, setProductType] = useState<"single" | "variable">("single");
+    const [initialVarId, setInitialVarId] = useState<string | undefined>(undefined);
+    const [initialOptionIds, setInitialOptionIds] = useState<string[]>([]);
 
     useEffect(() => {
         const fetchProduct = async () => {
@@ -57,8 +59,15 @@ const EditProductPage: React.FC = () => {
                     };
                 } else {
                     // Variable product mapping
+                    const varId = product.variations?.[0]?.variationId;
+                    const optIds = [...new Set(
+                        (product.variations || []).flatMap(v => v.options.map(o => o.id))
+                    )];
+                    setInitialVarId(varId);
+                    setInitialOptionIds(optIds);
+
                     formValues.variable_product = {
-                        variation_id: product.variations?.[0]?.variationId,
+                        variation_id: varId,
                         variations: product.variations?.map(v => ({
                             variation_option_ids: v.options.map(o => o.id),
                             sku: v.sku,
@@ -111,7 +120,10 @@ const EditProductPage: React.FC = () => {
             payload.warranty_id = cleanOptionalUuid(payload.warranty_id);
 
             if (payload.variable_product) {
-                payload.variable_product.variation_id = cleanOptionalUuid(payload.variable_product.variation_id);
+                // Ensure variation_id is present if it's a variable product
+                if (!payload.variable_product.variation_id) {
+                    delete payload.variable_product;
+                }
             }
 
             // Clean up image_url if empty string
@@ -149,8 +161,8 @@ const EditProductPage: React.FC = () => {
                 });
             }
 
-            // Note: Variable product variations update is not yet supported by the UpdateProduct endpoint directly
-            // except for fields on the main product.
+            // The backend UpdateProduct endpoint handles both root-level fields and variations
+            // if provided in the variable_product field.
 
             console.log("Submitting update payload:", payload);
 
@@ -243,7 +255,10 @@ const EditProductPage: React.FC = () => {
                     {productType === "single" ? (
                         <SingleProductForm />
                     ) : (
-                        <VariableProductForm />
+                        <VariableProductForm
+                            initialVariationId={initialVarId}
+                            initialOptionIds={initialOptionIds}
+                        />
                     )}
 
                     <div className="mt-8 flex justify-end">

@@ -1,7 +1,8 @@
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Spin } from 'antd';
+import KioskLayout from '../components/common/Layout/KioskLayout';
 
 const KioskRoutes: React.FC = () => {
     const { isAuthenticated, isLoading, isKiosk } = useAuth();
@@ -15,10 +16,10 @@ const KioskRoutes: React.FC = () => {
     }
 
     if (!isKiosk) {
-         return <Navigate to="/dashboard" replace />;
+        return <Navigate to="/dashboard" replace />;
     }
 
-    return <Outlet />;
+    return <KioskLayout />;
 };
 
 export default KioskRoutes;

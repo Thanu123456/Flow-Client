@@ -1,18 +1,29 @@
 import React, { useEffect, useState } from "react";
-import { Form, Select, Card, Row, Col, Alert, Typography, Divider } from "antd";
+import { Form, Select, Card, Row, Col, Alert, Typography, Divider, Collapse, Button } from "antd";
 import {
     ClusterOutlined,
     SolutionOutlined,
     InfoCircleOutlined,
-    WarningOutlined
+    WarningOutlined,
+    DeleteOutlined
 } from "@ant-design/icons";
+
+const { Panel } = Collapse;
 import { useVariationStore } from "../../store/management/variationStore";
 import { generateBarcode } from "../../utils/helpers/barcode";
 import VariationFields from "./VariationFields";
 
 const { Text: AntText } = Typography;
 
-const VariableProductForm: React.FC = () => {
+interface VariableProductFormProps {
+    initialVariationId?: string;
+    initialOptionIds?: string[];
+}
+
+const VariableProductForm: React.FC<VariableProductFormProps> = ({
+    initialVariationId,
+    initialOptionIds = []
+}) => {
     const { variations, getAllVariations } = useVariationStore();
     const [selectedVariationId, setSelectedVariationId] = useState<string | null>(null);
     const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
@@ -23,22 +34,16 @@ const VariableProductForm: React.FC = () => {
         const init = async () => {
             await getAllVariations();
 
-            // Sync with form values for editing/initial state
-            const variableProduct = form.getFieldValue("variable_product");
-            const initialVarId = variableProduct?.variation_id;
-            const initialVariations = variableProduct?.variations || [];
-
-            if (initialVarId) {
-                setSelectedVariationId(initialVarId);
-            }
-
-            if (initialVariations.length > 0) {
-                const optionIds = initialVariations.map((v: any) => v.variation_option_ids?.[0]).filter(Boolean);
-                setSelectedOptionIds(optionIds);
+            if (initialVariationId) {
+                setSelectedVariationId(initialVariationId);
+                if (initialOptionIds.length > 0) {
+                    setSelectedOptionIds(initialOptionIds);
+                }
             }
         };
         init();
-    }, [getAllVariations, form]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [getAllVariations, initialVariationId]);
 
     const handleVariationChange = (id: string) => {
         setSelectedVariationId(id);
@@ -178,31 +183,63 @@ const VariableProductForm: React.FC = () => {
                             </span>
                         </Divider>
 
-                        <Form.List name={["variable_product", "variations"]}>
-                            {(fields, { remove }) => (
-                                <div className="space-y-6 mt-6">
-                                    {fields.map(({ key, name }) => {
-                                        const itemData = form.getFieldValue(["variable_product", "variations", name]);
-                                        const optId = itemData?.variation_option_ids?.[0];
-                                        const optLabel = selectedVariationInfo?.values.find(v => v.id === optId)?.value;
+                        <Collapse
+                            ghost
+                            accordion
+                            className="mt-6"
+                            expandIconPosition="right"
+                        >
+                            <Form.List name={["variable_product", "variations"]}>
+                                {(fields, { remove }) => (
+                                    <>
+                                        {fields.map(({ key, name }) => {
+                                            const itemData = form.getFieldValue(["variable_product", "variations", name]);
+                                            const optId = itemData?.variation_option_ids?.[0];
+                                            const optLabel = selectedVariationInfo?.values.find(v => v.id === optId)?.value;
+                                            const label = optLabel ? `${selectedVariationInfo?.name}: ${optLabel}` : `Variation #${name + 1}`;
 
-                                        return (
-                                            <VariationFields
-                                                key={key}
-                                                name={name}
-                                                remove={() => {
-                                                    remove(name);
-                                                    if (optId) {
-                                                        setSelectedOptionIds(prev => prev.filter(id => id !== optId));
+                                            return (
+                                                <Panel
+                                                    header={
+                                                        <span className="flex items-center gap-2 text-slate-700 font-medium">
+                                                            <SolutionOutlined className="text-purple-500" />
+                                                            {label}
+                                                        </span>
                                                     }
-                                                }}
-                                                optionLabel={optLabel ? `${selectedVariationInfo?.name}: ${optLabel}` : undefined}
-                                            />
-                                        )
-                                    })}
-                                </div>
-                            )}
-                        </Form.List>
+                                                    key={key}
+                                                    extra={
+                                                        <Button
+                                                            danger
+                                                            type="text"
+                                                            icon={<DeleteOutlined />}
+                                                            onClick={(e: React.MouseEvent) => {
+                                                                e.stopPropagation();
+                                                                remove(name);
+                                                                if (optId) {
+                                                                    setSelectedOptionIds(prev => prev.filter(id => id !== optId));
+                                                                }
+                                                            }}
+                                                        />
+                                                    }
+                                                >
+                                                    <VariationFields
+                                                        key={key}
+                                                        name={name}
+                                                        remove={() => {
+                                                            remove(name);
+                                                            if (optId) {
+                                                                setSelectedOptionIds(prev => prev.filter(id => id !== optId));
+                                                            }
+                                                        }}
+                                                        optionLabel={label}
+                                                    />
+                                                </Panel>
+                                            )
+                                        })}
+                                    </>
+                                )}
+                            </Form.List>
+                        </Collapse>
                     </div>
                 )}
             </div>

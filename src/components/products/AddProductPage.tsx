@@ -43,7 +43,9 @@ const AddProductPage: React.FC = () => {
             sanitizedValues.warranty_id = cleanOptionalUuid(sanitizedValues.warranty_id);
 
             if (sanitizedValues.variable_product) {
-                sanitizedValues.variable_product.variation_id = cleanOptionalUuid(sanitizedValues.variable_product.variation_id);
+                if (!sanitizedValues.variable_product.variation_id) {
+                    delete sanitizedValues.variable_product;
+                }
             }
 
 

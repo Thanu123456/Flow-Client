@@ -141,5 +141,41 @@ export const productService = {
         return response.data.sku || response.data.data?.sku;
     },
 
-    // ExportPDF, ExportExcel, Import can be added later
+    // Export to PDF
+    exportToPDF: async (params: ProductPaginationParams): Promise<Blob> => {
+        const response = await axiosInstance.get("/admin/products/export/pdf", {
+            params: {
+                page: params.page,
+                per_page: params.limit,
+                search: params.search || undefined,
+                category_id: params.categoryId || undefined,
+                subcategory_id: params.subcategoryId || undefined,
+                brand_id: params.brandId || undefined,
+                product_type: params.productType || undefined,
+                include_inactive: params.status !== "active" && params.status !== undefined,
+            },
+            responseType: "arraybuffer",
+        });
+        return new Blob([response.data], { type: "application/pdf" });
+    },
+
+    // Export to Excel
+    exportToExcel: async (params: ProductPaginationParams): Promise<Blob> => {
+        const response = await axiosInstance.get("/admin/products/export/excel", {
+            params: {
+                page: params.page,
+                per_page: params.limit,
+                search: params.search || undefined,
+                category_id: params.categoryId || undefined,
+                subcategory_id: params.subcategoryId || undefined,
+                brand_id: params.brandId || undefined,
+                product_type: params.productType || undefined,
+                include_inactive: params.status !== "active" && params.status !== undefined,
+            },
+            responseType: "arraybuffer",
+        });
+        return new Blob([response.data], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+    },
 };

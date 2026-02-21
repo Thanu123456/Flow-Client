@@ -1,76 +1,127 @@
-import React, { useState } from "react";
-import { Button, Card, Space, Breadcrumb, Input } from "antd";
-import { PlusOutlined, SearchOutlined, ExportOutlined, ImportOutlined } from "@ant-design/icons";
+import React, { useState, useEffect } from "react";
+import { Space, message } from "antd";
+import { PlusOutlined, ReloadOutlined, FilePdfOutlined, FileExcelOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import ProductsTable from "./ProductsTable";
 import ImportProducts from "./ImportProducts";
+import { PageLayout } from "../common/PageLayout";
+import { CommonButton } from "../common/Button";
+import { useDebounce } from "../../hooks/ui/useDebounce";
+import { useProductStore } from "../../store/inventory/productStore";
+import { productService } from "../../services/inventory/productService";
+import type { ProductPaginationParams } from "../../types/entities/product.types";
 
 const ProductsPage: React.FC = () => {
     const navigate = useNavigate();
     const [importModalVisible, setImportModalVisible] = useState(false);
-    const [searchText, setSearchText] = useState("");
+    const [searchTerm, setSearchTerm] = useState("");
+    const [collapsed, setCollapsed] = useState(false);
+    const [paginationParams, setPaginationParams] = useState<ProductPaginationParams>({
+        page: 1,
+        limit: 10,
+        search: "",
+    });
 
-    const handleExport = () => {
-        // Implement export logic here if needed
-        console.log("Exporting products...");
+    const debouncedSearchTerm = useDebounce(searchTerm, 500);
+    const { getProducts } = useProductStore();
+
+    useEffect(() => {
+        const params = {
+            ...paginationParams,
+            search: debouncedSearchTerm,
+        };
+        setPaginationParams(params);
+        getProducts(params);
+    }, [debouncedSearchTerm, getProducts]);
+
+    const handleRefresh = () => getProducts(paginationParams);
+
+    const handleExportPDF = async () => {
+        try {
+            const blob = await productService.exportToPDF(paginationParams);
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute("download", "Products.pdf");
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            message.success("PDF exported successfully");
+        } catch {
+            message.error("Failed to export PDF");
+        }
+    };
+
+    const handleExportExcel = async () => {
+        try {
+            const blob = await productService.exportToExcel(paginationParams);
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute("download", "Products.xlsx");
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            message.success("Excel exported successfully");
+        } catch {
+            message.error("Failed to export Excel");
+        }
     };
 
     return (
-        <div style={{ padding: "24px" }}>
-            <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                    <h1 style={{ fontSize: "24px", margin: 0 }}>Products</h1>
-                    <Breadcrumb
-                        items={[
-                            { title: "Inventory" },
-                            { title: "Products" },
-                        ]}
-                    />
-                </div>
-                <Space>
-                    <Button
-                        icon={<ImportOutlined />}
-                        onClick={() => setImportModalVisible(true)}
-                    >
-                        Import
-                    </Button>
-                    <Button
-                        icon={<ExportOutlined />}
-                        onClick={handleExport}
-                    >
-                        Export
-                    </Button>
-                    <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => navigate("/products/add")}
-                    >
-                        Add Product
-                    </Button>
-                </Space>
-            </div>
-
-            <Card styles={{ body: { padding: 0 } }}>
-                <div style={{ padding: "16px", borderBottom: "1px solid #f0f0f0" }}>
-                    <Input
-                        placeholder="Search products..."
-                        prefix={<SearchOutlined style={{ color: "rgba(0,0,0,.25)" }} />}
-                        style={{ width: 300 }}
-                        value={searchText}
-                        onChange={(e) => setSearchText(e.target.value)}
-                    />
-                </div>
+        <>
+            <PageLayout
+                title="Manage Products"
+                collapsed={collapsed}
+                onCollapsedChange={setCollapsed}
+                searchConfig={{
+                    placeholder: "Search products...",
+                    value: searchTerm,
+                    onChange: setSearchTerm,
+                }}
+                actions={
+                    <Space>
+                        <CommonButton
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            onClick={() => navigate("/products/add")}
+                        >
+                            Add Product
+                        </CommonButton>
+                        <CommonButton
+                            icon={<FilePdfOutlined style={{ color: "#FF0000" }} />}
+                            onClick={handleExportPDF}
+                            tooltip="Download PDF"
+                        >
+                            PDF
+                        </CommonButton>
+                        <CommonButton
+                            icon={<FileExcelOutlined style={{ color: "#107C41" }} />}
+                            onClick={handleExportExcel}
+                            tooltip="Download Excel"
+                        >
+                            Excel
+                        </CommonButton>
+                        <CommonButton
+                            icon={<ReloadOutlined style={{ color: "blue" }} />}
+                            onClick={handleRefresh}
+                        >
+                            Refresh
+                        </CommonButton>
+                    </Space>
+                }
+            >
                 <ProductsTable />
-            </Card>
+            </PageLayout>
 
             <ImportProducts
                 visible={importModalVisible}
                 onClose={() => setImportModalVisible(false)}
-                onSuccess={() => {
-                    // Refresh products table logic if needed
-                }}
+                onSuccess={handleRefresh}
             />
-        </div>
+        </>
     );
 };
 

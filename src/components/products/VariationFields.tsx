@@ -18,7 +18,7 @@ const { Text: AntText } = Typography;
 
 interface VariationFieldsProps {
     name: number;
-    remove: (index: number) => void;
+    remove: () => void;
     optionLabel?: string;
 }
 
@@ -86,7 +86,7 @@ const VariationFields: React.FC<VariationFieldsProps> = ({ name, remove, optionL
                     danger
                     type="text"
                     icon={<DeleteOutlined />}
-                    onClick={() => remove(name)}
+                    onClick={() => remove()}
                     className="hover:bg-red-50 rounded-full"
                 >
                     Remove

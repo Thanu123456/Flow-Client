@@ -14,6 +14,7 @@ import {
   SafetyCertificateOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
+import HeaderWithSearch from './HeaderWithSearch';
 
 const { Content } = Layout;
 
@@ -342,10 +343,17 @@ const SuperAdminLayout: React.FC = () => {
           minHeight: '100vh',
         }}
       >
+        <HeaderWithSearch
+          onMenuClick={() => setCollapsed(!collapsed)}
+          collapsed={false}
+          sidebarOpen={!collapsed}
+          setSidebarOpen={(open) => setCollapsed(!open)}
+        />
         <Content
           style={{
             background: themeToken.colorBgLayout,
-            minHeight: '100vh',
+            minHeight: 'calc(100vh - 64px)',
+            padding: '24px',
           }}
         >
           <Outlet />

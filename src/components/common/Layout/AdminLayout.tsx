@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Layout, theme } from 'antd';
 import Sidebar from './Sidebar';
+import HeaderWithSearch from './HeaderWithSearch';
 
 const { Content } = Layout;
 
 const AdminLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const { token } = theme.useToken();
+  const location = useLocation();
 
   const sidebarWidth = collapsed ? 80 : 260;
+  const isDashboard = location.pathname === '/dashboard';
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -22,10 +25,19 @@ const AdminLayout: React.FC = () => {
           minHeight: '100vh',
         }}
       >
+        {!isDashboard && (
+          <HeaderWithSearch
+            onMenuClick={() => setCollapsed(!collapsed)}
+            collapsed={false}
+            sidebarOpen={!collapsed}
+            setSidebarOpen={(open) => setCollapsed(!open)}
+          />
+        )}
         <Content
           style={{
             background: token.colorBgLayout,
-            minHeight: '100vh',
+            minHeight: isDashboard ? '100vh' : 'calc(100vh - 64px)',
+            padding: isDashboard ? '0' : '24px',
           }}
         >
           <Outlet />
