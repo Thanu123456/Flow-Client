@@ -17,6 +17,8 @@ import { brandService } from "../../services/management/brandService";
 import { PageLayout } from "../common/PageLayout";
 import { CommonButton } from "../common/Button";
 
+import { useNavigate } from "react-router-dom";
+
 interface BrandsPageProps {
   onHeaderCollapseChange?: (collapsed: boolean) => void;
   sidebarOpen?: boolean;
@@ -32,6 +34,7 @@ const BrandsPage: React.FC<BrandsPageProps> = ({
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<any>(null);
   const [collapsed, setCollapsed] = useState(false);
+  const navigate = useNavigate();
 
   const handleCollapsedChange = (newCollapsed: boolean) => {
     setCollapsed(newCollapsed);
@@ -77,6 +80,9 @@ const BrandsPage: React.FC<BrandsPageProps> = ({
 
   const handleAddSuccess = () => getBrands(paginationParams);
   const handleEditSuccess = () => getBrands(paginationParams);
+  const handleProductCountClick = (brandId: string) => {
+    navigate(`/products?brandId=${brandId}`);
+  };
 
   const handleExportPDF = async () => {
     try {
@@ -173,6 +179,7 @@ const BrandsPage: React.FC<BrandsPageProps> = ({
           onPageChange={handlePageChange}
           onEdit={handleEditBrand}
           onView={(brand) => console.log("View brand:", brand)}
+          onProductCountClick={handleProductCountClick}
           refreshData={handleRefresh}
         />
       </PageLayout>

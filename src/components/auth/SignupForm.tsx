@@ -24,12 +24,85 @@ const businessTypes = [
   { value: 'other', label: 'Other' },
 ];
 
+interface InputFieldProps {
+  id: string;
+  label: string;
+  icon: any;
+  type?: string;
+  placeholder?: string;
+  value?: string;
+  error?: string;
+  required?: boolean;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onFocus: (id: string) => void;
+  onBlur: () => void;
+  disabled?: boolean;
+  focusedField: string | null;
+  showPassword?: boolean;
+  onTogglePassword?: () => void;
+}
+
+const InputField: React.FC<InputFieldProps> = ({
+  id,
+  label,
+  icon: Icon,
+  type = 'text',
+  placeholder,
+  value,
+  error,
+  required = false,
+  onChange,
+  onFocus,
+  onBlur,
+  disabled = false,
+  focusedField,
+  showPassword,
+  onTogglePassword,
+}) => (
+  <div className="space-y-1">
+    <label htmlFor={id} className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">
+      {label} {required && <span className="text-red-500">*</span>}
+    </label>
+    <div className="relative">
+      <Icon className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors duration-300 ${focusedField === id ? 'text-blue-500' : 'text-slate-400'}`} />
+      <input
+        id={id}
+        type={type}
+        value={value || ''}
+        onChange={onChange}
+        onFocus={() => onFocus(id)}
+        onBlur={onBlur}
+        placeholder={placeholder}
+        disabled={disabled}
+        className={`w-full pl-10 pr-4 py-2.5 bg-slate-50 border-2 rounded-xl focus:outline-none focus:bg-white transition-all duration-300 text-slate-900 text-sm placeholder:text-slate-400 ${error ? 'border-red-400 focus:border-red-500' : 'border-slate-200 focus:border-blue-500 hover:border-slate-300'} ${disabled ? 'opacity-50 cursor-not-allowed bg-slate-100' : ''}`}
+      />
+      {id === 'password' && onTogglePassword && (
+        <button
+          type="button"
+          onClick={onTogglePassword}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+        >
+          {!showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        </button>
+      )}
+    </div>
+    {error && <p className="text-[11px] text-red-500 ml-1 mt-0.5">{error}</p>}
+  </div>
+);
+
 const SignupForm: React.FC<SignupFormProps> = ({
   onSubmit,
   loading = false,
   error = null,
 }) => {
-  const [form] = Form.useForm();
+
+  const [formData, setFormData] = useState<Partial<RegisterRequest>>({
+    country: 'Sri Lanka',
+    business_type: 'retail'
+  });
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [password, setPassword] = useState('');
 
@@ -279,7 +352,7 @@ const SignupForm: React.FC<SignupFormProps> = ({
       <div style={{ textAlign: 'center' }}>
         Already have an account? <Link to="/login">Sign In</Link>
       </div>
-    </Form>
+    </Form >
   );
 };
 

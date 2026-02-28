@@ -1,6 +1,6 @@
 // src/components/Brands/BrandsTable.tsx (Refactored with DeleteBrandModal)
 import React, { useState } from "react";
-import { Button, Space, Image, message, Tooltip } from "antd";
+import { Button, Space, Image, message, Tooltip, Badge } from "antd";
 import { EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
 import { FaRegImages } from "react-icons/fa";
 import type { SortOrder } from "antd/es/table/interface";
@@ -23,6 +23,7 @@ interface BrandsTableProps {
   onPageChange: (page: number, pageSize: number) => void;
   onEdit: (brand: Brand) => void;
   onView: (brand: Brand) => void;
+  onProductCountClick: (brandId: string) => void;
   refreshData: () => void;
 }
 
@@ -32,6 +33,7 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
   pagination,
   onPageChange,
   onEdit,
+  onProductCountClick,
   refreshData,
 }) => {
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
@@ -137,7 +139,16 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
       dataIndex: "productCount",
       key: "productCount",
       align: "center" as const,
-      render: (count: number) => count || 0,
+      render: (count: number, record: Brand) => (
+        <Badge
+          count={count || 0}
+          style={{
+            backgroundColor: count > 0 ? "#1890ff" : "#d9d9d9",
+            cursor: count > 0 ? "pointer" : "default",
+          }}
+          onClick={() => count > 0 && onProductCountClick(record.id)}
+        />
+      ),
     },
     {
       title: <div className="text-center w-full">Status</div>,
@@ -146,11 +157,10 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
       align: "center" as const,
       render: (status: string) => (
         <span
-          className={`px-3 py-1 rounded-lg text-sm border ${
-            status === "active"
-              ? "border-green-500 text-green-500 bg-green-50/70"
-              : "border-red-500 text-red-500 bg-red-50/70"
-          }`}
+          className={`px-3 py-1 rounded-lg text-sm border ${status === "active"
+            ? "border-green-500 text-green-500 bg-green-50/70"
+            : "border-red-500 text-red-500 bg-red-50/70"
+            }`}
         >
           {status === "active" ? "Active" : "In-active"}
         </span>

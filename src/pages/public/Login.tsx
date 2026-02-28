@@ -68,9 +68,7 @@ const Login: React.FC = () => {
             }
         } catch (error: unknown) {
             console.error('Login Failed:', error);
-            const err = error as { response?: { data?: { message?: string; status?: AccountStatus; rejection_reason?: string } }; message?: string };
-
-            // Check for account status in error response
+            const err = error as { response?: { data?: { message?: string; status?: AccountStatus; rejection_reason?: string; error?: { message?: string } } }; message?: string };
             const errorData = err.response?.data;
             const status = errorData?.status;
             const rejectionReason = errorData?.rejection_reason;
@@ -90,9 +88,8 @@ const Login: React.FC = () => {
                     reason: rejectionReason
                 });
             } else {
-                // Regular error (invalid credentials, etc.)
-                const errorMsg = err.message || errorData?.message || 'Invalid email or password';
-                setFormError(errorMsg);
+                const message = errorData?.error?.message || errorData?.message || err.message || 'Invalid email or password';
+                setFormError(message);
             }
         } finally {
             setLoading(false);
@@ -106,7 +103,7 @@ const Login: React.FC = () => {
             messageApi.success('Login Successful');
             navigate('/dashboard');
         } catch (error: any) {
-            const errorMsg = error.response?.data?.message || error.message || 'Invalid verification code';
+            const errorMsg = error.response?.data?.error?.message || error.response?.data?.message || error.message || 'Invalid verification code';
             setMfaError(errorMsg);
             throw error; // Re-throw to let MfaVerification handle the error state
         }
@@ -149,7 +146,7 @@ const Login: React.FC = () => {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center'
-                     }}>
+                    }}>
                         <ShopOutlined style={{ fontSize: 24, color: '#fff' }} />
                     </div>
                     {!mfaRequired && (
