@@ -57,22 +57,23 @@ const EditProductPage: React.FC = () => {
                     };
                 } else {
                     // Variable product mapping
+                    const variations = product.variations || [];
                     formValues.variable_product = {
-                        variation_id: product.variations?.[0]?.variationId,
-                        variations: product.variations?.map(v => ({
-                            variation_option_ids: v.options.map(o => o.id),
+                        variation_id: variations[0]?.variationId ? String(variations[0].variationId) : undefined,
+                        variations: variations.map((v: any) => ({
+                            variation_option_ids: Array.isArray(v.options) ? v.options.map((o: any) => String(o.id)) : [],
                             sku: v.sku,
                             barcode: v.barcode,
-                            cost_price: v.costPrice,
-                            wholesale_price: v.wholesalePrice,
-                            retail_price: v.retailPrice,
-                            our_price: v.ourPrice,
-                            discount_type: v.discountType,
-                            discount_value: v.discountValue,
-                            discount_applies_to: v.discountAppliesTo,
-                            quantity_alert: v.quantityAlert,
-                            current_stock: v.currentStock,
-                            image_url: v.imageUrl,
+                            cost_price: v.costPrice || v.cost_price,
+                            wholesale_price: v.wholesalePrice || v.wholesale_price,
+                            retail_price: v.retailPrice || v.retail_price,
+                            our_price: v.ourPrice || v.our_price,
+                            discount_type: v.discountType || v.discount_type,
+                            discount_value: v.discountValue || v.discount_value,
+                            discount_applies_to: v.discountAppliesTo || v.discount_applies_to,
+                            quantity_alert: v.quantityAlert || v.quantity_alert,
+                            current_stock: v.currentStock || v.current_stock,
+                            image_url: v.imageUrl || v.image_url,
                         }))
                     };
                 }
