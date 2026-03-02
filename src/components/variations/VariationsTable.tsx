@@ -95,7 +95,7 @@ const VariationsTable: React.FC<VariationsTableProps> = ({
           count={record.values?.length || 0}
           showZero
           style={{
-            backgroundColor: (record.values?.length || 0) > 0 ? "#52c41a" : "#d9d9d9",
+            backgroundColor: (record.values?.length || 0) > 0 ? "#1890ff" : "#d9d9d9",
             cursor: (record.values?.length || 0) > 0 ? "pointer" : "default",
           }}
           onClick={() => {

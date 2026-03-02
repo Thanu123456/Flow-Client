@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Tag, Space, Tooltip, message } from "antd";
+import { Tag, Space, Tooltip, message, Badge } from "antd";
 import {
   EditOutlined,
   DeleteOutlined,
@@ -24,6 +24,7 @@ interface WarehousesTableProps {
   onPageChange: (page: number, pageSize: number) => void;
   onEdit: (warehouse: Warehouse) => void;
   onView?: (warehouse: Warehouse) => void;
+  onProductCountClick: (warehouseId: string) => void;
   refreshData: () => void;
 }
 
@@ -34,6 +35,7 @@ const WarehousesTable: React.FC<WarehousesTableProps> = ({
   onPageChange,
   onEdit,
   onView: _onView,
+  onProductCountClick,
   refreshData,
 }) => {
   const [viewModalVisible, setViewModalVisible] = useState(false);
@@ -101,7 +103,16 @@ const WarehousesTable: React.FC<WarehousesTableProps> = ({
       dataIndex: "totalProducts",
       key: "totalProducts",
       align: "center" as const,
-      render: (totalProducts: number | undefined) => totalProducts ?? 0,
+      render: (count: number, record: Warehouse) => (
+        <Badge
+          count={count || 0}
+          style={{
+            backgroundColor: count > 0 ? "#1890ff" : "#d9d9d9",
+            cursor: count > 0 ? "pointer" : "default",
+          }}
+          onClick={() => count > 0 && onProductCountClick(record.id)}
+        />
+      ),
     },
     {
       title: "Total Stock",

@@ -1,30 +1,30 @@
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { Layout, theme } from 'antd';
+import { Layout } from 'antd';
 import Sidebar from './Sidebar';
 
 const { Content } = Layout;
 
 const AdminLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
-  const { token } = theme.useToken();
 
-  const sidebarWidth = collapsed ? 80 : 260;
+  const sidebarWidth = collapsed ? 72 : 264;
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ minHeight: '100vh', background: '#f8f9fb' }}>
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
 
       <Layout
         style={{
           marginLeft: sidebarWidth,
-          transition: 'margin-left 0.3s cubic-bezier(0.2, 0, 0, 1)',
+          transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           minHeight: '100vh',
+          background: '#f8f9fb',
         }}
       >
         <Content
           style={{
-            background: token.colorBgLayout,
+            background: '#f8f9fb',
             minHeight: '100vh',
           }}
         >

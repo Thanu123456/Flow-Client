@@ -19,26 +19,44 @@ const VariableProductForm: React.FC = () => {
 
     const form = Form.useFormInstance();
 
+    // Watch form state to dynamically react to any late data injections or resets
+    const formVariationId = Form.useWatch(["variable_product", "variation_id"], form);
+    const formVariations = Form.useWatch(["variable_product", "variations"], form);
+
     useEffect(() => {
         const init = async () => {
             await getAllVariations();
-
-            // Sync with form values for editing/initial state
-            const variableProduct = form.getFieldValue("variable_product");
-            const initialVarId = variableProduct?.variation_id;
-            const initialVariations = variableProduct?.variations || [];
-
-            if (initialVarId) {
-                setSelectedVariationId(initialVarId);
-            }
-
-            if (initialVariations.length > 0) {
-                const optionIds = initialVariations.map((v: any) => v.variation_option_ids?.[0]).filter(Boolean);
-                setSelectedOptionIds(optionIds);
-            }
         };
         init();
-    }, [getAllVariations, form]);
+    }, [getAllVariations]);
+
+    // Continuously sync with the form if the data drops in (failsafe)
+    useEffect(() => {
+        const variableProduct = form.getFieldValue("variable_product");
+        const currentVarId = formVariationId || variableProduct?.variation_id;
+        const currentVariations = formVariations || variableProduct?.variations || [];
+
+        if (currentVarId && String(currentVarId) !== selectedVariationId) {
+            setSelectedVariationId(String(currentVarId));
+        }
+
+        if (currentVariations.length > 0) {
+            const optionIds = currentVariations.map((v: any) => {
+                const id = v.variation_option_ids?.[0];
+                return id ? String(id) : null;
+            }).filter(Boolean) as string[];
+
+            // Only update if they differ to avoid infinite loops
+            const sortedCurrent = [...selectedOptionIds].sort();
+            const sortedNew = [...optionIds].sort();
+            const isDifferent = sortedCurrent.length !== sortedNew.length ||
+                sortedCurrent.some((val, i) => val !== sortedNew[i]);
+
+            if (isDifferent) {
+                setSelectedOptionIds(optionIds);
+            }
+        }
+    }, [formVariationId, formVariations, form, selectedVariationId, selectedOptionIds]);
 
     const handleVariationChange = (id: string) => {
         setSelectedVariationId(id);
@@ -52,7 +70,7 @@ const VariableProductForm: React.FC = () => {
         });
     };
 
-    const selectedVariationInfo = variations.find(v => v.id === selectedVariationId);
+    const selectedVariationInfo = variations.find(v => String(v.id) === String(selectedVariationId));
 
     const handleOptionsChange = (optionIds: string[]) => {
         setSelectedOptionIds(optionIds);
@@ -142,8 +160,18 @@ const VariableProductForm: React.FC = () => {
                                     className="rounded-lg"
                                 >
                                     {selectedVariationInfo?.values.map(opt => (
-                                        <Select.Option key={opt.id} value={opt.id}>{opt.value}</Select.Option>
+                                        <Select.Option key={opt.id} value={String(opt.id)}>{opt.value}</Select.Option>
                                     ))}
+                                    {/* Guarantee exact IDs show even before full load to prevent empty inputs */}
+                                    {selectedOptionIds.map(id => {
+                                        const exists = selectedVariationInfo?.values.some(v => String(v.id) === String(id));
+                                        if (exists) return null;
+                                        return (
+                                            <Select.Option key={`fallback-${id}`} value={String(id)} style={{ display: 'none' }}>
+                                                {id}
+                                            </Select.Option>
+                                        );
+                                    })}
                                 </Select>
                             </Form.Item>
                         </Col>
@@ -184,7 +212,7 @@ const VariableProductForm: React.FC = () => {
                                     {fields.map(({ key, name }) => {
                                         const itemData = form.getFieldValue(["variable_product", "variations", name]);
                                         const optId = itemData?.variation_option_ids?.[0];
-                                        const optLabel = selectedVariationInfo?.values.find(v => v.id === optId)?.value;
+                                        const optLabel = selectedVariationInfo?.values.find(v => String(v.id) === String(optId))?.value;
 
                                         return (
                                             <VariationFields
@@ -193,10 +221,10 @@ const VariableProductForm: React.FC = () => {
                                                 remove={() => {
                                                     remove(name);
                                                     if (optId) {
-                                                        setSelectedOptionIds(prev => prev.filter(id => id !== optId));
+                                                        setSelectedOptionIds(prev => prev.filter(id => String(id) !== String(optId)));
                                                     }
                                                 }}
-                                                optionLabel={optLabel ? `${selectedVariationInfo?.name}: ${optLabel}` : undefined}
+                                                optionLabel={optLabel ? `${selectedVariationInfo?.name}: ${optLabel}` : (optId ? `Variation: ${optId}` : undefined)}
                                             />
                                         )
                                     })}

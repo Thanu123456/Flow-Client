@@ -95,7 +95,7 @@ const CategoriesTable: React.FC<CategoriesTableProps> = ({
           count={count || 0}
           showZero
           style={{
-            backgroundColor: count > 0 ? "#52c41a" : "#d9d9d9",
+            backgroundColor: count > 0 ? "#1890ff" : "#d9d9d9",
             cursor: count > 0 ? "pointer" : "default",
           }}
           onClick={() => {
