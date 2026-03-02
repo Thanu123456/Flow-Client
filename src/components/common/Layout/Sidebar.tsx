@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef, useCallback } from "react";
-import { Tooltip, Avatar } from "antd";
+import { Tooltip, Avatar, Modal } from "antd";
 import {
   DashboardOutlined,
   ShoppingCartOutlined,
@@ -328,9 +328,19 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     });
   }, []);
 
-  const handleLogout = async () => {
-    await logout();
-    navigate("/login");
+  const handleLogout = () => {
+    Modal.confirm({
+      title: "Confirm Logout",
+      content: "Are you sure you want to log out of the system?",
+      okText: "Logout",
+      okType: "danger",
+      cancelText: "Stay",
+      onOk: async () => {
+        await logout();
+        navigate("/login");
+      },
+      centered: true,
+    });
   };
 
   /* ── build nav groups ── */

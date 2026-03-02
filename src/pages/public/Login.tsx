@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { message, Alert } from 'antd';
-import { Zap, Users, TrendingUp, ArrowLeft } from 'lucide-react';
+import { message } from 'antd';
+import { Zap, Users, TrendingUp, ArrowLeft, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import type { LoginRequest, AccountStatus } from '../../types/auth/auth.types';
@@ -39,14 +39,12 @@ const Login: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [messageApi, contextHolder] = message.useMessage();
     const [statusAlert, setStatusAlert] = useState<{ type: 'warning' | 'error' | 'info'; message: string; reason?: string } | null>(null);
-    const [formError, setFormError] = useState<string | null>(null);
     const [mfaError, setMfaError] = useState<string | null>(null);
     const apiError = useApiError();
 
     const handleSubmit = async (values: LoginRequest) => {
         setLoading(true);
         setStatusAlert(null);
-        setFormError(null);
         try {
             const response = await login(values);
 
@@ -83,7 +81,10 @@ const Login: React.FC = () => {
                 });
             } else {
                 const message = errorData?.error?.message || errorData?.message || err.message || 'Invalid email or password';
-                setFormError(message);
+                setStatusAlert({
+                    type: 'error',
+                    message: message
+                });
             }
         } finally {
             setLoading(false);
@@ -272,32 +273,48 @@ const Login: React.FC = () => {
                                 </div>
 
                                 {statusAlert && (
-                                    <Alert
-                                        message={statusAlert.type === 'warning' ? 'Account Pending' : statusAlert.type === 'error' ? 'Account Issue' : 'Notice'}
-                                        description={statusAlert.message}
-                                        type={statusAlert.type}
-                                        showIcon
-                                        closable
-                                        onClose={() => setStatusAlert(null)}
-                                        className="mb-6 rounded-xl"
-                                    />
+                                    <div className={`relative mb-6 p-4 rounded-2xl border flex gap-3 transition-all duration-300 animate-[slideDown_0.3s_ease-out] shadow-sm ${statusAlert.type === 'error' ? 'bg-red-50/80 border-red-100 text-red-900' :
+                                        statusAlert.type === 'warning' ? 'bg-amber-50/80 border-amber-100 text-amber-900' :
+                                            'bg-blue-50/80 border-blue-100 text-blue-900'
+                                        }`}>
+                                        <div className="flex-shrink-0 mt-0.5">
+                                            {statusAlert.type === 'error' && <AlertCircle className="w-5 h-5 text-red-500" />}
+                                            {statusAlert.type === 'warning' && <AlertTriangle className="w-5 h-5 text-amber-500" />}
+                                            {statusAlert.type === 'info' && <Info className="w-5 h-5 text-blue-500" />}
+                                        </div>
+                                        <div className="flex-1 pr-6">
+                                            <h4 className="text-sm font-bold mb-1 opacity-90">
+                                                {statusAlert.type === 'warning' ? 'Account Pending' : statusAlert.type === 'error' ? 'Login Failed' : 'Notice'}
+                                            </h4>
+                                            <p className="text-xs leading-relaxed opacity-80 font-medium">
+                                                {statusAlert.message}
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => setStatusAlert(null)}
+                                            className="absolute top-3 right-3 p-1 rounded-lg hover:bg-black/5 transition-colors cursor-pointer"
+                                        >
+                                            <X className="w-4 h-4 opacity-50" />
+                                        </button>
+                                    </div>
                                 )}
 
                                 {apiError && apiError.status === 429 && (
-                                    <Alert
-                                        message="Too Many Attempts"
-                                        description={apiError.message}
-                                        type="error"
-                                        showIcon
-                                        className="mb-6 rounded-xl"
-                                    />
+                                    <div className="mb-6 p-4 rounded-2xl border bg-red-50/80 border-red-100 text-red-900 flex gap-3 shadow-sm animate-[slideDown_0.3s_ease-out]">
+                                        <div className="flex-shrink-0 mt-0.5">
+                                            <AlertCircle className="w-5 h-5 text-red-500" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h4 className="text-sm font-bold mb-1">Too Many Attempts</h4>
+                                            <p className="text-xs font-medium opacity-80">{apiError.message}</p>
+                                        </div>
+                                    </div>
                                 )}
 
                                 <LoginForm
                                     onSubmit={handleSubmit}
                                     onGoogleLogin={handleGoogleLogin}
                                     loading={loading}
-                                    error={formError}
                                 />
                             </>
                         )}
