@@ -3,6 +3,7 @@ import { Table, Card, Typography, Tag, message, Input } from 'antd';
 import { superAdminService } from '../../services/superadmin/superAdminService';
 import type { AuditLog } from '../../types/auth/superadmin.types';
 import dayjs from 'dayjs';
+import HeaderWithSearch from '../../components/common/Layout/HeaderWithSearch';
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -47,9 +48,9 @@ const SystemLogs: React.FC = () => {
       ),
     },
     {
-        title: 'Actor',
-        dataIndex: 'user_email',
-        key: 'user_email',
+      title: 'Actor',
+      dataIndex: 'user_email',
+      key: 'user_email',
     },
     {
       title: 'Module',
@@ -81,17 +82,18 @@ const SystemLogs: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
+      <HeaderWithSearch />
       <div style={{ marginBottom: '24px' }}>
         <Title level={2}>System Audit Logs</Title>
       </div>
 
       <Card>
         <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
-             <Search 
-                placeholder="Search logs..." 
-                onSearch={value => console.log(value)} 
-                style={{ width: 300 }} 
-            />
+          <Search
+            placeholder="Search logs..."
+            onSearch={value => console.log(value)}
+            style={{ width: 300 }}
+          />
         </div>
         <Table
           columns={columns}
