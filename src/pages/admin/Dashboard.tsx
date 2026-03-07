@@ -39,6 +39,7 @@ import { useUnitStore } from '../../store/management/unitStore';
 import { useWarehouseStore } from '../../store/management/warehouseStore';
 import { useWarrantyStore } from '../../store/management/warrantyStore';
 import { useVariationStore } from '../../store/management/variationStore';
+import HeaderWithSearch from '../../components/common/Layout/HeaderWithSearch';
 
 const { Title, Text } = Typography;
 
@@ -128,6 +129,7 @@ const Dashboard: React.FC = () => {
 
     return (
         <div style={{ padding: 24, background: token.colorBgLayout, minHeight: '100vh' }}>
+            <HeaderWithSearch />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                 <Title level={2} style={{ margin: 0 }}>Admin Dashboard</Title>
                 <Dropdown menu={{ items: userMenuItems }} trigger={['click']} placement="bottomRight">

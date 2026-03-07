@@ -40,7 +40,7 @@ interface SearchResult {
 }
 
 interface HeaderProps {
-  onMenuClick: () => void;
+  onMenuClick?: () => void;
   collapsed?: boolean;
   sidebarOpen?: boolean;
   setSidebarOpen?: (open: boolean) => void;
@@ -116,7 +116,9 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({
     if (setSidebarOpen) {
       setSidebarOpen(!sidebarOpen);
     }
-    onMenuClick();
+    if (onMenuClick) {
+      onMenuClick();
+    }
   };
 
   const userMenuItems: MenuProps["items"] = [

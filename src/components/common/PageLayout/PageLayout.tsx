@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Card, Row, Col, Input, Select, Space, Tooltip } from "antd";
 import { CommonButton } from "../Button";
+import HeaderWithSearch from "../Layout/HeaderWithSearch";
 import type { PageLayoutProps } from "./PageLayout.types";
 
 const { Search } = Input;
@@ -25,6 +26,7 @@ function PageLayout({
 
   return (
     <div className="page-layout">
+      <HeaderWithSearch />
       <Card
         title={
           <div

@@ -5,6 +5,7 @@ import RegistrationDetailsModal from '../../components/superadmin/PendingRegistr
 import RejectModal from '../../components/superadmin/PendingRegistrations/RejectModal';
 import { superAdminService } from '../../services/superadmin/superAdminService';
 import type { Registration } from '../../types/auth/superadmin.types';
+import HeaderWithSearch from '../../components/common/Layout/HeaderWithSearch';
 
 const { Title } = Typography;
 
@@ -13,7 +14,7 @@ const PendingRegistrations: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
-  
+
   // Modals state
   const [selectedReg, setSelectedReg] = useState<Registration | null>(null);
   const [isDetailsVisible, setIsDetailsVisible] = useState(false);
@@ -87,6 +88,7 @@ const PendingRegistrations: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
+      <HeaderWithSearch />
       <Title level={2}>Pending Registrations</Title>
       <Card>
         <PendingRegistrationsTable
