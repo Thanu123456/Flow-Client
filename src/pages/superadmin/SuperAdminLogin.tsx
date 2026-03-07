@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import {
-  Form,
-  Input,
-  Button,
-  Checkbox,
-  Typography,
-  Card,
-  message,
-  theme,
-  Alert
+    Form,
+    Input,
+    Button,
+    Checkbox,
+    Typography,
+    Card,
+    message,
+    theme,
+    Alert
 } from 'antd';
-import { UserOutlined, LockOutlined, SafetyOutlined } from '@ant-design/icons';
+import { UserOutlined, LockOutlined, SafetyOutlined, StopOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import type { SuperAdminLoginRequest } from '../../types/auth/superadmin.types';
@@ -27,6 +27,7 @@ const SuperAdminLogin: React.FC = () => {
     const [showMFA, setShowMFA] = useState(false);
     const [loginAttempts, setLoginAttempts] = useState(0);
     const [isLocked, setIsLocked] = useState(false);
+    const [errorAlert, setErrorAlert] = useState<string | null>(null);
     const apiError = useApiError();
 
     const onFinish = async (values: any) => {
@@ -36,6 +37,7 @@ const SuperAdminLogin: React.FC = () => {
         }
 
         setLoading(true);
+        setErrorAlert(null);
         try {
             const loginData: SuperAdminLoginRequest = {
                 email: values.email,
@@ -71,9 +73,9 @@ const SuperAdminLogin: React.FC = () => {
             // Check if error suggests MFA is required
             if (errorMsg.toLowerCase().includes('mfa') || errorMsg.toLowerCase().includes('two-factor') || errorMsg.toLowerCase().includes('code required')) {
                 setShowMFA(true);
-                messageApi.info('Please enter your two-factor authentication code.');
+                setErrorAlert('Please enter your two-factor authentication code.');
             } else {
-                messageApi.error(`${errorMsg} (${5 - newAttempts} attempts remaining)`);
+                setErrorAlert(`${errorMsg} (${5 - newAttempts} attempts remaining)`);
             }
         } finally {
             setLoading(false);
@@ -81,32 +83,32 @@ const SuperAdminLogin: React.FC = () => {
     };
 
     return (
-        <div style={{ 
-            minHeight: '100vh', 
-            background: token.colorBgLayout, 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
+        <div style={{
+            minHeight: '100vh',
+            background: token.colorBgLayout,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
             flexDirection: 'column',
             padding: '24px'
         }}>
             {contextHolder}
-            <Card 
-                style={{ 
-                    width: '100%', 
-                    maxWidth: 420, 
+            <Card
+                style={{
+                    width: '100%',
+                    maxWidth: 420,
                     boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                     borderColor: token.colorError // Visual hint for restricted area? Or just standard.
                 }}
             >
-                 <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                    <div style={{ 
+                <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                    <div style={{
                         display: 'inline-flex',
                         padding: 12,
                         borderRadius: '50%',
                         background: token.colorErrorBg,
                         marginBottom: 16
-                     }}>
+                    }}>
                         <SafetyOutlined style={{ fontSize: 24, color: token.colorError }} />
                     </div>
                     <Title level={2} style={{ margin: 0 }}>Super Admin</Title>
@@ -116,11 +118,18 @@ const SuperAdminLogin: React.FC = () => {
                 {/* Account Locked Alert */}
                 {isLocked && (
                     <Alert
-                        message="Account Locked"
-                        description="Too many failed login attempts. Please try again in 15 minutes."
+                        message={<Text strong style={{ color: '#cf1322' }}>Access Denied</Text>}
+                        description="Security protocol: Too many failed login attempts. Please wait 15 minutes before retry."
                         type="error"
                         showIcon
-                        style={{ marginBottom: 24 }}
+                        icon={<StopOutlined />}
+                        style={{
+                            marginBottom: 24,
+                            borderRadius: 16,
+                            background: '#fff2f0',
+                            border: '1px solid #ffccc7',
+                            padding: '12px 16px'
+                        }}
                     />
                 )}
 
@@ -135,8 +144,28 @@ const SuperAdminLogin: React.FC = () => {
                     />
                 )}
 
-                {/* Login Attempts Warning */}
-                {loginAttempts > 0 && loginAttempts < 5 && !isLocked && (
+                {/* Login Attempts Warning / Error */}
+                {errorAlert && !isLocked && (
+                    <Alert
+                        message={<Text strong style={{ color: '#cf1322', fontSize: '13px' }}>Authentication Error</Text>}
+                        description={<Text style={{ fontSize: '12px' }}>{errorAlert}</Text>}
+                        type="error"
+                        showIcon
+                        closable
+                        onClose={() => setErrorAlert(null)}
+                        icon={<StopOutlined />}
+                        style={{
+                            marginBottom: 24,
+                            borderRadius: 16,
+                            background: '#fff2f0',
+                            border: '1px solid #ffccc7',
+                            padding: '12px 16px',
+                            boxShadow: '0 2px 8px rgba(255, 77, 79, 0.08)'
+                        }}
+                    />
+                )}
+
+                {loginAttempts > 0 && loginAttempts < 5 && !isLocked && !errorAlert && (
                     <Alert
                         message="Login Attempts"
                         description={`${5 - loginAttempts} attempts remaining before account lockout.`}
@@ -156,8 +185,8 @@ const SuperAdminLogin: React.FC = () => {
                     <Form.Item
                         name="email"
                         rules={[
-                            { required: true, message: 'Please input your Email!' }, 
-                            { type: 'email', message: 'Invalid Email Format'}
+                            { required: true, message: 'Please input your Email!' },
+                            { type: 'email', message: 'Invalid Email Format' }
                         ]}
                     >
                         <Input prefix={<UserOutlined />} placeholder="Email" />

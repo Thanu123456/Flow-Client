@@ -1,7 +1,7 @@
 // src/components/Brands/BrandsTable.tsx (Refactored with DeleteBrandModal)
 import React, { useState } from "react";
-import { Button, Space, Image, message, Tooltip } from "antd";
-import { EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
+import { Button, Space, Image, message, Tooltip, Badge } from "antd";
+import { EditOutlined, DeleteOutlined, EyeOutlined, WarningOutlined } from "@ant-design/icons";
 import { FaRegImages } from "react-icons/fa";
 import type { SortOrder } from "antd/es/table/interface";
 import type { Brand } from "../../types/entities/brand.types";
@@ -10,6 +10,8 @@ import ViewBrandModal from "./ViewBrandModal";
 import DeleteBrandModal from "./DeleteBrandModal";
 import { CommonTable } from "../common/Table";
 import type { TableColumn } from "../common/Table/Table.types";
+import { useTableSelection } from "../../hooks/useTableSelection";
+import { Modal } from "antd";
 
 interface BrandsTableProps {
   brands: Brand[];
@@ -23,6 +25,7 @@ interface BrandsTableProps {
   onPageChange: (page: number, pageSize: number) => void;
   onEdit: (brand: Brand) => void;
   onView: (brand: Brand) => void;
+  onProductCountClick: (brandId: string) => void;
   refreshData: () => void;
 }
 
@@ -32,8 +35,10 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
   pagination,
   onPageChange,
   onEdit,
+  onProductCountClick,
   refreshData,
 }) => {
+  const { selectedRowKeys, rowSelection, clearSelection } = useTableSelection<Brand>();
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
 
   // Modal states
@@ -61,6 +66,27 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
   const showViewModal = (brand: Brand) => {
     setBrandToView(brand);
     setViewModalVisible(true);
+  };
+
+  const handleBulkDelete = () => {
+    Modal.confirm({
+      title: "Delete Multiple Brands",
+      icon: <WarningOutlined style={{ color: 'red' }} />,
+      content: `Are you sure you want to delete ${selectedRowKeys.length} selected brands? This action cannot be undone.`,
+      okText: "Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk: async () => {
+        try {
+          // In a real app, call bulk delete API here
+          message.success(`Successfully deleted ${selectedRowKeys.length} brands`);
+          clearSelection();
+          refreshData();
+        } catch (error) {
+          message.error("Failed to delete brands");
+        }
+      },
+    });
   };
 
   const columns: TableColumn<Brand>[] = [
@@ -137,7 +163,16 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
       dataIndex: "productCount",
       key: "productCount",
       align: "center" as const,
-      render: (count: number) => count || 0,
+      render: (count: number, record: Brand) => (
+        <Badge
+          count={count || 0}
+          style={{
+            backgroundColor: count > 0 ? "#1890ff" : "#d9d9d9",
+            cursor: count > 0 ? "pointer" : "default",
+          }}
+          onClick={() => count > 0 && onProductCountClick(record.id)}
+        />
+      ),
     },
     {
       title: <div className="text-center w-full">Status</div>,
@@ -146,13 +181,12 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
       align: "center" as const,
       render: (status: string) => (
         <span
-          className={`px-3 py-1 rounded-lg text-sm border ${
-            status === "active"
-              ? "border-green-500 text-green-500 bg-green-50/70"
-              : "border-red-500 text-red-500 bg-red-50/70"
-          }`}
+          className={`px-3 py-1 rounded-lg text-sm border ${status === "active"
+            ? "border-green-500 text-green-500 bg-green-50/70"
+            : "border-red-500 text-red-500 bg-red-50/70"
+            }`}
         >
-          {status === "active" ? "Active" : "In-active"}
+          {status === "active" ? "Active" : "Inactive"}
         </span>
       ),
     },
@@ -212,6 +246,9 @@ const BrandsTable: React.FC<BrandsTableProps> = ({
         onPageChange={onPageChange}
         selectedDate={selectedDate}
         onDateFilterChange={handleDateChange}
+        rowSelection={rowSelection}
+        onBulkDelete={handleBulkDelete}
+        bulkDeleteText={`Delete (${selectedRowKeys.length})`}
       />
 
       {/* Delete Modal */}

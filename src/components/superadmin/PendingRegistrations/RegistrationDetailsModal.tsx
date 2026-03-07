@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Descriptions, Tag, Divider } from 'antd';
+import { Modal, Descriptions, Divider } from 'antd';
 import type { Registration } from '../../../types/auth/superadmin.types';
 import dayjs from 'dayjs';
 
@@ -24,7 +24,11 @@ const RegistrationDetailsModal: React.FC<Props> = ({ visible, registration, onCl
         <Descriptions.Item label="Shop Name" span={2}>{registration.shop_name}</Descriptions.Item>
         <Descriptions.Item label="Business Type">{registration.business_type}</Descriptions.Item>
         <Descriptions.Item label="Status">
-          <Tag color="orange">{registration.status.toUpperCase()}</Tag>
+          <span
+            className="px-3 py-1 rounded-lg text-sm border border-orange-500 text-orange-500 bg-orange-50/70"
+          >
+            {registration.status.charAt(0).toUpperCase() + registration.status.slice(1)}
+          </span>
         </Descriptions.Item>
         <Descriptions.Item label="Registration No.">{registration.details?.business_registration_number || 'N/A'}</Descriptions.Item>
         <Descriptions.Item label="Tax/VAT No.">{registration.details?.tax_vat_number || 'N/A'}</Descriptions.Item>

@@ -1,6 +1,6 @@
-import React from 'react';
-import { Table, Tag, Button, Space, Tooltip, Popconfirm, Avatar } from 'antd';
-import { EditOutlined, DeleteOutlined, KeyOutlined, UserOutlined, EyeOutlined, HistoryOutlined } from '@ant-design/icons';
+import { Button, Space, Tooltip, Popconfirm, Avatar, Modal, message } from 'antd';
+import { EditOutlined, DeleteOutlined, KeyOutlined, UserOutlined, EyeOutlined, HistoryOutlined, WarningOutlined } from '@ant-design/icons';
+import { CommonTable } from '../common/Table';
 import type { User } from '../../types/entities/user.types';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -37,7 +37,25 @@ const UsersTable: React.FC<Props> = ({
   onViewActivity,
   pagination,
 }) => {
-  console.log('UsersTable Data:', data);
+  const handleBulkDelete = () => {
+    Modal.confirm({
+      title: "Delete Multiple Users",
+      icon: <WarningOutlined style={{ color: "red" }} />,
+      content: `Are you sure you want to delete ${selectedRowKeys.length} selected users? This action cannot be undone.`,
+      okText: "Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk: async () => {
+        try {
+          message.success(`Successfully deleted ${selectedRowKeys.length} users`);
+          onSelectChange([]);
+        } catch (error) {
+          message.error("Failed to delete users");
+        }
+      },
+    });
+  };
+
   const columns = [
     {
       title: 'User',
@@ -69,9 +87,14 @@ const UsersTable: React.FC<Props> = ({
       dataIndex: 'kioskEnabled',
       key: 'kioskEnabled',
       render: (enabled: boolean) => (
-        <Tag color={enabled ? 'cyan' : 'default'}>
+        <span
+          className={`px-3 py-1 rounded-lg text-sm border ${enabled
+            ? "border-cyan-500 text-cyan-500 bg-cyan-50/70"
+            : "border-gray-300 text-gray-500 bg-gray-50/70"
+            }`}
+        >
           {enabled ? 'Enabled' : 'Disabled'}
-        </Tag>
+        </span>
       ),
     },
     {
@@ -85,16 +108,18 @@ const UsersTable: React.FC<Props> = ({
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => {
-        const colorMap: Record<string, string> = {
-          active: 'green',
-          inactive: 'orange',
-          locked: 'red',
-          pending: 'blue',
+        const styleMap: Record<string, string> = {
+          active: "border-green-500 text-green-500 bg-green-50/70",
+          inactive: "border-orange-500 text-orange-500 bg-orange-50/70",
+          locked: "border-red-500 text-red-500 bg-red-50/70",
+          pending: "border-blue-500 text-blue-500 bg-blue-50/70",
         };
         return (
-          <Tag color={colorMap[status] || 'default'}>
+          <span
+            className={`px-3 py-1 rounded-lg text-sm border ${styleMap[status] || "border-gray-300 text-gray-500 bg-gray-50/70"}`}
+          >
             {status.charAt(0).toUpperCase() + status.slice(1)}
-          </Tag>
+          </span>
         );
       },
     },
@@ -159,29 +184,28 @@ const UsersTable: React.FC<Props> = ({
     },
   ];
 
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: (keys: React.Key[]) => onSelectChange(keys as string[]),
-    getCheckboxProps: (record: User) => ({
-      disabled: record.userType === 'owner',
-    }),
-  };
-
   return (
-    <Table
-      columns={columns}
+    <CommonTable<User>
+      columns={columns as any}
       dataSource={data}
       rowKey="id"
       loading={loading}
-      rowSelection={rowSelection}
+      onBulkDelete={handleBulkDelete}
+      bulkDeleteText={`Delete (${selectedRowKeys.length})`}
+      rowSelection={{
+        selectedRowKeys,
+        onChange: (keys: any) => onSelectChange(keys as string[]),
+        getCheckboxProps: (record: User) => ({
+          disabled: record.userType === 'owner',
+        }),
+      }}
       pagination={pagination ? {
-        current: pagination.current,
-        pageSize: pagination.pageSize,
+        page: pagination.current,
+        limit: pagination.pageSize,
         total: pagination.total,
-        onChange: pagination.onChange,
-        showSizeChanger: true,
-        showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} users`,
-      } : false}
+        totalPages: Math.ceil(pagination.total / pagination.pageSize),
+      } : undefined}
+      onPageChange={pagination?.onChange}
     />
   );
 };

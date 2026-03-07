@@ -1,5 +1,5 @@
 import React from "react";
-import { Modal, Descriptions, Image, Tag } from "antd";
+import { Modal, Descriptions, Image, Badge } from "antd";
 import { FaRegImages } from "react-icons/fa";
 import type { Subcategory } from "../../types/entities/subcategory.types";
 import dayjs from "dayjs";
@@ -50,12 +50,23 @@ const ViewSubCategoryModal: React.FC<ViewSubCategoryModalProps> = ({
           {subcategory.description || "N/A"}
         </Descriptions.Item>
         <Descriptions.Item label="Product Count">
-          {subcategory.productCount || 0}
+          <Badge
+            count={subcategory.productCount || 0}
+            showZero
+            style={{
+              backgroundColor: (subcategory.productCount || 0) > 0 ? "#1890ff" : "#d9d9d9",
+            }}
+          />
         </Descriptions.Item>
         <Descriptions.Item label="Status">
-          <Tag color={subcategory.status === "active" ? "green" : "red"}>
+          <span
+            className={`px-3 py-1 rounded-lg text-sm border ${subcategory.status === "active"
+              ? "border-green-500 text-green-500 bg-green-50/70"
+              : "border-red-500 text-red-500 bg-red-50/70"
+              }`}
+          >
             {subcategory.status === "active" ? "Active" : "Inactive"}
-          </Tag>
+          </span>
         </Descriptions.Item>
         <Descriptions.Item label="Created At">
           {dayjs(subcategory.createdAt).format("YYYY-MM-DD HH:mm")}

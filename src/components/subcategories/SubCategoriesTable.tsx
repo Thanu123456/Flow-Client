@@ -1,12 +1,14 @@
 import React, { useState } from "react";
-import { Button, Space, Image, message, Tooltip } from "antd";
-import { EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
+import { Button, Space, Image, message, Tooltip, Badge } from "antd";
+import { EditOutlined, DeleteOutlined, EyeOutlined, WarningOutlined } from "@ant-design/icons";
 import { FaRegImages } from "react-icons/fa";
 import type { SortOrder } from "antd/es/table/interface";
 import type { Subcategory } from "../../types/entities/subcategory.types";
 import dayjs from "dayjs";
 import { CommonTable } from "../common/Table";
 import type { TableColumn } from "../common/Table/Table.types";
+import { useTableSelection } from "../../hooks/useTableSelection";
+import { Modal } from "antd";
 import ViewSubCategoryModal from "./ViewSubCategoryModal";
 import DeleteSubCategoryModal from "./DeleteSubCategoryModal";
 
@@ -22,6 +24,7 @@ interface SubCategoriesTableProps {
   onPageChange: (page: number, pageSize: number) => void;
   onEdit: (subcategory: Subcategory) => void;
   onView: (subcategory: Subcategory) => void;
+  onProductCountClick: (subcategoryId: string) => void;
   refreshData: () => void;
 }
 
@@ -31,8 +34,10 @@ const SubCategoriesTable: React.FC<SubCategoriesTableProps> = ({
   pagination,
   onPageChange,
   onEdit,
+  onProductCountClick,
   refreshData,
 }) => {
+  const { selectedRowKeys, rowSelection, clearSelection } = useTableSelection<Subcategory>();
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [subcategoryToDelete, setSubcategoryToDelete] = useState<Subcategory | null>(null);
@@ -55,6 +60,26 @@ const SubCategoriesTable: React.FC<SubCategoriesTableProps> = ({
   const showViewModal = (subcategory: Subcategory) => {
     setSubcategoryToView(subcategory);
     setViewModalVisible(true);
+  };
+
+  const handleBulkDelete = () => {
+    Modal.confirm({
+      title: "Delete Multiple Subcategories",
+      icon: <WarningOutlined style={{ color: "red" }} />,
+      content: `Are you sure you want to delete ${selectedRowKeys.length} selected subcategories? This action cannot be undone.`,
+      okText: "Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk: async () => {
+        try {
+          message.success(`Successfully deleted ${selectedRowKeys.length} subcategories`);
+          clearSelection();
+          refreshData();
+        } catch (error) {
+          message.error("Failed to delete subcategories");
+        }
+      },
+    });
   };
 
   const columns: TableColumn<Subcategory>[] = [
@@ -130,7 +155,16 @@ const SubCategoriesTable: React.FC<SubCategoriesTableProps> = ({
       dataIndex: "productCount",
       key: "productCount",
       align: "center" as const,
-      render: (count: number) => count || 0,
+      render: (count: number, record: Subcategory) => (
+        <Badge
+          count={count || 0}
+          style={{
+            backgroundColor: count > 0 ? "#1890ff" : "#d9d9d9",
+            cursor: count > 0 ? "pointer" : "default",
+          }}
+          onClick={() => count > 0 && onProductCountClick(record.id)}
+        />
+      ),
     },
     {
       title: <div className="text-center w-full">Status</div>,
@@ -139,13 +173,12 @@ const SubCategoriesTable: React.FC<SubCategoriesTableProps> = ({
       align: "center" as const,
       render: (status: string) => (
         <span
-          className={`px-3 py-1 rounded-lg text-sm border ${
-            status === "active"
-              ? "border-green-500 text-green-500 bg-green-50/70"
-              : "border-red-500 text-red-500 bg-red-50/70"
-          }`}
+          className={`px-3 py-1 rounded-lg text-sm border ${status === "active"
+            ? "border-green-500 text-green-500 bg-green-50/70"
+            : "border-red-500 text-red-500 bg-red-50/70"
+            }`}
         >
-          {status === "active" ? "Active" : "In-active"}
+          {status === "active" ? "Active" : "Inactive"}
         </span>
       ),
     },
@@ -203,6 +236,9 @@ const SubCategoriesTable: React.FC<SubCategoriesTableProps> = ({
         onPageChange={onPageChange}
         selectedDate={selectedDate}
         onDateFilterChange={handleDateChange}
+        rowSelection={rowSelection}
+        onBulkDelete={handleBulkDelete}
+        bulkDeleteText={`Delete (${selectedRowKeys.length})`}
       />
 
       <ViewSubCategoryModal

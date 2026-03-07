@@ -16,6 +16,7 @@ import { subcategoryService } from "../../services/management/subCategoryService
 import { PageLayout } from "../common/PageLayout";
 import { CommonButton } from "../common/Button";
 import type { Subcategory } from "../../types/entities/subcategory.types";
+import { useNavigate } from "react-router-dom";
 
 interface SubCategoriesPageProps {
   onHeaderCollapseChange?: (collapsed: boolean) => void;
@@ -32,6 +33,7 @@ const SubCategoriesPage: React.FC<SubCategoriesPageProps> = ({
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedSubcategory, setSelectedSubcategory] = useState<Subcategory | null>(null);
   const [collapsed, setCollapsed] = useState(false);
+  const navigate = useNavigate();
 
   const handleCollapsedChange = (newCollapsed: boolean) => {
     setCollapsed(newCollapsed);
@@ -77,6 +79,9 @@ const SubCategoriesPage: React.FC<SubCategoriesPageProps> = ({
 
   const handleAddSuccess = () => getSubcategories(paginationParams);
   const handleEditSuccess = () => getSubcategories(paginationParams);
+  const handleProductCountClick = (subcategoryId: string) => {
+    navigate(`/products?subcategoryId=${subcategoryId}`);
+  };
 
   const handleExportPDF = async () => {
     try {
@@ -130,7 +135,7 @@ const SubCategoriesPage: React.FC<SubCategoriesPageProps> = ({
             onChange: setStatusFilter,
             options: [
               { label: "Active", value: "active" },
-              { label: "In-active", value: "inactive" },
+              { label: "Inactive", value: "inactive" },
             ],
           },
         ]}
@@ -173,6 +178,7 @@ const SubCategoriesPage: React.FC<SubCategoriesPageProps> = ({
           onPageChange={handlePageChange}
           onEdit={handleEditSubcategory}
           onView={(subcategory) => console.log("View subcategory:", subcategory)}
+          onProductCountClick={handleProductCountClick}
           refreshData={handleRefresh}
         />
       </PageLayout>

@@ -1,76 +1,169 @@
-import React, { useState } from "react";
-import { Button, Card, Space, Breadcrumb, Input } from "antd";
-import { PlusOutlined, SearchOutlined, ExportOutlined, ImportOutlined } from "@ant-design/icons";
+import React, { useState, useEffect, useCallback } from "react";
+import { Space, message } from "antd";
+import { PlusOutlined, ImportOutlined, ReloadOutlined, FilePdfOutlined, FileExcelOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import ProductsTable from "./ProductsTable";
 import ImportProducts from "./ImportProducts";
+import { PageLayout } from "../common/PageLayout";
+import { CommonButton } from "../common/Button";
+import { useProductStore } from "../../store/inventory/productStore";
+import { useDebounce } from "../../hooks/ui/useDebounce";
+import type { ProductType, ProductStatus } from "../../types/entities/product.types";
 
-const ProductsPage: React.FC = () => {
+interface ProductsPageProps {
+    onHeaderCollapseChange?: (collapsed: boolean) => void;
+    sidebarOpen?: boolean;
+    setSidebarOpen?: (open: boolean) => void;
+}
+
+const ProductsPage: React.FC<ProductsPageProps> = ({
+    onHeaderCollapseChange,
+    sidebarOpen: _sidebarOpen = false,
+    setSidebarOpen: _setSidebarOpen,
+}) => {
     const navigate = useNavigate();
     const [importModalVisible, setImportModalVisible] = useState(false);
-    const [searchText, setSearchText] = useState("");
 
-    const handleExport = () => {
-        // Implement export logic here if needed
-        console.log("Exporting products...");
+    // Layout states
+    const [collapsed, setCollapsed] = useState(false);
+
+    const handleCollapsedChange = (newCollapsed: boolean) => {
+        setCollapsed(newCollapsed);
+        onHeaderCollapseChange?.(newCollapsed);
+    };
+
+    // Filter states
+    const [searchTerm, setSearchTerm] = useState("");
+    const [typeFilter, setTypeFilter] = useState<ProductType | undefined>(undefined);
+    const [statusFilter, setStatusFilter] = useState<ProductStatus | undefined>(undefined);
+
+    const debouncedSearch = useDebounce(searchTerm, 300);
+    const { products, loading, pagination, getProducts } = useProductStore();
+
+    const fetchProducts = useCallback(async (page = 1, limit = 10) => {
+        await getProducts({
+            page,
+            limit,
+            search: debouncedSearch || undefined,
+            productType: typeFilter,
+            status: statusFilter,
+        });
+    }, [getProducts, debouncedSearch, typeFilter, statusFilter]);
+
+    useEffect(() => {
+        fetchProducts(1, pagination.limit);
+    }, [debouncedSearch, typeFilter, statusFilter]);
+
+    const handlePageChange = (page: number, pageSize: number) => {
+        fetchProducts(page, pageSize);
+    };
+
+    const handleRefresh = () => {
+        setSearchTerm("");
+        setTypeFilter(undefined);
+        setStatusFilter(undefined);
+        fetchProducts(1, pagination.limit);
+    };
+
+    const handleExportPDF = () => {
+        message.info("Export to PDF coming soon");
+    };
+
+    const handleExportExcel = () => {
+        message.info("Export to Excel coming soon");
     };
 
     return (
-        <div style={{ padding: "24px" }}>
-            <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                    <h1 style={{ fontSize: "24px", margin: 0 }}>Products</h1>
-                    <Breadcrumb
-                        items={[
-                            { title: "Inventory" },
-                            { title: "Products" },
-                        ]}
-                    />
-                </div>
-                <Space>
-                    <Button
-                        icon={<ImportOutlined />}
-                        onClick={() => setImportModalVisible(true)}
-                    >
-                        Import
-                    </Button>
-                    <Button
-                        icon={<ExportOutlined />}
-                        onClick={handleExport}
-                    >
-                        Export
-                    </Button>
-                    <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => navigate("/products/add")}
-                    >
-                        Add Product
-                    </Button>
-                </Space>
-            </div>
-
-            <Card styles={{ body: { padding: 0 } }}>
-                <div style={{ padding: "16px", borderBottom: "1px solid #f0f0f0" }}>
-                    <Input
-                        placeholder="Search products..."
-                        prefix={<SearchOutlined style={{ color: "rgba(0,0,0,.25)" }} />}
-                        style={{ width: 300 }}
-                        value={searchText}
-                        onChange={(e) => setSearchText(e.target.value)}
-                    />
-                </div>
-                <ProductsTable />
-            </Card>
+        <>
+            <PageLayout
+                title="Manage Products"
+                collapsed={collapsed}
+                onCollapsedChange={handleCollapsedChange}
+                searchConfig={{
+                    placeholder: "Search Products...",
+                    value: searchTerm,
+                    onChange: setSearchTerm,
+                }}
+                filterConfig={[
+                    {
+                        placeholder: "Filter By Type",
+                        value: typeFilter,
+                        onChange: setTypeFilter,
+                        options: [
+                            { label: "Single", value: "single" },
+                            { label: "Variable", value: "variable" },
+                        ],
+                    },
+                    {
+                        placeholder: "Filter By Status",
+                        value: statusFilter,
+                        onChange: setStatusFilter,
+                        options: [
+                            { label: "Active", value: "active" },
+                            { label: "Inactive", value: "inactive" },
+                        ],
+                    },
+                ]}
+                actions={
+                    <Space>
+                        <CommonButton
+                            icon={<ImportOutlined />}
+                            onClick={() => setImportModalVisible(true)}
+                        >
+                            Import
+                        </CommonButton>
+                        <CommonButton
+                            icon={<FilePdfOutlined style={{ color: "#FF0000" }} />}
+                            onClick={handleExportPDF}
+                            tooltip="Download PDF"
+                        >
+                            PDF
+                        </CommonButton>
+                        <CommonButton
+                            icon={<FileExcelOutlined style={{ color: "#107C41" }} />}
+                            onClick={handleExportExcel}
+                            tooltip="Download Excel"
+                        >
+                            Excel
+                        </CommonButton>
+                        <CommonButton
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            onClick={() => navigate("/products/add")}
+                        >
+                            Add Product
+                        </CommonButton>
+                        <CommonButton
+                            icon={<ReloadOutlined style={{ color: "blue" }} />}
+                            onClick={handleRefresh}
+                        >
+                            Refresh
+                        </CommonButton>
+                    </Space>
+                }
+            >
+                <ProductsTable
+                    products={products}
+                    loading={loading}
+                    pagination={{
+                        page: pagination.page,
+                        limit: pagination.limit,
+                        total: pagination.total,
+                        totalPages: pagination.totalPages
+                    }}
+                    onPageChange={handlePageChange}
+                    refreshData={() => fetchProducts(pagination.page, pagination.limit)}
+                />
+            </PageLayout>
 
             <ImportProducts
                 visible={importModalVisible}
                 onClose={() => setImportModalVisible(false)}
                 onSuccess={() => {
-                    // Refresh products table logic if needed
+                    fetchProducts(pagination.page, pagination.limit);
                 }}
             />
-        </div>
+        </>
     );
 };
 

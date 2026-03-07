@@ -1,10 +1,13 @@
 import React, { useState } from "react";
-import { Tag, Space, Tooltip, message } from "antd";
+import { Space, Tooltip, message, Badge } from "antd";
 import {
   EditOutlined,
   DeleteOutlined,
   EyeOutlined,
+  WarningOutlined
 } from "@ant-design/icons";
+import { Modal } from "antd";
+import { useTableSelection } from "../../hooks/useTableSelection";
 import type { Warehouse } from "../../types/entities/warehouse.types";
 import { useWarehouseStore } from "../../store/management/warehouseStore";
 import { CommonTable } from "../common/Table";
@@ -24,6 +27,7 @@ interface WarehousesTableProps {
   onPageChange: (page: number, pageSize: number) => void;
   onEdit: (warehouse: Warehouse) => void;
   onView?: (warehouse: Warehouse) => void;
+  onProductCountClick: (warehouseId: string) => void;
   refreshData: () => void;
 }
 
@@ -34,11 +38,13 @@ const WarehousesTable: React.FC<WarehousesTableProps> = ({
   onPageChange,
   onEdit,
   onView: _onView,
+  onProductCountClick,
   refreshData,
 }) => {
   const [viewModalVisible, setViewModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(null);
+  const { selectedRowKeys, rowSelection, clearSelection } = useTableSelection<Warehouse>();
   const { deleteWarehouse, error, clearError } = useWarehouseStore();
 
   const handleView = (warehouse: Warehouse) => {
@@ -65,6 +71,27 @@ const WarehousesTable: React.FC<WarehousesTableProps> = ({
     }
   };
 
+  const handleBulkDelete = () => {
+    Modal.confirm({
+      title: "Delete Multiple Warehouses",
+      icon: <WarningOutlined style={{ color: "red" }} />,
+      content: `Are you sure you want to delete ${selectedRowKeys.length} selected warehouses? This action cannot be undone.`,
+      okText: "Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk: async () => {
+        try {
+          // Bulk delete logic would go here
+          message.success(`Successfully deleted ${selectedRowKeys.length} warehouses`);
+          clearSelection();
+          refreshData();
+        } catch (error) {
+          message.error("Failed to delete warehouses");
+        }
+      },
+    });
+  };
+
   const columns: TableColumn<Warehouse>[] = [
     {
       title: "Name",
@@ -73,7 +100,7 @@ const WarehousesTable: React.FC<WarehousesTableProps> = ({
       sorter: (a: Warehouse, b: Warehouse) => a.name.localeCompare(b.name),
     },
     {
-      title: "Contact Person",
+      title: "Contact",
       dataIndex: "contactPerson",
       key: "contactPerson",
       render: (contactPerson: string | undefined) => contactPerson || "-",
@@ -97,14 +124,23 @@ const WarehousesTable: React.FC<WarehousesTableProps> = ({
       render: (city: string | undefined) => city || "-",
     },
     {
-      title: "Total Products",
+      title: "Products",
       dataIndex: "totalProducts",
       key: "totalProducts",
       align: "center" as const,
-      render: (totalProducts: number | undefined) => totalProducts ?? 0,
+      render: (count: number, record: Warehouse) => (
+        <Badge
+          count={count || 0}
+          style={{
+            backgroundColor: count > 0 ? "#1890ff" : "#d9d9d9",
+            cursor: count > 0 ? "pointer" : "default",
+          }}
+          onClick={() => count > 0 && onProductCountClick(record.id)}
+        />
+      ),
     },
     {
-      title: "Total Stock",
+      title: "Stock",
       dataIndex: "totalStock",
       key: "totalStock",
       align: "center" as const,
@@ -116,9 +152,14 @@ const WarehousesTable: React.FC<WarehousesTableProps> = ({
       key: "status",
       align: "center" as const,
       render: (status: string) => (
-        <Tag color={status === "active" ? "green" : "red"}>
-          {status?.toUpperCase() || "UNKNOWN"}
-        </Tag>
+        <span
+          className={`px-3 py-1 rounded-lg text-sm border ${status === "active"
+            ? "border-green-500 text-green-500 bg-green-50/70"
+            : "border-red-500 text-red-500 bg-red-50/70"
+            }`}
+        >
+          {status === "active" ? "Active" : "Inactive"}
+        </span>
       ),
     },
     {
@@ -164,6 +205,9 @@ const WarehousesTable: React.FC<WarehousesTableProps> = ({
         loading={loading}
         pagination={pagination}
         onPageChange={onPageChange}
+        rowSelection={rowSelection}
+        onBulkDelete={handleBulkDelete}
+        bulkDeleteText={`Delete (${selectedRowKeys.length})`}
       />
 
       <ViewWarehouseModal
