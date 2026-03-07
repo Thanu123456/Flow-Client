@@ -1,6 +1,6 @@
-import React from 'react';
-import { Table, Tag, Button, Space, Tooltip, Popconfirm, Avatar } from 'antd';
-import { EditOutlined, DeleteOutlined, UserOutlined, EyeOutlined } from '@ant-design/icons';
+import { Button, Space, Tooltip, Avatar, Modal, message, Popconfirm } from 'antd';
+import { EditOutlined, DeleteOutlined, UserOutlined, EyeOutlined, WarningOutlined } from '@ant-design/icons';
+import { CommonTable } from '../common/Table';
 import type { Customer, CustomerType } from '../../types/entities/customer.types';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -33,14 +33,14 @@ const CustomersTable: React.FC<Props> = ({
   onView,
   pagination,
 }) => {
-  const getTypeColor = (type: CustomerType): string => {
-    const colorMap: Record<CustomerType, string> = {
-      walk_in: 'default',
-      regular: 'blue',
-      wholesale: 'purple',
-      vip: 'gold',
+  const getTypeStyle = (type: CustomerType): string => {
+    const styleMap: Record<CustomerType, string> = {
+      walk_in: 'border-gray-400 text-gray-500 bg-gray-50/70',
+      regular: 'border-blue-500 text-blue-500 bg-blue-50/70',
+      wholesale: 'border-purple-500 text-purple-500 bg-purple-50/70',
+      vip: 'border-gold-500 text-gold-600 bg-gold-50/70', // Note: Tailwind might not have gold-500 by default, check if we use a palette
     };
-    return colorMap[type] || 'default';
+    return styleMap[type] || 'border-gray-400 text-gray-500 bg-gray-50/70';
   };
 
   const getTypeLabel = (type: CustomerType): string => {
@@ -51,6 +51,25 @@ const CustomersTable: React.FC<Props> = ({
       vip: 'VIP',
     };
     return labelMap[type] || type;
+  };
+
+  const handleBulkDelete = () => {
+    Modal.confirm({
+      title: "Delete Multiple Customers",
+      icon: <WarningOutlined style={{ color: "red" }} />,
+      content: `Are you sure you want to delete ${selectedRowKeys.length} selected customers? This action cannot be undone.`,
+      okText: "Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk: async () => {
+        try {
+          message.success(`Successfully deleted ${selectedRowKeys.length} customers`);
+          onSelectChange([]);
+        } catch (error) {
+          message.error("Failed to delete customers");
+        }
+      },
+    });
   };
 
   const columns = [
@@ -84,19 +103,21 @@ const CustomersTable: React.FC<Props> = ({
       dataIndex: 'customerType',
       key: 'customerType',
       render: (type: CustomerType) => (
-        <Tag color={getTypeColor(type)}>
+        <span
+          className={`px-3 py-1 rounded-lg text-sm border ${getTypeStyle(type)}`}
+        >
           {getTypeLabel(type)}
-        </Tag>
+        </span>
       ),
     },
     {
-      title: 'Loyalty Points',
+      title: 'Points',
       dataIndex: 'loyaltyPoints',
       key: 'loyaltyPoints',
       render: (points: number) => points?.toLocaleString() || '0',
     },
     {
-      title: 'Total Purchases',
+      title: 'Purchases',
       dataIndex: 'totalPurchases',
       key: 'totalPurchases',
       render: (total: string) => `Rs. ${parseFloat(total || '0').toLocaleString()}`,
@@ -106,9 +127,14 @@ const CustomersTable: React.FC<Props> = ({
       dataIndex: 'isActive',
       key: 'isActive',
       render: (isActive: boolean) => (
-        <Tag color={isActive ? 'green' : 'red'}>
+        <span
+          className={`px-3 py-1 rounded-lg text-sm border ${isActive
+            ? "border-green-500 text-green-500 bg-green-50/70"
+            : "border-red-500 text-red-500 bg-red-50/70"
+            }`}
+        >
           {isActive ? 'Active' : 'Inactive'}
-        </Tag>
+        </span>
       ),
     },
     {
@@ -150,26 +176,25 @@ const CustomersTable: React.FC<Props> = ({
     },
   ];
 
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: (keys: React.Key[]) => onSelectChange(keys as string[]),
-  };
-
   return (
-    <Table
-      columns={columns}
+    <CommonTable<Customer>
+      columns={columns as any}
       dataSource={data}
       rowKey="id"
       loading={loading}
-      rowSelection={rowSelection}
+      onBulkDelete={handleBulkDelete}
+      bulkDeleteText={`Delete (${selectedRowKeys.length})`}
+      rowSelection={{
+        selectedRowKeys,
+        onChange: (keys: any) => onSelectChange(keys as string[]),
+      }}
       pagination={pagination ? {
-        current: pagination.current,
-        pageSize: pagination.pageSize,
+        page: pagination.current,
+        limit: pagination.pageSize,
         total: pagination.total,
-        onChange: pagination.onChange,
-        showSizeChanger: true,
-        showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} customers`,
-      } : false}
+        totalPages: Math.ceil(pagination.total / pagination.pageSize),
+      } : undefined}
+      onPageChange={pagination?.onChange}
     />
   );
 };

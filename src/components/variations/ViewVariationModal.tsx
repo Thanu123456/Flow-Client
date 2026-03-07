@@ -1,5 +1,5 @@
 import React from "react";
-import { Modal, Descriptions, Tag, Tooltip } from "antd";
+import { Modal, Descriptions, Tooltip, Badge } from "antd";
 import type { Variation } from "../../types/entities/variation.types";
 import dayjs from "dayjs";
 
@@ -33,7 +33,13 @@ const ViewVariationModal: React.FC<ViewVariationModalProps> = ({
         </Descriptions.Item>
 
         <Descriptions.Item label="Values Count">
-          <Tag color="blue">{variation?.values.length || 0} values</Tag>
+          <Badge
+            count={variation?.values.length || 0}
+            showZero
+            style={{
+              backgroundColor: (variation?.values.length || 0) > 0 ? "#1890ff" : "#d9d9d9",
+            }}
+          />
         </Descriptions.Item>
 
         <Descriptions.Item label="Variation Values">
@@ -49,9 +55,9 @@ const ViewVariationModal: React.FC<ViewVariationModalProps> = ({
                     </div>
                   }
                 >
-                  <Tag color="geekblue" style={{ marginBottom: 8 }}>
+                  <span className="px-3 py-1 rounded-lg text-sm border border-blue-500 text-blue-500 bg-blue-50/70 mb-2 inline-block">
                     {value.value}
-                  </Tag>
+                  </span>
                 </Tooltip>
               ))
             ) : (

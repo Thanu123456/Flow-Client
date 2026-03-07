@@ -1,5 +1,5 @@
 import React from "react";
-import { Image, Descriptions } from "antd";
+import { Image, Descriptions, Badge } from "antd";
 import { FaRegImages } from "react-icons/fa";
 import type { Brand } from "../../types/entities/brand.types";
 import { ViewModal } from "../common/Modal";
@@ -59,18 +59,23 @@ const ViewBrandModal: React.FC<ViewBrandModalProps> = ({
             </Descriptions.Item>
 
             <Descriptions.Item label="Product Count">
-              {brandData?.productCount ?? 0}
+              <Badge
+                count={brandData?.productCount ?? 0}
+                showZero
+                style={{
+                  backgroundColor: (brandData?.productCount ?? 0) > 0 ? "#1890ff" : "#d9d9d9",
+                }}
+              />
             </Descriptions.Item>
 
             <Descriptions.Item label="Status">
               <span
-                className={`px-3 py-1 rounded-lg text-sm border ${
-                  brandData?.status === "active"
-                    ? "border-green-500 text-green-500 bg-green-50/70"
-                    : "border-red-500 text-red-500 bg-red-50/70"
-                }`}
+                className={`px-3 py-1 rounded-lg text-sm border ${brandData?.status === "active"
+                  ? "border-green-500 text-green-500 bg-green-50/70"
+                  : "border-red-500 text-red-500 bg-red-50/70"
+                  }`}
               >
-                {brandData?.status === "active" ? "Active" : "In-active"}
+                {brandData?.status === "active" ? "Active" : "Inactive"}
               </span>
             </Descriptions.Item>
 

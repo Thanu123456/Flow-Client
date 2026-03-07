@@ -23,4 +23,6 @@ export interface CommonTableProps<T>
   showDateFilter?: boolean;
   onDateFilterChange?: (date: Dayjs | null) => void;
   selectedDate?: Dayjs | null;
+  onBulkDelete?: () => void;
+  bulkDeleteText?: string;
 }

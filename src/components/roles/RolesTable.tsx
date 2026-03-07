@@ -1,6 +1,6 @@
-import React from 'react';
-import { Table, Tag, Button, Space, Tooltip, Popconfirm } from 'antd';
-import { EditOutlined, DeleteOutlined, KeyOutlined, EyeOutlined } from '@ant-design/icons';
+import { Tag, Button, Space, Tooltip, Popconfirm } from 'antd';
+import { EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
+import { CommonTable } from '../common/Table';
 import type { Role } from '../../types/entities/role.types';
 
 interface Props {
@@ -54,9 +54,14 @@ const RolesTable: React.FC<Props> = ({
       dataIndex: 'isActive',
       key: 'isActive',
       render: (isActive: boolean) => (
-        <Tag color={isActive ? 'green' : 'red'}>
+        <span
+          className={`px-3 py-1 rounded-lg text-sm border ${isActive
+            ? "border-green-500 text-green-500 bg-green-50/70"
+            : "border-red-500 text-red-500 bg-red-50/70"
+            }`}
+        >
           {isActive ? 'Active' : 'Inactive'}
-        </Tag>
+        </span>
       ),
     },
     {
@@ -108,19 +113,18 @@ const RolesTable: React.FC<Props> = ({
   ];
 
   return (
-    <Table
-      columns={columns}
+    <CommonTable<Role>
+      columns={columns as any}
       dataSource={data}
       rowKey="id"
       loading={loading}
       pagination={pagination ? {
-        current: pagination.current,
-        pageSize: pagination.pageSize,
+        page: pagination.current,
+        limit: pagination.pageSize,
         total: pagination.total,
-        onChange: pagination.onChange,
-        showSizeChanger: true,
-        showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} roles`,
-      } : false}
+        totalPages: Math.ceil(pagination.total / pagination.pageSize),
+      } : undefined}
+      onPageChange={pagination?.onChange}
     />
   );
 };

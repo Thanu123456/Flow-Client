@@ -1,5 +1,5 @@
 import React from "react";
-import { Modal, Descriptions, Tag, Image, Divider, Table } from "antd";
+import { Modal, Descriptions, Image, Divider, Table } from "antd";
 import type { Product } from "../../types/entities/product.types";
 import dayjs from "dayjs";
 
@@ -59,10 +59,24 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({ visible, prod
                 />
                 <div className="flex-1">
                     <h2 className="text-xl font-semibold mb-2">{product.name}</h2>
-                    <Tag color={product.status === "active" ? "green" : "red"}>
-                        {product.status.toUpperCase()}
-                    </Tag>
-                    <Tag color="blue">{product.productType.toUpperCase()}</Tag>
+                    <div className="flex gap-2 mb-2">
+                        <span
+                            className={`px-3 py-1 rounded-lg text-sm border ${product.status === "active"
+                                ? "border-green-500 text-green-500 bg-green-50/70"
+                                : "border-red-500 text-red-500 bg-red-50/70"
+                                }`}
+                        >
+                            {product.status === "active" ? "Active" : "Inactive"}
+                        </span>
+                        <span
+                            className={`px-3 py-1 rounded-lg text-sm border ${product.productType === "variable"
+                                ? "border-purple-500 text-purple-500 bg-purple-50/70"
+                                : "border-blue-500 text-blue-500 bg-blue-50/70"
+                                }`}
+                        >
+                            {product.productType.charAt(0).toUpperCase() + product.productType.slice(1)}
+                        </span>
+                    </div>
                     <p className="mt-4 text-slate-600">{product.description || "No description provided."}</p>
                 </div>
             </div>

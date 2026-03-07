@@ -135,7 +135,7 @@ const SubCategoriesPage: React.FC<SubCategoriesPageProps> = ({
             onChange: setStatusFilter,
             options: [
               { label: "Active", value: "active" },
-              { label: "In-active", value: "inactive" },
+              { label: "Inactive", value: "inactive" },
             ],
           },
         ]}

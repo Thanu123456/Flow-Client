@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Descriptions, Tag, Avatar, Space, Typography, Divider } from 'antd';
+import { Modal, Descriptions, Avatar, Space, Typography, Divider, Badge } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import type { Customer, CustomerType } from '../../types/entities/customer.types';
 import dayjs from 'dayjs';
@@ -19,14 +19,14 @@ const CustomerProfileModal: React.FC<CustomerProfileModalProps> = ({
 }) => {
   if (!customer) return null;
 
-  const getTypeColor = (type: CustomerType): string => {
-    const colorMap: Record<CustomerType, string> = {
-      walk_in: 'default',
-      regular: 'blue',
-      wholesale: 'purple',
-      vip: 'gold',
+  const getTypeStyle = (type: CustomerType): string => {
+    const styleMap: Record<CustomerType, string> = {
+      walk_in: 'border-slate-400 text-slate-500 bg-slate-50/70',
+      regular: 'border-blue-500 text-blue-500 bg-blue-50/70',
+      wholesale: 'border-purple-500 text-purple-500 bg-purple-50/70',
+      vip: 'border-amber-500 text-amber-600 bg-amber-50/70',
     };
-    return colorMap[type] || 'default';
+    return styleMap[type] || 'border-slate-400 text-slate-500 bg-slate-50/70';
   };
 
   const getTypeLabel = (type: CustomerType): string => {
@@ -57,12 +57,17 @@ const CustomerProfileModal: React.FC<CustomerProfileModalProps> = ({
           {customer.fullName}
         </Title>
         <Space>
-          <Tag color={getTypeColor(customer.customerType)}>
+          <span className={`px-3 py-1 rounded-lg text-sm border ${getTypeStyle(customer.customerType)}`}>
             {getTypeLabel(customer.customerType)}
-          </Tag>
-          <Tag color={customer.isActive ? 'green' : 'red'}>
+          </span>
+          <span
+            className={`px-3 py-1 rounded-lg text-sm border ${customer.isActive
+              ? "border-green-500 text-green-500 bg-green-50/70"
+              : "border-red-500 text-red-500 bg-red-50/70"
+              }`}
+          >
             {customer.isActive ? 'Active' : 'Inactive'}
-          </Tag>
+          </span>
         </Space>
       </div>
 
@@ -80,7 +85,11 @@ const CustomerProfileModal: React.FC<CustomerProfileModalProps> = ({
           Rs. {parseFloat(customer.totalPurchases || '0').toLocaleString()}
         </Descriptions.Item>
         <Descriptions.Item label="Purchase Count">
-          {customer.purchaseCount || 0}
+          <Badge
+            count={customer.purchaseCount || 0}
+            showZero
+            style={{ backgroundColor: (customer.purchaseCount || 0) > 0 ? '#1890ff' : '#d9d9d9' }}
+          />
         </Descriptions.Item>
         <Descriptions.Item label="Last Purchase">
           {customer.lastPurchaseDate
@@ -88,7 +97,12 @@ const CustomerProfileModal: React.FC<CustomerProfileModalProps> = ({
             : 'Never'}
         </Descriptions.Item>
         <Descriptions.Item label="Loyalty Points">
-          {customer.loyaltyPoints?.toLocaleString() || 0}
+          <Badge
+            count={customer.loyaltyPoints || 0}
+            showZero
+            overflowCount={99999}
+            style={{ backgroundColor: (customer.loyaltyPoints || 0) > 0 ? '#1890ff' : '#d9d9d9' }}
+          />
         </Descriptions.Item>
       </Descriptions>
 

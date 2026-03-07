@@ -1,10 +1,10 @@
 import React from 'react';
-import { Table, Tag, Button, Space, Tooltip, Popconfirm } from 'antd';
-import { 
-  EyeOutlined, 
-  PauseCircleOutlined, 
-  PlayCircleOutlined, 
-  DeleteOutlined 
+import { Table, Button, Space, Tooltip, Popconfirm } from 'antd';
+import {
+  EyeOutlined,
+  PauseCircleOutlined,
+  PlayCircleOutlined,
+  DeleteOutlined
 } from '@ant-design/icons';
 import type { Tenant } from '../../../types/auth/superadmin.types';
 import dayjs from 'dayjs';
@@ -21,11 +21,11 @@ interface Props {
   onTableChange: (pagination: any) => void;
 }
 
-const TenantsTable: React.FC<Props> = ({ 
-  data, 
-  loading, 
-  onView, 
-  onActivate, 
+const TenantsTable: React.FC<Props> = ({
+  data,
+  loading,
+  onView,
+  onActivate,
   onSuspend,
   onDelete,
   total,
@@ -55,16 +55,24 @@ const TenantsTable: React.FC<Props> = ({
       key: 'status',
       render: (status: string | undefined) => {
         const statusValue = status || 'pending';
-        const colorMap: Record<string, string> = {
-          active: 'green',
-          suspended: 'red',
-          pending: 'orange',
-          rejected: 'red'
+        const styleMap: Record<string, string> = {
+          active: 'border-green-500 text-green-500 bg-green-50/70',
+          suspended: 'border-red-500 text-red-500 bg-red-50/70',
+          pending: 'border-orange-500 text-orange-500 bg-orange-50/70',
+          rejected: 'border-red-500 text-red-500 bg-red-50/70'
+        };
+        const labelMap: Record<string, string> = {
+          active: 'Active',
+          suspended: 'Suspended',
+          pending: 'Pending',
+          rejected: 'Rejected'
         };
         return (
-          <Tag color={colorMap[statusValue] || 'default'}>
-            {statusValue.toUpperCase()}
-          </Tag>
+          <span
+            className={`px-3 py-1 rounded-lg text-sm border ${styleMap[statusValue] || 'border-gray-500 text-gray-500 bg-gray-50/70'}`}
+          >
+            {labelMap[statusValue] || 'Unknown'}
+          </span>
         );
       },
     },
@@ -80,42 +88,42 @@ const TenantsTable: React.FC<Props> = ({
       render: (_: any, record: Tenant) => (
         <Space size="middle">
           <Tooltip title="View Details">
-            <Button 
-                type="text" 
-                icon={<EyeOutlined />} 
-                onClick={() => onView(record)} 
+            <Button
+              type="text"
+              icon={<EyeOutlined />}
+              onClick={() => onView(record)}
             />
           </Tooltip>
           {record.status === 'suspended' ? (
-             <Tooltip title="Activate">
-                <Button 
-                    type="text" 
-                    icon={<PlayCircleOutlined style={{ color: '#52c41a' }} />} 
-                    onClick={() => onActivate(record.id)} 
-                />
-             </Tooltip>
+            <Tooltip title="Activate">
+              <Button
+                type="text"
+                icon={<PlayCircleOutlined style={{ color: '#52c41a' }} />}
+                onClick={() => onActivate(record.id)}
+              />
+            </Tooltip>
           ) : (
             <Tooltip title="Suspend">
-                <Button 
-                    type="text" 
-                    icon={<PauseCircleOutlined style={{ color: '#faad14' }} />} 
-                    onClick={() => onSuspend(record.id)} 
-                />
+              <Button
+                type="text"
+                icon={<PauseCircleOutlined style={{ color: '#faad14' }} />}
+                onClick={() => onSuspend(record.id)}
+              />
             </Tooltip>
           )}
           <Tooltip title="Delete">
             <Popconfirm
-                title="Delete Tenant"
-                description="Are you sure you want to permanently delete this tenant and all their data?"
-                onConfirm={() => onDelete(record.id)}
-                okText="Delete"
-                cancelText="Cancel"
-                okButtonProps={{ danger: true }}
+              title="Delete Tenant"
+              description="Are you sure you want to permanently delete this tenant and all their data?"
+              onConfirm={() => onDelete(record.id)}
+              okText="Delete"
+              cancelText="Cancel"
+              okButtonProps={{ danger: true }}
             >
-                <Button 
-                    type="text" 
-                    icon={<DeleteOutlined style={{ color: '#ff4d4f' }} />} 
-                />
+              <Button
+                type="text"
+                icon={<DeleteOutlined style={{ color: '#ff4d4f' }} />}
+              />
             </Popconfirm>
           </Tooltip>
         </Space>

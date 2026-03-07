@@ -5,7 +5,6 @@ import type { CategoryFormData } from "../../types/entities/category.types";
 import { categoryService } from "../../services/management/categoryService";
 import { useCategoryStore } from "../../store/management/categoryStore";
 import { AddModal } from "../common/Modal";
-import type { FormInstance } from "antd";
 
 const { TextArea } = Input;
 
@@ -23,6 +22,7 @@ const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
   const [generatedCode, setGeneratedCode] = useState<string>("");
   const [loadingCode, setLoadingCode] = useState(false);
   const { generateCategoryCode } = useCategoryStore();
+  const [form] = Form.useForm();
 
   useEffect(() => {
     if (visible) {
@@ -35,6 +35,7 @@ const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
     try {
       const code = await generateCategoryCode();
       setGeneratedCode(code);
+      form.setFieldsValue({ code });
     } catch (error) {
       console.error("Failed to generate code:", error);
     } finally {
@@ -61,75 +62,63 @@ const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
       onSuccess={onSuccess}
       onSubmit={handleSubmit}
       initialValues={{ status: true, code: generatedCode }}
+      form={form}
       submitButtonText="Add Category"
       width={600}
     >
-      {(form: FormInstance) => {
-        // Update form when generated code changes
-        useEffect(() => {
-          if (generatedCode) {
-            form.setFieldsValue({ code: generatedCode });
+      <Form.Item
+        label="Category Name"
+        name="name"
+        rules={[
+          { required: true, message: "Please enter Category Name" },
+          {
+            min: 3,
+            max: 50,
+            message: "Category name must be between 3 and 50 characters",
+          },
+        ]}
+      >
+        <Input placeholder="e.g., Electronics" />
+      </Form.Item>
+
+      <Form.Item
+        label="Category Code"
+        name="code"
+        tooltip="Leave empty for auto-generation (e.g., CAT-001)"
+      >
+        <Input
+          placeholder="CAT-001"
+          suffix={
+            <Button
+              type="text"
+              size="small"
+              icon={<ReloadOutlined />}
+              loading={loadingCode}
+              onClick={handleGenerateCode}
+            />
           }
-        }, [generatedCode]);
+        />
+      </Form.Item>
 
-        return (
-          <>
-            <Form.Item
-              label="Category Name"
-              name="name"
-              rules={[
-                { required: true, message: "Please enter Category Name" },
-                {
-                  min: 3,
-                  max: 50,
-                  message: "Category name must be between 3 and 50 characters",
-                },
-              ]}
-            >
-              <Input placeholder="e.g., Electronics" />
-            </Form.Item>
+      <Form.Item
+        label="Description"
+        name="description"
+        rules={[
+          {
+            max: 500,
+            message: "Description must be less than 500 characters",
+          },
+        ]}
+      >
+        <TextArea
+          rows={4}
+          placeholder="Enter category description (optional)"
+        />
+      </Form.Item>
 
-            <Form.Item
-              label="Category Code"
-              name="code"
-              tooltip="Leave empty for auto-generation (e.g., CAT-001)"
-            >
-              <Input
-                placeholder="CAT-001"
-                suffix={
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<ReloadOutlined />}
-                    loading={loadingCode}
-                    onClick={handleGenerateCode}
-                  />
-                }
-              />
-            </Form.Item>
-
-            <Form.Item
-              label="Description"
-              name="description"
-              rules={[
-                {
-                  max: 500,
-                  message: "Description must be less than 500 characters",
-                },
-              ]}
-            >
-              <TextArea
-                rows={4}
-                placeholder="Enter category description (optional)"
-              />
-            </Form.Item>
-
-            <Form.Item label="Status" name="status" valuePropName="checked">
-              <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
-            </Form.Item>
-          </>
-        );
-      }}
+      <Form.Item label="Status" name="status" valuePropName="checked">
+        <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
+      </Form.Item>
     </AddModal>
   );
 };
