@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Input, Button, Space, Select, message, Row, Col } from 'antd';
+import { message, Space } from 'antd';
 import { PlusOutlined, ReloadOutlined, FileExcelOutlined, FilePdfOutlined } from '@ant-design/icons';
 import { useSupplierStore } from '../../store/management/supplierStore';
 import { supplierService } from '../../services/management/supplierService';
@@ -9,8 +9,8 @@ import EditSupplierModal from './EditSupplierModal';
 import SupplierDetailsModal from './SupplierDetailsModal';
 import type { Supplier } from '../../types/entities/supplier.types';
 import { useDebounce } from '../../hooks/ui/useDebounce';
-
-const { Search } = Input;
+import { PageLayout } from '../common/PageLayout';
+import { CommonButton } from '../common/Button';
 
 const SuppliersPage: React.FC = () => {
   const { suppliers, loading, pagination, getSuppliers, deleteSupplier } = useSupplierStore();
@@ -25,10 +25,10 @@ const SuppliersPage: React.FC = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
   // Filter states
-  const [searchText, setSearchText] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
 
-  const debouncedSearch = useDebounce(searchText, 300);
+  const debouncedSearch = useDebounce(searchTerm, 300);
 
   const fetchSuppliers = useCallback(async (page = 1, limit = 10) => {
     await getSuppliers({
@@ -48,8 +48,8 @@ const SuppliersPage: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    setSearchText('');
-    setStatusFilter('all');
+    setSearchTerm('');
+    setStatusFilter(undefined);
     setSelectedRowKeys([]);
     fetchSuppliers(1, pagination.limit);
   };
@@ -90,14 +90,16 @@ const SuppliersPage: React.FC = () => {
       const blob = await supplierService.exportToPDF({
         page: 1,
         limit: 1000,
-        search: searchText || undefined,
+        search: searchTerm || undefined,
         includeInactive: statusFilter === 'all' ? true : statusFilter === 'inactive',
       });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = 'suppliers.pdf';
+      document.body.appendChild(a);
       a.click();
+      a.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
       message.error('Failed to export PDF');
@@ -109,14 +111,16 @@ const SuppliersPage: React.FC = () => {
       const blob = await supplierService.exportToExcel({
         page: 1,
         limit: 1000,
-        search: searchText || undefined,
+        search: searchTerm || undefined,
         includeInactive: statusFilter === 'all' ? true : statusFilter === 'inactive',
       });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = 'suppliers.xlsx';
+      document.body.appendChild(a);
       a.click();
+      a.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
       message.error('Failed to export Excel');
@@ -124,47 +128,57 @@ const SuppliersPage: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '24px' }}>
-      <Card>
-        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <Search
-              placeholder="Search suppliers..."
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              allowClear
-            />
-          </Col>
-          <Col xs={24} sm={12} md={8} lg={4}>
-            <Select
-              style={{ width: '100%' }}
-              value={statusFilter}
-              onChange={setStatusFilter}
-              options={[
-                { value: 'all', label: 'All Status' },
-                { value: 'active', label: 'Active' },
-                { value: 'inactive', label: 'Inactive' },
-              ]}
-            />
-          </Col>
-          <Col xs={24} sm={24} md={24} lg={14} style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <Space wrap>
-              <Button icon={<FilePdfOutlined />} onClick={handleExportPDF}>
-                PDF
-              </Button>
-              <Button icon={<FileExcelOutlined />} onClick={handleExportExcel}>
-                Excel
-              </Button>
-              <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-                Refresh
-              </Button>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddModalVisible(true)}>
-                Add Supplier
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-
+    <>
+      <PageLayout
+        title="Manage Suppliers"
+        searchConfig={{
+          placeholder: "Search Suppliers...",
+          value: searchTerm,
+          onChange: setSearchTerm,
+        }}
+        filterConfig={[
+          {
+            placeholder: "Filter By Status",
+            value: statusFilter,
+            onChange: setStatusFilter,
+            options: [
+              { label: "Active", value: "active" },
+              { label: "Inactive", value: "inactive" },
+            ],
+          },
+        ]}
+        actions={
+          <Space>
+            <CommonButton
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setAddModalVisible(true)}
+            >
+              Add Supplier
+            </CommonButton>
+            <CommonButton
+              icon={<FilePdfOutlined style={{ color: "#FF0000" }} />}
+              onClick={handleExportPDF}
+              tooltip="Download PDF"
+            >
+              PDF
+            </CommonButton>
+            <CommonButton
+              icon={<FileExcelOutlined style={{ color: "#107C41" }} />}
+              onClick={handleExportExcel}
+              tooltip="Download Excel"
+            >
+              Excel
+            </CommonButton>
+            <CommonButton
+              icon={<ReloadOutlined style={{ color: "blue" }} />}
+              onClick={handleRefresh}
+            >
+              Refresh
+            </CommonButton>
+          </Space>
+        }
+      >
         <SuppliersTable
           data={suppliers}
           loading={loading}
@@ -180,7 +194,7 @@ const SuppliersPage: React.FC = () => {
             onChange: handlePageChange,
           }}
         />
-      </Card>
+      </PageLayout>
 
       <AddSupplierModal
         visible={addModalVisible}
@@ -206,7 +220,7 @@ const SuppliersPage: React.FC = () => {
           setSelectedSupplier(null);
         }}
       />
-    </div>
+    </>
   );
 };
 

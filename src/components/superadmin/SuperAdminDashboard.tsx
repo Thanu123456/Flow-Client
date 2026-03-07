@@ -37,6 +37,7 @@ import type {
   RecentApproval
 } from '../../types/auth/superadmin.types';
 import type { ColumnsType } from 'antd/es/table';
+import HeaderWithSearch from '../common/Layout/HeaderWithSearch';
 
 const { Title, Text } = Typography;
 
@@ -209,6 +210,7 @@ const SuperAdminDashboardComponent: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
+      <HeaderWithSearch />
       <Title level={2}>Super Admin Dashboard</Title>
       <Text type="secondary" style={{ marginBottom: '24px', display: 'block' }}>
         System-wide overview and real-time statistics

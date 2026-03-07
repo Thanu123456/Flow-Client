@@ -1,8 +1,6 @@
-import React from 'react';
 import {
   Modal,
   Descriptions,
-  Tag,
   Avatar,
   Space,
   Typography,
@@ -25,23 +23,23 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
   user,
   onClose,
 }) => {
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      active: 'green',
-      inactive: 'default',
-      locked: 'red',
-      pending: 'orange',
+  const getStatusStyle = (status: string) => {
+    const styles: Record<string, string> = {
+      active: 'border-green-500 text-green-500 bg-green-50/70',
+      inactive: 'border-gray-500 text-gray-500 bg-gray-50/70',
+      locked: 'border-red-500 text-red-500 bg-red-50/70',
+      pending: 'border-orange-500 text-orange-500 bg-orange-50/70',
     };
-    return colors[status] || 'default';
+    return styles[status] || 'border-gray-500 text-gray-500 bg-gray-50/70';
   };
 
-  const getUserTypeColor = (userType: string) => {
-    const colors: Record<string, string> = {
-      super_admin: 'purple',
-      owner: 'blue',
-      employee: 'cyan',
+  const getUserTypeStyle = (userType: string) => {
+    const styles: Record<string, string> = {
+      super_admin: 'border-purple-500 text-purple-500 bg-purple-50/70',
+      owner: 'border-blue-500 text-blue-500 bg-blue-50/70',
+      employee: 'border-cyan-500 text-cyan-600 bg-cyan-50/70',
     };
-    return colors[userType] || 'default';
+    return styles[userType] || 'border-gray-500 text-gray-500 bg-gray-50/70';
   };
 
   const formatDate = (date?: string) => {
@@ -79,24 +77,28 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
           {user.userId || <Text type="secondary">Not set</Text>}
         </Descriptions.Item>
         <Descriptions.Item label="Status">
-          <Tag color={getStatusColor(user.status)}>
-            {user.status.toUpperCase()}
-          </Tag>
+          <span
+            className={`px-3 py-1 rounded-lg text-sm border ${getStatusStyle(user.status)}`}
+          >
+            {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+          </span>
         </Descriptions.Item>
         <Descriptions.Item label="User Type">
-          <Tag color={getUserTypeColor(user.userType)}>
-            {user.userType.replace('_', ' ').toUpperCase()}
-          </Tag>
+          <span
+            className={`px-3 py-1 rounded-lg text-sm border ${getUserTypeStyle(user.userType)}`}
+          >
+            {user.userType.replace('_', ' ').charAt(0).toUpperCase() + user.userType.replace('_', ' ').slice(1)}
+          </span>
         </Descriptions.Item>
         <Descriptions.Item label="Email Verified">
           {user.emailVerified ? (
-            <Tag icon={<CheckCircleOutlined />} color="success">
-              Verified
-            </Tag>
+            <span className="px-3 py-1 rounded-lg text-sm border border-green-500 text-green-500 bg-green-50/70 inline-flex items-center gap-1">
+              <CheckCircleOutlined size={12} /> Verified
+            </span>
           ) : (
-            <Tag icon={<CloseCircleOutlined />} color="warning">
-              Not Verified
-            </Tag>
+            <span className="px-3 py-1 rounded-lg text-sm border border-orange-500 text-orange-500 bg-orange-50/70 inline-flex items-center gap-1">
+              <CloseCircleOutlined size={12} /> Not Verified
+            </span>
           )}
         </Descriptions.Item>
       </Descriptions>
@@ -104,7 +106,9 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
       <Divider orientation="left">Role & Access</Divider>
       <Descriptions column={2} size="small">
         <Descriptions.Item label="Role">
-          <Tag color="blue">{user.roleName || 'No role assigned'}</Tag>
+          <span className="px-3 py-1 rounded-lg text-sm border border-blue-500 text-blue-500 bg-blue-50/70">
+            {user.roleName || 'No role assigned'}
+          </span>
         </Descriptions.Item>
         <Descriptions.Item label="Warehouse">
           {user.warehouseName || <Text type="secondary">Not assigned</Text>}
@@ -116,9 +120,13 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
         </Descriptions.Item>
         <Descriptions.Item label="Kiosk Access">
           {user.kioskEnabled ? (
-            <Tag color="green">Enabled</Tag>
+            <span className="px-3 py-1 rounded-lg text-sm border border-green-500 text-green-500 bg-green-50/70">
+              Enabled
+            </span>
           ) : (
-            <Tag color="default">Disabled</Tag>
+            <span className="px-3 py-1 rounded-lg text-sm border border-gray-400 text-gray-500 bg-gray-50/70">
+              Disabled
+            </span>
           )}
         </Descriptions.Item>
       </Descriptions>
@@ -135,16 +143,24 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
       <Descriptions column={2} size="small">
         <Descriptions.Item label="Must Change Password">
           {user.mustChangePassword ? (
-            <Tag color="warning">Yes</Tag>
+            <span className="px-3 py-1 rounded-lg text-sm border border-orange-500 text-orange-500 bg-orange-50/70">
+              Yes
+            </span>
           ) : (
-            <Tag color="success">No</Tag>
+            <span className="px-3 py-1 rounded-lg text-sm border border-green-500 text-green-500 bg-green-50/70">
+              No
+            </span>
           )}
         </Descriptions.Item>
         <Descriptions.Item label="Must Change PIN">
           {user.mustChangePin ? (
-            <Tag color="warning">Yes</Tag>
+            <span className="px-3 py-1 rounded-lg text-sm border border-orange-500 text-orange-500 bg-orange-50/70">
+              Yes
+            </span>
           ) : (
-            <Tag color="success">No</Tag>
+            <span className="px-3 py-1 rounded-lg text-sm border border-green-500 text-green-500 bg-green-50/70">
+              No
+            </span>
           )}
         </Descriptions.Item>
       </Descriptions>
@@ -167,9 +183,9 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
           <Divider orientation="left">Permissions</Divider>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
             {user.permissions.map((permission) => (
-              <Tag key={permission} color="geekblue">
+              <span key={permission} className="px-3 py-1 rounded-lg text-sm border border-blue-500 text-blue-500 bg-blue-50/70">
                 {permission}
-              </Tag>
+              </span>
             ))}
           </div>
         </>

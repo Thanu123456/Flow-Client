@@ -16,6 +16,7 @@ import { warehouseService } from "../../services/management/warehouseService";
 import { PageLayout } from "../common/PageLayout";
 import { CommonButton } from "../common/Button";
 import type { Warehouse } from "../../types/entities/warehouse.types";
+import { useNavigate } from "react-router-dom";
 
 interface WarehousesPageProps {
   onHeaderCollapseChange?: (collapsed: boolean) => void;
@@ -32,6 +33,7 @@ const WarehousesPage: React.FC<WarehousesPageProps> = ({
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(null);
   const [collapsed, setCollapsed] = useState(false);
+  const navigate = useNavigate();
 
   const handleCollapsedChange = (newCollapsed: boolean) => {
     setCollapsed(newCollapsed);
@@ -77,6 +79,9 @@ const WarehousesPage: React.FC<WarehousesPageProps> = ({
 
   const handleAddSuccess = () => getWarehouses(paginationParams);
   const handleEditSuccess = () => getWarehouses(paginationParams);
+  const handleProductCountClick = (warehouseId: string) => {
+    navigate(`/products?warehouseId=${warehouseId}`);
+  };
 
   const handleExportPDF = async () => {
     try {
@@ -130,7 +135,7 @@ const WarehousesPage: React.FC<WarehousesPageProps> = ({
             onChange: setStatusFilter,
             options: [
               { label: "Active", value: "active" },
-              { label: "In-active", value: "inactive" },
+              { label: "Inactive", value: "inactive" },
             ],
           },
         ]}
@@ -173,6 +178,7 @@ const WarehousesPage: React.FC<WarehousesPageProps> = ({
           onPageChange={handlePageChange}
           onEdit={handleEditWarehouse}
           onView={(warehouse) => console.log("View warehouse:", warehouse)}
+          onProductCountClick={handleProductCountClick}
           refreshData={handleRefresh}
         />
       </PageLayout>

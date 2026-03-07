@@ -46,17 +46,16 @@ const ViewCategoryModal: React.FC<ViewCategoryModalProps> = ({
           <Badge
             count={category?.subCategoryCount ?? 0}
             showZero
-            style={{ backgroundColor: "#52c41a" }}
+            style={{ backgroundColor: (category?.subCategoryCount ?? 0) > 0 ? "#1890ff" : "#d9d9d9", }}
           />
         </Descriptions.Item>
 
         <Descriptions.Item label="Status">
           <span
-            className={`px-3 py-1 rounded-lg text-sm border ${
-              category?.status === "active"
-                ? "border-green-500 text-green-500 bg-green-50/70"
-                : "border-red-500 text-red-500 bg-red-50/70"
-            }`}
+            className={`px-3 py-1 rounded-lg text-sm border ${category?.status === "active"
+              ? "border-green-500 text-green-500 bg-green-50/70"
+              : "border-red-500 text-red-500 bg-red-50/70"
+              }`}
           >
             {category?.status === "active" ? "Active" : "Inactive"}
           </span>

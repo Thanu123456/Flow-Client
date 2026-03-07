@@ -6,6 +6,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { PermissionProvider } from "./contexts/PermissionContext";
 import { TenantProvider } from "./contexts/TenantContext";
 import AppRoutes from "./routes/AppRoutes";
+import SessionExpiredHandler from "./components/auth/SessionExpiredHandler";
 
 const App: React.FC = () => {
   return (
@@ -15,6 +16,7 @@ const App: React.FC = () => {
           <AuthProvider>
             <TenantProvider>
               <PermissionProvider>
+                <SessionExpiredHandler />
                 <AppRoutes />
               </PermissionProvider>
             </TenantProvider>

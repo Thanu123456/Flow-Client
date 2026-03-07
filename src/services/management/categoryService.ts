@@ -10,6 +10,7 @@ import type {
 const transformCategory = (c: any): Category => ({
   id: c.id,
   name: c.name,
+  code: c.code || c.name.substring(0, 3).toUpperCase() + "-" + c.id.toString().substring(0, 4),
   description: c.description || undefined,
   imageUrl: c.image_url || undefined,
   status: c.is_active ? "active" : "inactive",
@@ -65,6 +66,7 @@ export const categoryService = {
   createCategory: async (data: CategoryFormData): Promise<Category> => {
     const payload = {
       name: data.name,
+      code: data.code || undefined,
       description: data.description || undefined,
       image_url: data.imageUrl || undefined,
       is_active: data.status === "active",
@@ -82,6 +84,7 @@ export const categoryService = {
   ): Promise<Category> => {
     const payload: any = {};
     if (data.name !== undefined) payload.name = data.name;
+    if (data.code !== undefined) payload.code = data.code;
     if (data.description !== undefined) payload.description = data.description;
     if (data.imageUrl !== undefined) payload.image_url = data.imageUrl;
     if (data.status !== undefined) payload.is_active = data.status === "active";

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Card, Form, Input, Button, Switch, Typography, Row, Col, message, Select, InputNumber } from 'antd';
 import { SaveOutlined, GlobalOutlined, SecurityScanOutlined, MailOutlined } from '@ant-design/icons';
+import HeaderWithSearch from '../../components/common/Layout/HeaderWithSearch';
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -24,6 +25,7 @@ const SystemSettings: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
+      <HeaderWithSearch />
       <div style={{ marginBottom: '24px' }}>
         <Title level={2}>System Settings</Title>
       </div>

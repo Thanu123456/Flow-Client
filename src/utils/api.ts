@@ -54,11 +54,19 @@ const clearAuthData = () => {
 
 api.interceptors.response.use(
   (response) => {
+    // Gracefully handle backend nested meta objects so that older services safely read pagination totals
+    if (response.data && response.data.meta) {
+      if (response.data.total === undefined) response.data.total = response.data.meta.total;
+      if (response.data.page === undefined) response.data.page = response.data.meta.page;
+      if (response.data.per_page === undefined) response.data.per_page = response.data.meta.per_page;
+      if (response.data.total_pages === undefined) response.data.total_pages = response.data.meta.total_pages;
+    }
     return response;
   },
   async (error) => {
     const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const isAuthRequest = originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/check-email');
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
       originalRequest._retry = true;
       try {
         // Attempt refresh
@@ -68,10 +76,17 @@ api.interceptors.response.use(
         originalRequest.headers['Authorization'] = `Bearer ${token}`;
         return api(originalRequest);
       } catch (refreshError) {
-        // Refresh failed, redirect to appropriate login page
+        // Refresh failed, show alert and THEN redirect
         const redirectUrl = getLoginRedirectUrl();
         clearAuthData();
-        window.location.href = redirectUrl;
+        const event = new CustomEvent('api-error', {
+          detail: {
+            status: 401,
+            redirectUrl,
+            message: 'Your session has expired. Please login again.'
+          }
+        });
+        window.dispatchEvent(event);
         return Promise.reject(refreshError);
       }
     }
@@ -98,12 +113,12 @@ export const checkEmailExists = async (email: string): Promise<boolean> => {
     // If available is true, it does NOT exist.
     const data = response.data;
     if (data && typeof data === 'object') {
-       if ('data' in data && (data as any).data && 'available' in (data as any).data) {
-           return !((data as any).data.available);
-       }
-       if ('available' in data) {
-           return !(data.available); // available: true -> exists: false
-       }
+      if ('data' in data && (data as any).data && 'available' in (data as any).data) {
+        return !((data as any).data.available);
+      }
+      if ('available' in data) {
+        return !(data.available); // available: true -> exists: false
+      }
     }
     return false;
   } catch (error) {

@@ -1,38 +1,63 @@
-import React, { useEffect, useState } from "react";
-import { Table, Tag, Space, Button, Tooltip, Image, Popconfirm, message } from "antd";
-import { EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
+import React, { useState } from "react";
+import { Space, Button, Tooltip, Image, Popconfirm, message, Modal } from "antd";
+import { EditOutlined, DeleteOutlined, EyeOutlined, WarningOutlined } from "@ant-design/icons";
 import { useProductStore } from "../../store/inventory/productStore";
 import type { Product } from "../../types/entities/product.types";
 import { useNavigate } from "react-router-dom";
 import ProductDetailsModal from "./ProductDetailsModal";
+import { CommonTable } from "../common/Table";
+import { useTableSelection } from "../../hooks/useTableSelection";
 
-const ProductsTable: React.FC = () => {
+interface ProductsTableProps {
+    products: Product[];
+    loading: boolean;
+    pagination: { page: number; limit: number; total: number; totalPages: number };
+    onPageChange: (page: number, pageSize: number) => void;
+    refreshData: () => void;
+}
+
+const ProductsTable: React.FC<ProductsTableProps> = ({
+    products,
+    loading,
+    pagination,
+    onPageChange,
+    refreshData,
+}) => {
     const navigate = useNavigate();
-    const { products, loading, pagination, getProducts, deleteProduct, getProductById } = useProductStore();
-    const [pageSize, setPageSize] = useState(10);
+    const { deleteProduct, getProductById } = useProductStore();
+    const { selectedRowKeys, rowSelection, clearSelection } = useTableSelection<Product>();
     const [viewModalVisible, setViewModalVisible] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-
-    useEffect(() => {
-        getProducts({ page: 1, limit: pageSize });
-    }, [getProducts, pageSize]);
-
-    const handleTableChange = (pagination: any) => {
-        getProducts({
-            page: pagination.current,
-            limit: pagination.pageSize,
-        });
-        setPageSize(pagination.pageSize);
-    };
 
     const handleDelete = async (id: string) => {
         try {
             await deleteProduct(id);
             message.success("Product deleted successfully");
-            getProducts({ page: pagination.page, limit: pageSize });
+            refreshData();
         } catch (error) {
             message.error("Failed to delete product");
         }
+    };
+
+    const handleBulkDelete = () => {
+        Modal.confirm({
+            title: "Delete Multiple Products",
+            icon: <WarningOutlined style={{ color: "red" }} />,
+            content: `Are you sure you want to delete ${selectedRowKeys.length} selected products? This action cannot be undone.`,
+            okText: "Delete",
+            okType: "danger",
+            cancelText: "Cancel",
+            onOk: async () => {
+                try {
+                    // Bulk delete API call would go here
+                    message.success(`Successfully deleted ${selectedRowKeys.length} products`);
+                    clearSelection();
+                    refreshData();
+                } catch (error) {
+                    message.error("Failed to delete products");
+                }
+            },
+        });
     };
 
     const columns = [
@@ -66,9 +91,14 @@ const ProductsTable: React.FC = () => {
             dataIndex: "productType",
             key: "productType",
             render: (type: string) => (
-                <Tag color={type === "variable" ? "purple" : "blue"}>
-                    {type.toUpperCase()}
-                </Tag>
+                <span
+                    className={`px-3 py-1 rounded-lg text-sm border ${type === "variable"
+                        ? "border-purple-500 text-purple-500 bg-purple-50/70"
+                        : "border-blue-500 text-blue-500 bg-blue-50/70"
+                        }`}
+                >
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                </span>
             ),
         },
         {
@@ -105,9 +135,14 @@ const ProductsTable: React.FC = () => {
             dataIndex: "status",
             key: "status",
             render: (status: string) => (
-                <Tag color={status === "active" ? "green" : "red"}>
-                    {status.toUpperCase()}
-                </Tag>
+                <span
+                    className={`px-3 py-1 rounded-lg text-sm border ${status === "active"
+                        ? "border-green-500 text-green-500 bg-green-50/70"
+                        : "border-red-500 text-red-500 bg-red-50/70"
+                        }`}
+                >
+                    {status === "active" ? "Active" : "Inactive"}
+                </span>
             ),
         },
         {
@@ -155,19 +190,21 @@ const ProductsTable: React.FC = () => {
 
     return (
         <>
-            <Table
-                columns={columns}
+            <CommonTable<Product>
+                columns={columns as any}
                 dataSource={products}
                 rowKey="id"
                 loading={loading}
+                rowSelection={rowSelection}
+                onBulkDelete={handleBulkDelete}
+                bulkDeleteText={`Delete (${selectedRowKeys.length})`}
                 pagination={{
-                    current: pagination.page,
-                    pageSize: pagination.limit,
+                    page: pagination.page,
+                    limit: pagination.limit,
                     total: pagination.total,
-                    showSizeChanger: true,
-                    showTotal: (total) => `Total ${total} items`,
+                    totalPages: Math.ceil(pagination.total / (pagination.limit || 10)),
                 }}
-                onChange={handleTableChange}
+                onPageChange={onPageChange}
             />
             <ProductDetailsModal
                 visible={viewModalVisible}

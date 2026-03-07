@@ -26,6 +26,7 @@ interface CategoryState {
     data: Partial<CategoryFormData>
   ) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
+  generateCategoryCode: () => Promise<string>;
   clearError: () => void;
 }
 
@@ -131,6 +132,13 @@ export const useCategoryStore = create<CategoryState>()(
           });
           throw error;
         }
+      },
+
+      generateCategoryCode: async () => {
+        // Generate a highly unique code using a timestamp and random characters
+        const timestampPart = Date.now().toString(36).toUpperCase();
+        const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
+        return `CAT-${timestampPart}-${randomPart}`;
       },
 
       clearError: () => set({ error: null }),

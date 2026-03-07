@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Descriptions, Tag, Avatar, Space, Typography, Divider } from 'antd';
+import { Modal, Descriptions, Avatar, Typography, Divider, Badge } from 'antd';
 import { ShopOutlined } from '@ant-design/icons';
 import type { Supplier, PaymentTerms } from '../../types/entities/supplier.types';
 import dayjs from 'dayjs';
@@ -52,9 +52,14 @@ const SupplierDetailsModal: React.FC<SupplierDetailsModalProps> = ({
           <Text type="secondary">{supplier.companyName}</Text>
         )}
         <div style={{ marginTop: 8 }}>
-          <Tag color={supplier.isActive ? 'green' : 'red'}>
+          <span
+            className={`px-3 py-1 rounded-lg text-sm border ${supplier.isActive
+              ? "border-green-500 text-green-500 bg-green-50/70"
+              : "border-red-500 text-red-500 bg-red-50/70"
+              }`}
+          >
             {supplier.isActive ? 'Active' : 'Inactive'}
-          </Tag>
+          </span>
         </div>
       </div>
 
@@ -74,7 +79,11 @@ const SupplierDetailsModal: React.FC<SupplierDetailsModalProps> = ({
           Rs. {parseFloat(supplier.totalPurchases || '0').toLocaleString()}
         </Descriptions.Item>
         <Descriptions.Item label="Purchase Count">
-          {supplier.purchaseCount || 0}
+          <Badge
+            count={supplier.purchaseCount || 0}
+            showZero
+            style={{ backgroundColor: (supplier.purchaseCount || 0) > 0 ? '#1890ff' : '#d9d9d9' }}
+          />
         </Descriptions.Item>
         <Descriptions.Item label="Last Purchase">
           {supplier.lastPurchaseDate
@@ -82,7 +91,9 @@ const SupplierDetailsModal: React.FC<SupplierDetailsModalProps> = ({
             : 'Never'}
         </Descriptions.Item>
         <Descriptions.Item label="Payment Terms">
-          <Tag color="blue">{getPaymentTermsLabel(supplier.paymentTerms)}</Tag>
+          <span className="px-3 py-1 rounded-lg text-sm border border-blue-500 text-blue-500 bg-blue-50/70">
+            {getPaymentTermsLabel(supplier.paymentTerms)}
+          </span>
         </Descriptions.Item>
       </Descriptions>
 

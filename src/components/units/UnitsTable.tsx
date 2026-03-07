@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Space, Tooltip, Badge } from "antd";
-import { EditOutlined, EyeOutlined, DeleteOutlined } from "@ant-design/icons";
+import { EditOutlined, EyeOutlined, DeleteOutlined, WarningOutlined } from "@ant-design/icons";
+import { Modal, message } from "antd";
+import { useTableSelection } from "../../hooks/useTableSelection";
 import type { SortOrder } from "antd/es/table/interface";
 import type { Unit } from "../../types/entities/unit.types";
 import dayjs from "dayjs";
@@ -33,10 +35,31 @@ const UnitsTable: React.FC<UnitsTableProps> = ({
   onDelete,
   onProductCountClick,
 }) => {
+  const { selectedRowKeys, rowSelection, clearSelection } = useTableSelection<Unit>();
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
 
   const handleDateChange = (date: dayjs.Dayjs | null) => {
     setSelectedDate(date);
+  };
+
+  const handleBulkDelete = () => {
+    Modal.confirm({
+      title: "Delete Multiple Units",
+      icon: <WarningOutlined style={{ color: "red" }} />,
+      content: `Are you sure you want to delete ${selectedRowKeys.length} selected units? This action cannot be undone.`,
+      okText: "Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk: async () => {
+        try {
+          message.success(`Successfully deleted ${selectedRowKeys.length} units`);
+          clearSelection();
+          // refreshData logic if available or passed down
+        } catch (error) {
+          message.error("Failed to delete units");
+        }
+      },
+    });
   };
 
   const columns: TableColumn<Unit>[] = [
@@ -63,6 +86,7 @@ const UnitsTable: React.FC<UnitsTableProps> = ({
       render: (count: number, record: Unit) => (
         <Badge
           count={count || 0}
+          showZero
           style={{
             backgroundColor: count > 0 ? "#1890ff" : "#d9d9d9",
             cursor: count > 0 ? "pointer" : "default",
@@ -86,13 +110,12 @@ const UnitsTable: React.FC<UnitsTableProps> = ({
       align: "center" as const,
       render: (status: string) => (
         <span
-          className={`px-3 py-1 rounded-lg text-sm border ${
-            status === "active"
-              ? "border-green-500 text-green-500 bg-green-50/70"
-              : "border-red-500 text-red-500 bg-red-50/70"
-          }`}
+          className={`px-3 py-1 rounded-lg text-sm border ${status === "active"
+            ? "border-green-500 text-green-500 bg-green-50/70"
+            : "border-red-500 text-red-500 bg-red-50/70"
+            }`}
         >
-          {status === "active" ? "Active" : "In-active"}
+          {status === "active" ? "Active" : "Inactive"}
         </span>
       ),
     },
@@ -147,6 +170,9 @@ const UnitsTable: React.FC<UnitsTableProps> = ({
       onPageChange={onPageChange}
       selectedDate={selectedDate}
       onDateFilterChange={handleDateChange}
+      rowSelection={rowSelection}
+      onBulkDelete={handleBulkDelete}
+      bulkDeleteText={`Delete (${selectedRowKeys.length})`}
     />
   );
 };

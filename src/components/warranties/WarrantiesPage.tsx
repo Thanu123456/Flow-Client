@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Input, Button, Space, Select, message, Row, Col, Modal, Descriptions, Tag } from 'antd';
+import { message, Space, Modal, Descriptions } from 'antd';
 import { PlusOutlined, ReloadOutlined, FileExcelOutlined, FilePdfOutlined } from '@ant-design/icons';
 import { useWarrantyStore } from '../../store/management/warrantyStore';
 import { warrantyService } from '../../services/management/warrantyService';
@@ -9,8 +9,8 @@ import EditWarrantyModal from './EditWarrantyModal';
 import type { Warranty } from '../../types/entities/warranty.types';
 import { useDebounce } from '../../hooks/ui/useDebounce';
 import dayjs from 'dayjs';
-
-const { Search } = Input;
+import { PageLayout } from '../common/PageLayout';
+import { CommonButton } from '../common/Button';
 
 const WarrantiesPage: React.FC = () => {
   const { warranties, loading, pagination, getWarranties, deleteWarranty } = useWarrantyStore();
@@ -25,17 +25,17 @@ const WarrantiesPage: React.FC = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
   // Filter states
-  const [searchText, setSearchText] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
 
-  const debouncedSearch = useDebounce(searchText, 300);
+  const debouncedSearch = useDebounce(searchTerm, 300);
 
   const fetchWarranties = useCallback(async (page = 1, limit = 10) => {
     await getWarranties({
       page,
       limit,
       search: debouncedSearch || undefined,
-      includeInactive: statusFilter === 'all' ? true : statusFilter === 'inactive',
+      status: statusFilter === 'all' ? undefined : (statusFilter as 'active' | 'inactive'),
     });
   }, [getWarranties, debouncedSearch, statusFilter]);
 
@@ -48,8 +48,8 @@ const WarrantiesPage: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    setSearchText('');
-    setStatusFilter('all');
+    setSearchTerm('');
+    setStatusFilter(undefined);
     setSelectedRowKeys([]);
     fetchWarranties(1, pagination.limit);
   };
@@ -90,14 +90,16 @@ const WarrantiesPage: React.FC = () => {
       const blob = await warrantyService.exportToPDF({
         page: 1,
         limit: 1000,
-        search: searchText || undefined,
-        includeInactive: statusFilter === 'all' ? true : statusFilter === 'inactive',
+        search: searchTerm || undefined,
+        status: statusFilter === 'all' ? undefined : (statusFilter as 'active' | 'inactive'),
       });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = 'warranties.pdf';
+      document.body.appendChild(a);
       a.click();
+      a.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
       message.error('Failed to export PDF');
@@ -109,14 +111,16 @@ const WarrantiesPage: React.FC = () => {
       const blob = await warrantyService.exportToExcel({
         page: 1,
         limit: 1000,
-        search: searchText || undefined,
-        includeInactive: statusFilter === 'all' ? true : statusFilter === 'inactive',
+        search: searchTerm || undefined,
+        status: statusFilter === 'all' ? undefined : (statusFilter as 'active' | 'inactive'),
       });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = 'warranties.xlsx';
+      document.body.appendChild(a);
       a.click();
+      a.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
       message.error('Failed to export Excel');
@@ -124,47 +128,57 @@ const WarrantiesPage: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '24px' }}>
-      <Card>
-        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <Search
-              placeholder="Search warranties..."
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              allowClear
-            />
-          </Col>
-          <Col xs={24} sm={12} md={8} lg={4}>
-            <Select
-              style={{ width: '100%' }}
-              value={statusFilter}
-              onChange={setStatusFilter}
-              options={[
-                { value: 'all', label: 'All Status' },
-                { value: 'active', label: 'Active' },
-                { value: 'inactive', label: 'Inactive' },
-              ]}
-            />
-          </Col>
-          <Col xs={24} sm={24} md={24} lg={14} style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <Space wrap>
-              <Button icon={<FilePdfOutlined />} onClick={handleExportPDF}>
-                PDF
-              </Button>
-              <Button icon={<FileExcelOutlined />} onClick={handleExportExcel}>
-                Excel
-              </Button>
-              <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-                Refresh
-              </Button>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddModalVisible(true)}>
-                Add Warranty
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-
+    <>
+      <PageLayout
+        title="Manage Warranties"
+        searchConfig={{
+          placeholder: "Search Warranties...",
+          value: searchTerm,
+          onChange: setSearchTerm,
+        }}
+        filterConfig={[
+          {
+            placeholder: "Filter By Status",
+            value: statusFilter,
+            onChange: setStatusFilter,
+            options: [
+              { label: "Active", value: "active" },
+              { label: "Inactive", value: "inactive" },
+            ],
+          },
+        ]}
+        actions={
+          <Space>
+            <CommonButton
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setAddModalVisible(true)}
+            >
+              Add Warranty
+            </CommonButton>
+            <CommonButton
+              icon={<FilePdfOutlined style={{ color: "#FF0000" }} />}
+              onClick={handleExportPDF}
+              tooltip="Download PDF"
+            >
+              PDF
+            </CommonButton>
+            <CommonButton
+              icon={<FileExcelOutlined style={{ color: "#107C41" }} />}
+              onClick={handleExportExcel}
+              tooltip="Download Excel"
+            >
+              Excel
+            </CommonButton>
+            <CommonButton
+              icon={<ReloadOutlined style={{ color: "blue" }} />}
+              onClick={handleRefresh}
+            >
+              Refresh
+            </CommonButton>
+          </Space>
+        }
+      >
         <WarrantiesTable
           data={warranties}
           loading={loading}
@@ -180,7 +194,7 @@ const WarrantiesPage: React.FC = () => {
             onChange: handlePageChange,
           }}
         />
-      </Card>
+      </PageLayout>
 
       <AddWarrantyModal
         visible={addModalVisible}
@@ -215,15 +229,22 @@ const WarrantiesPage: React.FC = () => {
               {selectedWarranty.duration} {selectedWarranty.period === 'month' ? 'Month(s)' : 'Year(s)'}
             </Descriptions.Item>
             <Descriptions.Item label="Period">
-              <Tag color="blue">{selectedWarranty.period === 'month' ? 'Monthly' : 'Yearly'}</Tag>
+              <span className="px-3 py-1 rounded-lg text-sm border border-blue-500 text-blue-500 bg-blue-50/70">
+                {selectedWarranty.period === 'month' ? 'Monthly' : 'Yearly'}
+              </span>
             </Descriptions.Item>
             <Descriptions.Item label="Description">
               {selectedWarranty.description || '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Status">
-              <Tag color={selectedWarranty.isActive ? 'green' : 'red'}>
+              <span
+                className={`px-3 py-1 rounded-lg text-sm border ${selectedWarranty.isActive
+                  ? "border-green-500 text-green-500 bg-green-50/70"
+                  : "border-red-500 text-red-500 bg-red-50/70"
+                  }`}
+              >
                 {selectedWarranty.isActive ? 'Active' : 'Inactive'}
-              </Tag>
+              </span>
             </Descriptions.Item>
             <Descriptions.Item label="Created At">
               {selectedWarranty.createdAt ? dayjs(selectedWarranty.createdAt).format('DD MMM YYYY, HH:mm') : '-'}
@@ -234,7 +255,7 @@ const WarrantiesPage: React.FC = () => {
           </Descriptions>
         )}
       </Modal>
-    </div>
+    </>
   );
 };
 

@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import { 
-  Form, 
-  Input, 
-  Button, 
-  Typography, 
-  message, 
-  Modal,
-  theme,
-  Row,
-  Col,
-  Avatar,
-  Card
+import {
+    Form,
+    Input,
+    Button,
+    Typography,
+    message,
+    Modal,
+    theme,
+    Row,
+    Col,
+    Avatar,
+    Card,
+    Alert
 } from 'antd';
 import { UserOutlined, InfoCircleOutlined, ShopOutlined, FullscreenOutlined, FullscreenExitOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -30,11 +31,12 @@ const KioskLogin: React.FC = () => {
     const [form] = Form.useForm();
     const [messageApi, contextHolder] = message.useMessage();
     const [isFullscreen, setIsFullscreen] = useState(false);
-    
+
     // Keypad state
     const [activeField, setActiveField] = useState<'user_id' | 'pin'>('user_id');
     const [pinValue, setPinValue] = useState('');
     const [userIdValue, setUserIdValue] = useState('');
+    const [errorAlert, setErrorAlert] = useState<string | null>(null);
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -95,7 +97,7 @@ const KioskLogin: React.FC = () => {
         } catch (error: any) {
             console.error('Kiosk Login Failed:', error);
             const errorMsg = error.response?.data?.message || 'Invalid User ID or PIN';
-            messageApi.error(errorMsg);
+            setErrorAlert(errorMsg);
             setPinValue('');
             form.setFieldValue('pin', '');
         } finally {
@@ -117,10 +119,10 @@ const KioskLogin: React.FC = () => {
     };
 
     return (
-        <div style={{ 
-            height: '100vh', 
-            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)', 
-            display: 'flex', 
+        <div style={{
+            height: '100vh',
+            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+            display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden'
         }}>
@@ -128,17 +130,17 @@ const KioskLogin: React.FC = () => {
             {/* Top Bar */}
             <div style={{ padding: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <Avatar 
-                        src={tenant?.logo_url} 
-                        icon={<ShopOutlined />} 
-                        size={48} 
+                    <Avatar
+                        src={tenant?.logo_url}
+                        icon={<ShopOutlined />}
+                        size={48}
                         style={{ background: token.colorPrimary }}
                     />
                     <Title level={3} style={{ margin: 0 }}>{tenant?.shop_name || 'Flow POS'}</Title>
                 </div>
-                <Button 
+                <Button
                     size="large"
-                    icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />} 
+                    icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
                     onClick={toggleFullscreen}
                     style={{ borderRadius: 10 }}
                 >
@@ -149,17 +151,36 @@ const KioskLogin: React.FC = () => {
             <Row style={{ flex: 1, paddingBottom: 40 }}>
                 {/* Left Side: Login Form */}
                 <Col xs={24} md={12} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-                    <Card style={{ 
-                        maxWidth: 450, 
-                        width: '100%', 
-                        borderRadius: 24, 
+                    <Card style={{
+                        maxWidth: 450,
+                        width: '100%',
+                        borderRadius: 24,
                         boxShadow: '0 12px 30px rgba(0,0,0,0.1)',
                         padding: '20px 10px'
                     }}>
-                         <div style={{ textAlign: 'center', marginBottom: 40 }}>
+                        <div style={{ textAlign: 'center', marginBottom: 40 }}>
                             <Title level={2} style={{ marginBottom: 8 }}>Team Sign In</Title>
                             <Text type="secondary" style={{ fontSize: 16 }}>Tap input fields to use keypad</Text>
                         </div>
+
+                        {errorAlert && (
+                            <Alert
+                                message={<Text strong style={{ color: '#cf1322', fontSize: '18px' }}>Login Error</Text>}
+                                description={<Text style={{ fontSize: '15px', color: '#851019' }}>{errorAlert}</Text>}
+                                type="error"
+                                showIcon
+                                closable
+                                onClose={() => setErrorAlert(null)}
+                                style={{
+                                    marginBottom: 32,
+                                    borderRadius: 20,
+                                    padding: '24px',
+                                    background: 'linear-gradient(to right, #fff2f0, #fff)',
+                                    border: '2px solid #ffccc7',
+                                    boxShadow: '0 8px 16px rgba(255, 77, 79, 0.1)'
+                                }}
+                            />
+                        )}
 
                         <Form
                             form={form}
@@ -174,14 +195,14 @@ const KioskLogin: React.FC = () => {
                                     { min: 3, max: 20, message: 'ID must be 3-20 characters' }
                                 ]}
                             >
-                                <Input 
-                                    prefix={<UserOutlined style={{ color: activeField === 'user_id' ? token.colorPrimary : '#bfbfbf' }} />} 
-                                    placeholder="Enter User ID" 
+                                <Input
+                                    prefix={<UserOutlined style={{ color: activeField === 'user_id' ? token.colorPrimary : '#bfbfbf' }} />}
+                                    placeholder="Enter User ID"
                                     onClick={() => setActiveField('user_id')}
                                     onChange={(e) => setUserIdValue(e.target.value)}
-                                    style={{ 
-                                        height: 64, 
-                                        borderRadius: 16, 
+                                    style={{
+                                        height: 64,
+                                        borderRadius: 16,
                                         fontSize: 18,
                                         borderWidth: activeField === 'user_id' ? 2 : 1,
                                         borderColor: activeField === 'user_id' ? token.colorPrimary : undefined
@@ -197,16 +218,16 @@ const KioskLogin: React.FC = () => {
                                     { min: 4, message: 'Minimum 4 digits' }
                                 ]}
                             >
-                                <Input.Password 
+                                <Input.Password
                                     style={{ display: 'none' }}
                                 />
-                                <div 
+                                <div
                                     onClick={() => setActiveField('pin')}
-                                    style={{ 
-                                        display: 'flex', 
-                                        justifyContent: 'center', 
-                                        gap: 16, 
-                                        padding: '24px 16px', 
+                                    style={{
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        gap: 16,
+                                        padding: '24px 16px',
                                         border: `2px solid ${activeField === 'pin' ? token.colorPrimary : '#e8e8e8'}`,
                                         borderRadius: 16,
                                         cursor: 'pointer',
@@ -229,16 +250,16 @@ const KioskLogin: React.FC = () => {
                             </Form.Item>
 
                             <div style={{ marginTop: 40 }}>
-                                <Button 
-                                    type="primary" 
-                                    htmlType="submit" 
-                                    block 
-                                    size="large" 
-                                    loading={loading} 
-                                    style={{ 
-                                        height: 64, 
-                                        fontSize: 20, 
-                                        fontWeight: 600, 
+                                <Button
+                                    type="primary"
+                                    htmlType="submit"
+                                    block
+                                    size="large"
+                                    loading={loading}
+                                    style={{
+                                        height: 64,
+                                        fontSize: 20,
+                                        fontWeight: 600,
                                         borderRadius: 16,
                                         boxShadow: `0 8px 20px ${token.colorPrimary}40`
                                     }}
@@ -258,16 +279,16 @@ const KioskLogin: React.FC = () => {
                 {/* Right Side: Keypad */}
                 <Col xs={0} md={12} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                     <div style={{ width: '100%', maxWidth: 500 }}>
-                        <VirtualKeypad 
-                            onKeyPress={handleKeypadPress} 
-                            onBackspace={handleBackspace} 
+                        <VirtualKeypad
+                            onKeyPress={handleKeypadPress}
+                            onBackspace={handleBackspace}
                             onClear={handleClear}
                             disabled={loading}
                         />
                         <div style={{ textAlign: 'center', marginTop: 40 }}>
-                             <Typography.Title level={4} type="secondary" style={{ fontWeight: 400 }}>
+                            <Typography.Title level={4} type="secondary" style={{ fontWeight: 400 }}>
                                 {activeField === 'pin' ? 'Entering Security PIN' : 'Entering User ID'}
-                             </Typography.Title>
+                            </Typography.Title>
                         </div>
                     </div>
                 </Col>
