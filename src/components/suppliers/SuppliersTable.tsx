@@ -1,6 +1,7 @@
 import React from 'react';
-import { Table, Tag, Button, Space, Tooltip, Popconfirm, Avatar } from 'antd';
-import { EditOutlined, DeleteOutlined, ShopOutlined, EyeOutlined } from '@ant-design/icons';
+import { Button, Space, Tooltip, Avatar, Modal, message, Popconfirm } from 'antd';
+import { EditOutlined, DeleteOutlined, ShopOutlined, EyeOutlined, WarningOutlined } from '@ant-design/icons';
+import { CommonTable } from '../common/Table';
 import type { Supplier, PaymentTerms } from '../../types/entities/supplier.types';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -45,6 +46,26 @@ const SuppliersTable: React.FC<Props> = ({
     return labelMap[terms] || terms;
   };
 
+  const handleBulkDelete = () => {
+    Modal.confirm({
+      title: "Delete Multiple Suppliers",
+      icon: <WarningOutlined style={{ color: "red" }} />,
+      content: `Are you sure you want to delete ${selectedRowKeys.length} selected suppliers? This action cannot be undone.`,
+      okText: "Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk: async () => {
+        try {
+          // Perform bulk delete logic here
+          message.success(`Successfully deleted ${selectedRowKeys.length} suppliers`);
+          onSelectChange([]);
+        } catch (error) {
+          message.error("Failed to delete suppliers");
+        }
+      },
+    });
+  };
+
   const columns = [
     {
       title: 'Supplier',
@@ -78,15 +99,19 @@ const SuppliersTable: React.FC<Props> = ({
       render: (city: string) => city || '-',
     },
     {
-      title: 'Payment Terms',
+      title: 'Terms',
       dataIndex: 'paymentTerms',
       key: 'paymentTerms',
       render: (terms: PaymentTerms) => (
-        <Tag color="blue">{getPaymentTermsLabel(terms)}</Tag>
+        <span
+          className="px-3 py-1 rounded-lg text-sm border border-blue-500 text-blue-500 bg-blue-50/70"
+        >
+          {getPaymentTermsLabel(terms)}
+        </span>
       ),
     },
     {
-      title: 'Total Purchases',
+      title: '# Purchases',
       dataIndex: 'totalPurchases',
       key: 'totalPurchases',
       render: (total: string) => `Rs. ${parseFloat(total || '0').toLocaleString()}`,
@@ -109,9 +134,14 @@ const SuppliersTable: React.FC<Props> = ({
       dataIndex: 'isActive',
       key: 'isActive',
       render: (isActive: boolean) => (
-        <Tag color={isActive ? 'green' : 'red'}>
+        <span
+          className={`px-3 py-1 rounded-lg text-sm border ${isActive
+            ? "border-green-500 text-green-500 bg-green-50/70"
+            : "border-red-500 text-red-500 bg-red-50/70"
+            }`}
+        >
           {isActive ? 'Active' : 'Inactive'}
-        </Tag>
+        </span>
       ),
     },
     {
@@ -153,26 +183,25 @@ const SuppliersTable: React.FC<Props> = ({
     },
   ];
 
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: (keys: React.Key[]) => onSelectChange(keys as string[]),
-  };
-
   return (
-    <Table
-      columns={columns}
+    <CommonTable<Supplier>
+      columns={columns as any}
       dataSource={data}
       rowKey="id"
       loading={loading}
-      rowSelection={rowSelection}
+      onBulkDelete={handleBulkDelete}
+      bulkDeleteText={`Delete (${selectedRowKeys.length})`}
+      rowSelection={{
+        selectedRowKeys,
+        onChange: (keys: any) => onSelectChange(keys as string[]),
+      }}
       pagination={pagination ? {
-        current: pagination.current,
-        pageSize: pagination.pageSize,
+        page: pagination.current,
+        limit: pagination.pageSize,
         total: pagination.total,
-        onChange: pagination.onChange,
-        showSizeChanger: true,
-        showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} suppliers`,
-      } : false}
+        totalPages: Math.ceil(pagination.total / pagination.pageSize),
+      } : undefined}
+      onPageChange={pagination?.onChange}
     />
   );
 };

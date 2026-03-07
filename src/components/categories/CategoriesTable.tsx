@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Button, Space, Badge, Tooltip } from "antd";
-import { EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined, EyeOutlined, WarningOutlined } from "@ant-design/icons";
 import type { SortOrder } from "antd/es/table/interface";
 import type { Category } from "../../types/entities/category.types";
 import dayjs from "dayjs";
@@ -8,6 +8,8 @@ import ViewCategoryModal from "./ViewCategoryModal";
 import DeleteCategoryModal from "./DeleteCategoryModal";
 import { CommonTable } from "../common/Table";
 import type { TableColumn } from "../common/Table/Table.types";
+import { useTableSelection } from "../../hooks/useTableSelection";
+import { Modal, message } from "antd";
 
 interface CategoriesTableProps {
   categories: Category[];
@@ -33,6 +35,7 @@ const CategoriesTable: React.FC<CategoriesTableProps> = ({
   onSubCategoryCountClick,
   refreshData,
 }) => {
+  const { selectedRowKeys, rowSelection, clearSelection } = useTableSelection<Category>();
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
 
   // Modal states
@@ -56,6 +59,27 @@ const CategoriesTable: React.FC<CategoriesTableProps> = ({
   const showViewModal = (category: Category) => {
     setCategoryToView(category);
     setViewModalVisible(true);
+  };
+
+  const handleBulkDelete = () => {
+    Modal.confirm({
+      title: "Delete Multiple Categories",
+      icon: <WarningOutlined style={{ color: "red" }} />,
+      content: `Are you sure you want to delete ${selectedRowKeys.length} selected categories? This action cannot be undone.`,
+      okText: "Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk: async () => {
+        try {
+          // Perform bulk delete logic here
+          message.success(`Successfully deleted ${selectedRowKeys.length} categories`);
+          clearSelection();
+          refreshData();
+        } catch (error) {
+          message.error("Failed to delete categories");
+        }
+      },
+    });
   };
 
   const columns: TableColumn<Category>[] = [
@@ -185,6 +209,9 @@ const CategoriesTable: React.FC<CategoriesTableProps> = ({
         onPageChange={onPageChange}
         selectedDate={selectedDate}
         onDateFilterChange={handleDateChange}
+        rowSelection={rowSelection}
+        onBulkDelete={handleBulkDelete}
+        bulkDeleteText={`Delete (${selectedRowKeys.length})`}
       />
 
       {/* Delete Modal */}

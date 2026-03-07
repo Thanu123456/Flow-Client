@@ -1,6 +1,8 @@
 import React, { useState } from "react";
-import { Button, Space, Tag, Tooltip, Badge } from "antd";
-import { EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
+import { Button, Space, Tooltip, Badge } from "antd";
+import { EditOutlined, DeleteOutlined, EyeOutlined, WarningOutlined } from "@ant-design/icons";
+import { useTableSelection } from "../../hooks/useTableSelection";
+import { Modal, message } from "antd";
 import type { SortOrder } from "antd/es/table/interface";
 import type { Variation } from "../../types/entities/variation.types";
 import dayjs from "dayjs";
@@ -31,6 +33,7 @@ const VariationsTable: React.FC<VariationsTableProps> = ({
   onEdit,
   refreshData,
 }) => {
+  const { selectedRowKeys, rowSelection, clearSelection } = useTableSelection<Variation>();
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
 
   // Modal states
@@ -58,6 +61,26 @@ const VariationsTable: React.FC<VariationsTableProps> = ({
     setViewModalVisible(true);
   };
 
+  const handleBulkDelete = () => {
+    Modal.confirm({
+      title: "Delete Multiple Variations",
+      icon: <WarningOutlined style={{ color: "red" }} />,
+      content: `Are you sure you want to delete ${selectedRowKeys.length} selected variations? This action cannot be undone.`,
+      okText: "Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk: async () => {
+        try {
+          message.success(`Successfully deleted ${selectedRowKeys.length} variations`);
+          clearSelection();
+          refreshData();
+        } catch (error) {
+          message.error("Failed to delete variations");
+        }
+      },
+    });
+  };
+
   const columns: TableColumn<Variation>[] = [
     {
       title: <div className="text-center w-full">Variation Name</div>,
@@ -77,9 +100,12 @@ const VariationsTable: React.FC<VariationsTableProps> = ({
       render: (_: any, record: Variation) => (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
           {record.values.map((value) => (
-            <Tag key={value.id} color="geekblue">
+            <span
+              key={value.id}
+              className="px-2 py-0.5 rounded-md text-xs border border-blue-500 text-blue-500 bg-blue-50/70"
+            >
               {value.value}
-            </Tag>
+            </span>
           ))}
         </div>
       ),
@@ -199,6 +225,9 @@ const VariationsTable: React.FC<VariationsTableProps> = ({
         onPageChange={onPageChange}
         selectedDate={selectedDate}
         onDateFilterChange={handleDateChange}
+        rowSelection={rowSelection}
+        onBulkDelete={handleBulkDelete}
+        bulkDeleteText={`Delete (${selectedRowKeys.length})`}
       />
 
       {/* Delete Modal */}

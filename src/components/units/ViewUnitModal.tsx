@@ -3,6 +3,7 @@ import { Modal, Descriptions, Badge } from "antd";
 import type { Unit } from "../../types/entities/unit.types";
 import dayjs from "dayjs";
 
+
 interface ViewUnitModalProps {
   visible: boolean;
   unit: Unit | null;
@@ -31,13 +32,23 @@ const ViewUnitModal: React.FC<ViewUnitModalProps> = ({
             {unit.shortName}
           </Descriptions.Item>
           <Descriptions.Item label="Status">
-            <Badge
-              status={unit.status === "active" ? "success" : "error"}
-              text={unit.status === "active" ? "Active" : "In-active"}
-            />
+            <span
+              className={`px-3 py-1 rounded-lg text-sm border ${unit.status === "active"
+                ? "border-green-500 text-green-500 bg-green-50/70"
+                : "border-red-500 text-red-500 bg-red-50/70"
+                }`}
+            >
+              {unit.status === "active" ? "Active" : "Inactive"}
+            </span>
           </Descriptions.Item>
           <Descriptions.Item label="Number of Products">
-            {unit.productCount || 0}
+            <Badge
+              count={unit.productCount || 0}
+              showZero
+              style={{
+                backgroundColor: (unit.productCount || 0) > 0 ? "#1890ff" : "#d9d9d9",
+              }}
+            />
           </Descriptions.Item>
           <Descriptions.Item label="Created At">
             {dayjs(unit.createdAt).format("YYYY-MM-DD HH:mm:ss")}

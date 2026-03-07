@@ -1,5 +1,5 @@
 import { Table as AntTable, Button, Popover, DatePicker } from "antd";
-import { CalendarOutlined } from "@ant-design/icons";
+import { CalendarOutlined, DeleteOutlined, ClearOutlined } from "@ant-design/icons";
 import type { CommonTableProps } from "./Table.types";
 
 function CommonTable<T extends Record<string, any>>({
@@ -13,7 +13,10 @@ function CommonTable<T extends Record<string, any>>({
   showDateFilter = false,
   onDateFilterChange,
   selectedDate,
+  onBulkDelete,
+  bulkDeleteText = "Delete Selected",
   sticky = { offsetHeader: 0 },
+  rowSelection,
   ...restProps
 }: CommonTableProps<T>) {
   const enhancedColumns = columns.map((col) => {
@@ -51,31 +54,73 @@ function CommonTable<T extends Record<string, any>>({
 
   const paginationConfig = pagination
     ? {
-        current: pagination.page,
-        pageSize: pagination.limit,
-        total: pagination.total,
-        showSizeChanger: true,
-        showQuickJumper: true,
-        showTotal: (total: number, range: [number, number]) =>
-          `${range[0]}-${range[1]} of ${total} items`,
-        pageSizeOptions: ["10", "25", "50", "100"],
-        onChange: onPageChange,
-        position: ["bottomRight"] as any,
-      }
+      current: pagination.page,
+      pageSize: pagination.limit,
+      total: pagination.total,
+      showSizeChanger: true,
+      showQuickJumper: true,
+      showTotal: (total: number, range: [number, number]) =>
+        `${range[0]}-${range[1]} of ${total} items`,
+      pageSizeOptions: ["10", "25", "50", "100"],
+      onChange: onPageChange,
+      position: ["bottomRight"] as any,
+    }
     : false;
 
   return (
-    <AntTable<T>
-      columns={enhancedColumns}
-      dataSource={dataSource}
-      className="custom-blue-header"
-      rowKey={rowKey}
-      loading={loading}
-      scroll={scroll}
-      pagination={paginationConfig}
-      sticky={sticky}
-      {...restProps}
-    />
+    <div className="flex flex-col gap-4">
+      {/* Bulk Selection Bar */}
+      {rowSelection && rowSelection.selectedRowKeys && rowSelection.selectedRowKeys.length > 0 && (
+        <div className="flex items-center justify-between p-3.5 bg-blue-50/80 border border-blue-100 rounded-2xl animate-in fade-in slide-in-from-top-4 duration-300 shadow-sm backdrop-blur-sm">
+          <div className="flex items-center gap-4 ml-2">
+            <div className="flex items-center justify-center bg-blue-500 text-white w-6 h-6 rounded-full text-[12px] font-bold shadow-sm shadow-blue-500/20">
+              {rowSelection.selectedRowKeys.length}
+            </div>
+            <span className="text-[13px] font-bold text-blue-900 tracking-tight uppercase">
+              Items Selected
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              type="text"
+              size="small"
+              icon={<ClearOutlined />}
+              onClick={() => rowSelection.onChange?.([], [], { type: 'all' } as any)}
+              className="text-[11px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wider"
+            >
+              Clear
+            </Button>
+
+            {onBulkDelete && (
+              <Button
+                danger
+                type="primary"
+                size="middle"
+                icon={<DeleteOutlined className="animate-pulse" />}
+                onClick={onBulkDelete}
+                className="rounded-xl font-bold shadow-lg shadow-red-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all px-6"
+              >
+                {bulkDeleteText}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      <AntTable<T>
+        columns={enhancedColumns}
+        dataSource={dataSource}
+        className="custom-blue-header rounded-2xl overflow-hidden border border-slate-100"
+        rowKey={rowKey}
+        loading={loading}
+        scroll={scroll}
+        pagination={paginationConfig}
+        sticky={sticky}
+        rowSelection={rowSelection}
+        {...restProps}
+      />
+    </div>
   );
 }
 

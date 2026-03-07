@@ -65,7 +65,8 @@ api.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const isAuthRequest = originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/check-email');
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
       originalRequest._retry = true;
       try {
         // Attempt refresh
@@ -75,10 +76,17 @@ api.interceptors.response.use(
         originalRequest.headers['Authorization'] = `Bearer ${token}`;
         return api(originalRequest);
       } catch (refreshError) {
-        // Refresh failed, redirect to appropriate login page
+        // Refresh failed, show alert and THEN redirect
         const redirectUrl = getLoginRedirectUrl();
         clearAuthData();
-        window.location.href = redirectUrl;
+        const event = new CustomEvent('api-error', {
+          detail: {
+            status: 401,
+            redirectUrl,
+            message: 'Your session has expired. Please login again.'
+          }
+        });
+        window.dispatchEvent(event);
         return Promise.reject(refreshError);
       }
     }

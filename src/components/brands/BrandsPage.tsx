@@ -136,7 +136,7 @@ const BrandsPage: React.FC<BrandsPageProps> = ({
             onChange: setStatusFilter,
             options: [
               { label: "Active", value: "active" },
-              { label: "In-active", value: "inactive" },
+              { label: "Inactive", value: "inactive" },
             ],
           },
         ]}
