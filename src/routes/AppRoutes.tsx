@@ -39,6 +39,9 @@ import Products from "../pages/management/Products";
 import AddProduct from "../pages/management/AddProduct";
 import EditProduct from "../pages/management/EditProduct";
 
+// Transaction Pages
+import Purchases from "../pages/transactions/Purchases";
+import AddPurchase from "../pages/transactions/AddPurchase";
 
 // Super Admin Pages
 import SuperAdminDashboard from "../pages/superadmin/SuperAdminDashboard";
@@ -145,6 +148,23 @@ const AppRoutes: React.FC = () => {
           }
         >
           <Route path="/warranties" element={<Warranties />} />
+        </Route>
+
+        {/* Purchase / GRN Routes */}
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.PURCHASES_VIEW} />
+          }
+        >
+          <Route path="/purchases" element={<Purchases />} />
+        </Route>
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.PURCHASES_CREATE} />
+          }
+        >
+          <Route path="/purchases/add" element={<AddPurchase />} />
+          <Route path="/purchases/:id/edit" element={<AddPurchase />} />
         </Route>
       </Route>
 
