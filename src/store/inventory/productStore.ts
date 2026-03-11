@@ -43,21 +43,41 @@ export const useProductStore = create<ProductState>()(
                 set({ loading: true, error: null });
                 try {
                     const response = await productService.getProducts(params);
-                    set({
-                        products: response.data,
-                        pagination: {
-                            total: response.total,
-                            page: response.page,
-                            limit: response.limit,
-                            totalPages: response.totalPages,
-                        },
-                        loading: false,
-                    });
+                    const data = response.data ?? [];
+                    const total = response.total ?? data.length;
+                    const limit = response.limit ?? params.limit ?? 10;
+                    const page = response.page ?? params.page ?? 1;
+                    const totalPages = response.totalPages ?? Math.ceil(total / limit);
+                    
+                    // Update pagination total regardless of limit (good for counters)
+                    // But only update the products list if we're doing a real fetch
+                    if (params.limit === 1) {
+                        set(state => ({
+                            pagination: {
+                                ...state.pagination,
+                                total,
+                            },
+                            loading: false,
+                        }));
+                    } else {
+                        set({
+                            products: data,
+                            pagination: {
+                                total,
+                                page,
+                                limit,
+                                totalPages,
+                            },
+                            loading: false,
+                        });
+                    }
+                    return response;
                 } catch (error: any) {
                     set({
                         error: error.response?.data?.message || "Failed to fetch products",
                         loading: false,
                     });
+                    throw error;
                 }
             },
 

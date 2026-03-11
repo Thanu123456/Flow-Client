@@ -12,6 +12,7 @@ import {
   Typography,
 } from "antd";
 import type { MenuProps } from "antd";
+import { useNavigate } from "react-router-dom";
 import {
   MenuOutlined,
   SearchOutlined,
@@ -52,6 +53,7 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({
   sidebarOpen = true,
   setSidebarOpen,
 }) => {
+  const navigate = useNavigate();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -154,21 +156,24 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({
           opacity: collapsed ? 0 : 1,
         }}
       >
-        {/* Left: Menu + Search */}
-        <div className="flex items-center gap-4 flex-1">
+        {/* Left: Menu */}
+        <div className="flex items-center flex-1">
           <Button
             type="text"
             icon={<MenuOutlined />}
             onClick={handleMenuToggle}
             className="text-gray-700 hover:text-black hover:bg-gray-100 w-10 h-10 rounded-lg"
           />
+        </div>
 
-          <div className="max-w-md w-full">
+        {/* Center: Search */}
+        <div className="flex items-center justify-center flex-[2] px-4">
+          <div className="max-w-2xl w-full">
             <Input
               placeholder="Search anything..."
               prefix={<SearchOutlined className="text-gray-400" />}
               suffix={
-                <kbd className="px-2 py-0.5 text-xs font-medium text-gray-600 bg-gray-100 border border-gray-300 rounded">
+                <kbd className="flex items-center justify-center px-2 py-0.5 text-xs font-medium text-gray-600 bg-gray-100 border border-gray-300 rounded">
                   Cmd K
                 </kbd>
               }
@@ -181,68 +186,71 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({
         </div>
 
         {/* Right: Actions */}
-        <Space size={12}>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            className="font-medium h-10 px-5 rounded-lg"
-          >
-            Add New
-          </Button>
+        <div className="flex items-center justify-end flex-1">
+          <Space size={12} align="center">
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              className="font-medium h-10 px-5 rounded-lg"
+            >
+              Add New
+            </Button>
 
-          <Button
-            icon={<ShoppingCartOutlined />}
-            className="font-medium h-10 px-5 rounded-lg"
-          >
-            POS
-          </Button>
+            <Button
+              icon={<ShoppingCartOutlined />}
+              className="font-medium h-10 px-5 rounded-lg"
+              onClick={() => navigate('/pos')}
+            >
+              POS
+            </Button>
 
-          <Button
-            type="text"
-            icon={
-              isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />
-            }
-            onClick={toggleFullscreen}
-            className="text-gray-700 hover:text-black hover:bg-gray-100 w-10 h-10 rounded-lg"
-          />
-
-          <Badge count={unreadMessages} offset={[-5, 5]}>
             <Button
               type="text"
-              icon={<MailOutlined className="text-lg" />}
+              icon={
+                isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />
+              }
+              onClick={toggleFullscreen}
               className="text-gray-700 hover:text-black hover:bg-gray-100 w-10 h-10 rounded-lg"
             />
-          </Badge>
 
-          <Badge count={unreadNotifications} offset={[-5, 5]}>
-            <Button
-              type="text"
-              icon={<BellOutlined className="text-lg" />}
-              className="text-gray-700 hover:text-black hover:bg-gray-100 w-10 h-10 rounded-lg"
-            />
-          </Badge>
-
-          <Button
-            type="text"
-            icon={<SettingOutlined className="text-lg" />}
-            className="text-gray-700 hover:text-black hover:bg-gray-100 w-10 h-10 rounded-lg"
-          />
-
-          <Dropdown
-            menu={{ items: userMenuItems }}
-            trigger={["click"]}
-            placement="bottomRight"
-          >
-            <div className="cursor-pointer">
-              <Avatar
-                size={40}
-                src={user.avatar}
-                icon={!user.avatar && <UserOutlined />}
-                className="bg-gradient-to-br from-orange-400 to-orange-600 ring-4 ring-white shadow-md hover:ring-gray-200 transition-all"
+            <Badge count={unreadMessages}>
+              <Button
+                type="text"
+                icon={<MailOutlined className="text-lg" />}
+                className="text-gray-700 hover:text-black hover:bg-gray-100 w-10 h-10 rounded-lg"
               />
-            </div>
-          </Dropdown>
-        </Space>
+            </Badge>
+
+            <Badge count={unreadNotifications}>
+              <Button
+                type="text"
+                icon={<BellOutlined className="text-lg" />}
+                className="text-gray-700 hover:text-black hover:bg-gray-100 w-10 h-10 rounded-lg"
+              />
+            </Badge>
+
+            <Button
+              type="text"
+              icon={<SettingOutlined className="text-lg" />}
+              className="text-gray-700 hover:text-black hover:bg-gray-100 w-10 h-10 rounded-lg"
+            />
+
+            <Dropdown
+              menu={{ items: userMenuItems }}
+              trigger={["click"]}
+              placement="bottomRight"
+            >
+              <div className="cursor-pointer">
+                <Avatar
+                  size={40}
+                  src={user.avatar}
+                  icon={!user.avatar && <UserOutlined />}
+                  className="bg-gradient-to-br from-orange-400 to-orange-600 ring-4 ring-white shadow-md hover:ring-gray-200 transition-all"
+                />
+              </div>
+            </Dropdown>
+          </Space>
+        </div>
       </AntHeader>
 
       {/* Search Modal */}

@@ -7,7 +7,6 @@ import type {
   ResetPasswordRequest,
   MfaSetupResponse,
   MfaStatusResponse,
-  MfaLoginResponse,
   MfaVerifyLoginRequest,
   EmailVerificationResponse,
   ResendVerificationResponse

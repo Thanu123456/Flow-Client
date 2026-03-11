@@ -38,7 +38,7 @@ interface RoleState {
 
 export const useRoleStore = create<RoleState>()(
   devtools(
-    (set) => ({
+    (set, get) => ({
       roles: [],
       allRoles: [],
       selectedRole: null,
@@ -54,7 +54,9 @@ export const useRoleStore = create<RoleState>()(
       },
 
       getRoles: async (params) => {
-        set({ loading: true, error: null });
+        const isCached = get().roles.length > 0;
+        if (!isCached) set({ loading: true, error: null });
+        else set({ error: null });
         try {
           const response = await roleService.getRoles(params);
           set({
@@ -76,11 +78,13 @@ export const useRoleStore = create<RoleState>()(
       },
 
       getAllRoles: async () => {
+        const cached = get().allRoles;
         try {
           const roles = await roleService.getAllRoles();
           set({ allRoles: roles });
           return roles;
         } catch (error: any) {
+          if (cached.length > 0) return cached;
           const errorMessage = error.response?.data?.message || error.message || "Failed to fetch roles";
           set({ error: errorMessage });
           return [];

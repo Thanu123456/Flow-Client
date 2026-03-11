@@ -51,8 +51,9 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
     }, [getProducts, debouncedSearch, typeFilter, statusFilter]);
 
     useEffect(() => {
-        fetchProducts(1, pagination.limit);
-    }, [debouncedSearch, typeFilter, statusFilter]);
+        fetchProducts(1, pagination.limit || 10);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [debouncedSearch, typeFilter, statusFilter, fetchProducts]);
 
     const handlePageChange = (page: number, pageSize: number) => {
         fetchProducts(page, pageSize);

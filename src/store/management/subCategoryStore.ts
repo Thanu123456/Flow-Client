@@ -8,7 +8,10 @@ import type {
 } from "../../types/entities/subcategory.types";
 
 interface SubcategoryState {
+  // Paginated table data
   subcategories: Subcategory[];
+  // Full list for dropdowns — separate so table data is never overwritten
+  allSubcategories: Subcategory[];
   loading: boolean;
   error: string | null;
   pagination: {
@@ -18,7 +21,6 @@ interface SubcategoryState {
     totalPages: number;
   };
 
-  // Actions
   getSubcategories: (params: SubcategoryPaginationParams) => Promise<void>;
   getSubcategoryById: (id: string) => Promise<Subcategory | null>;
   getSubcategoriesByCategory: (categoryId: string) => Promise<Subcategory[]>;
@@ -30,35 +32,40 @@ interface SubcategoryState {
 
 export const useSubcategoryStore = create<SubcategoryState>()(
   devtools(
-    (set) => ({
+    (set, get) => ({
       subcategories: [],
+      allSubcategories: [],
       loading: false,
       error: null,
-      pagination: {
-        total: 0,
-        page: 1,
-        limit: 10,
-        totalPages: 0,
-      },
+      pagination: { total: 0, page: 1, limit: 10, totalPages: 0 },
 
       getSubcategories: async (params) => {
         set({ loading: true, error: null });
         try {
           const response = await subcategoryService.getSubcategories(params);
-          set({
-            subcategories: response.data,
-            pagination: {
-              total: response.total,
-              page: response.page,
-              limit: response.limit,
-              totalPages: response.totalPages,
-            },
-            loading: false,
-          });
+          const data = response.data ?? [];
+          const total = response.total ?? data.length;
+          
+          if (params.limit === 1) {
+            set(state => ({
+              pagination: { ...state.pagination, total },
+              loading: false
+            }));
+          } else {
+            set({
+              subcategories: data,
+              pagination: {
+                total: total,
+                page: response.page || params.page || 1,
+                limit: response.limit || params.limit || 10,
+                totalPages: response.totalPages || Math.ceil(total / (response.limit || 10)),
+              },
+              loading: false,
+            });
+          }
         } catch (error: any) {
-          const errorMessage = error.response?.data?.message || error.message || "Failed to fetch subcategories";
           set({
-            error: errorMessage,
+            error: error.response?.data?.message || error.message || "Failed to fetch subcategories",
             loading: false,
           });
         }
@@ -66,23 +73,24 @@ export const useSubcategoryStore = create<SubcategoryState>()(
 
       getSubcategoryById: async (id) => {
         try {
-          const subcategory = await subcategoryService.getSubcategoryById(id);
-          return subcategory;
+          return await subcategoryService.getSubcategoryById(id);
         } catch (error: any) {
-          const errorMessage = error.response?.data?.message || error.message || "Failed to fetch subcategory";
-          set({ error: errorMessage });
+          set({ error: error.response?.data?.message || error.message || "Failed to fetch subcategory" });
           return null;
         }
       },
 
+      // Returns subcategories for a specific category — stored in allSubcategories to avoid
+      // overwriting the paginated `subcategories` table list
       getSubcategoriesByCategory: async (categoryId) => {
         try {
           const subcategories = await subcategoryService.getSubcategoriesByCategory(categoryId);
-          set({ subcategories });
+          set({ allSubcategories: subcategories });  // ← separate field
           return subcategories;
         } catch (error: any) {
-          const errorMessage = error.response?.data?.message || error.message || "Failed to fetch subcategories";
-          set({ error: errorMessage, subcategories: [] });
+          const cached = get().allSubcategories.filter((s) => s.categoryId === categoryId);
+          if (cached.length > 0) return cached;
+          set({ error: error.response?.data?.message || error.message || "Failed to fetch subcategories" });
           return [];
         }
       },
@@ -93,11 +101,7 @@ export const useSubcategoryStore = create<SubcategoryState>()(
           await subcategoryService.createSubcategory(data);
           set({ loading: false });
         } catch (error: any) {
-          const errorMessage = error.response?.data?.message || error.message || "Failed to create subcategory";
-          set({
-            error: errorMessage,
-            loading: false,
-          });
+          set({ error: error.response?.data?.message || error.message || "Failed to create subcategory", loading: false });
           throw error;
         }
       },
@@ -108,11 +112,7 @@ export const useSubcategoryStore = create<SubcategoryState>()(
           await subcategoryService.updateSubcategory(id, data);
           set({ loading: false });
         } catch (error: any) {
-          const errorMessage = error.response?.data?.message || error.message || "Failed to update subcategory";
-          set({
-            error: errorMessage,
-            loading: false,
-          });
+          set({ error: error.response?.data?.message || error.message || "Failed to update subcategory", loading: false });
           throw error;
         }
       },
@@ -123,19 +123,13 @@ export const useSubcategoryStore = create<SubcategoryState>()(
           await subcategoryService.deleteSubcategory(id);
           set({ loading: false });
         } catch (error: any) {
-          const errorMessage = error.response?.data?.message || error.message || "Failed to delete subcategory";
-          set({
-            error: errorMessage,
-            loading: false,
-          });
+          set({ error: error.response?.data?.message || error.message || "Failed to delete subcategory", loading: false });
           throw error;
         }
       },
 
       clearError: () => set({ error: null }),
     }),
-    {
-      name: "subcategory-store",
-    }
+    { name: "subcategory-store" }
   )
 );

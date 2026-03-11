@@ -5,7 +5,6 @@ import {
   Input,
   Select,
   Switch,
-  Divider,
   Row,
   Col,
   Typography,
@@ -15,7 +14,6 @@ import { useCustomerStore } from '../../store/management/customerStore';
 import type { CustomerFormData } from '../../types/entities/customer.types';
 
 const { Text } = Typography;
-const { TextArea } = Input;
 
 interface AddCustomerModalProps {
   visible: boolean;
@@ -66,7 +64,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       onCancel={onCancel}
       onOk={handleSubmit}
       confirmLoading={submitting}
-      width={700}
+      width={900}
       destroyOnHidden
     >
       <Form
@@ -77,9 +75,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           isActive: true,
         }}
       >
-        <Divider orientation="left">Personal Information</Divider>
         <Row gutter={16}>
-          <Col span={12}>
+          <Col span={8}>
             <Form.Item
               name="firstName"
               label="First Name"
@@ -91,7 +88,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               <Input placeholder="Enter first name" />
             </Form.Item>
           </Col>
-          <Col span={12}>
+          <Col span={8}>
             <Form.Item
               name="lastName"
               label="Last Name"
@@ -103,10 +100,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               <Input placeholder="Enter last name" />
             </Form.Item>
           </Col>
-        </Row>
-
-        <Row gutter={16}>
-          <Col span={12}>
+          <Col span={8}>
             <Form.Item
               name="phone"
               label="Phone Number"
@@ -115,7 +109,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               <Input placeholder="Enter phone number" />
             </Form.Item>
           </Col>
-          <Col span={12}>
+        </Row>
+
+        <Row gutter={16}>
+          <Col span={8}>
             <Form.Item
               name="email"
               label="Email"
@@ -123,28 +120,23 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 { type: 'email', message: 'Please enter a valid email' },
               ]}
             >
-              <Input placeholder="Enter email address (optional)" />
+              <Input placeholder="Enter email address" />
             </Form.Item>
           </Col>
-        </Row>
-
-        <Divider orientation="left">Address Information</Divider>
-        <Row gutter={16}>
-          <Col span={12}>
+          <Col span={8}>
             <Form.Item name="city" label="City">
               <Input placeholder="Enter city" />
             </Form.Item>
           </Col>
-          <Col span={12}>
+          <Col span={8}>
             <Form.Item name="address" label="Address">
               <Input placeholder="Enter address" />
             </Form.Item>
           </Col>
         </Row>
 
-        <Divider orientation="left">Customer Settings</Divider>
         <Row gutter={16}>
-          <Col span={12}>
+          <Col span={8}>
             <Form.Item
               name="customerType"
               label="Customer Type"
@@ -158,20 +150,20 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               </Select>
             </Form.Item>
           </Col>
-          <Col span={12}>
+          <Col span={8}>
             <Form.Item name="creditLimit" label="Credit Limit">
-              <Input placeholder="Enter credit limit (optional)" type="number" />
+              <Input placeholder="Enter credit limit" type="number" />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item name="imageUrl" label="Image URL">
+              <Input placeholder="Enter image URL" />
             </Form.Item>
           </Col>
         </Row>
 
         <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item name="imageUrl" label="Image URL">
-              <Input placeholder="Enter image URL (optional)" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
+          <Col span={8}>
             <Form.Item name="isActive" label="Status" valuePropName="checked">
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Switch defaultChecked />
@@ -179,11 +171,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               </div>
             </Form.Item>
           </Col>
+          <Col span={16}>
+            <Form.Item name="notes" label="Notes">
+              <Input placeholder="Enter any additional notes" />
+            </Form.Item>
+          </Col>
         </Row>
-
-        <Form.Item name="notes" label="Notes">
-          <TextArea rows={3} placeholder="Enter any additional notes (optional)" />
-        </Form.Item>
       </Form>
     </Modal>
   );

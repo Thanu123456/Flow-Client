@@ -24,38 +24,34 @@ const transformWarehouse = (w: any): Warehouse => ({
 });
 
 export const warehouseService = {
-  // Get all warehouses with pagination
   getWarehouses: async (params: WarehousePaginationParams): Promise<WarehouseResponse> => {
-    // Convert frontend params to backend params
     const backendParams: any = {
       page: params.page,
       per_page: params.limit,
       search: params.search || undefined,
-      include_inactive: params.status !== "active",
+      // Only send include_inactive when the user explicitly wants inactive records
+      include_inactive: params.status === 'inactive' ? true : undefined,
     };
 
-    const response = await axiosInstance.get("/admin/warehouses", { params: backendParams });
-
-    // Backend returns { warehouses: [...], total, page, per_page, total_pages }
-    const warehousesData = response.data.warehouses || response.data.data || response.data || [];
-    const warehouses: Warehouse[] = Array.isArray(warehousesData)
-      ? warehousesData.map(transformWarehouse)
-      : [];
+    const response = await axiosInstance.get('/admin/warehouses', { params: backendParams });
+    const rd = response.data;
+    const raw = rd.data ?? rd.warehouses ?? rd ?? [];
+    const warehouses: Warehouse[] = Array.isArray(raw) ? raw.map(transformWarehouse) : [];
 
     return {
-      data: warehouses,
-      total: response.data.total || warehouses.length,
-      page: response.data.page || params.page,
-      limit: response.data.per_page || params.limit,
-      totalPages: response.data.total_pages || Math.ceil((response.data.total || warehouses.length) / params.limit),
+      data:       warehouses,
+      total:      rd.total       ?? rd.meta?.total       ?? warehouses.length,
+      page:       rd.page        ?? rd.meta?.page        ?? params.page,
+      limit:      rd.per_page    ?? rd.meta?.per_page    ?? params.limit,
+      totalPages: rd.total_pages ?? rd.meta?.total_pages ?? Math.ceil((rd.meta?.total ?? warehouses.length) / params.limit),
     };
   },
 
   // Get all warehouses (no pagination, for dropdowns)
   getAllWarehouses: async (): Promise<Warehouse[]> => {
-    const response = await axiosInstance.get("/admin/warehouses/all");
-    const warehousesData = response.data.warehouses || response.data.data || response.data || [];
-    return Array.isArray(warehousesData) ? warehousesData.map(transformWarehouse) : [];
+    const response = await axiosInstance.get('/admin/warehouses/all');
+    const raw = response.data.data ?? response.data.warehouses ?? response.data ?? [];
+    return Array.isArray(raw) ? raw.map(transformWarehouse) : [];
   },
 
   // Get warehouse by ID

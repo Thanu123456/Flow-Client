@@ -9,6 +9,8 @@ import type {
 
 interface WarrantyState {
   warranties: Warranty[];
+  // Separate field for dropdowns so paginated table data is never overwritten
+  allWarranties: Warranty[];
   loading: boolean;
   error: string | null;
   pagination: {
@@ -31,14 +33,10 @@ export const useWarrantyStore = create<WarrantyState>()(
   devtools(
     (set) => ({
       warranties: [],
+      allWarranties: [],
       loading: false,
       error: null,
-      pagination: {
-        total: 0,
-        page: 1,
-        limit: 10,
-        totalPages: 0,
-      },
+      pagination: { total: 0, page: 1, limit: 10, totalPages: 0 },
 
       getWarranties: async (params) => {
         set({ loading: true, error: null });
@@ -50,7 +48,7 @@ export const useWarrantyStore = create<WarrantyState>()(
               total: response.total,
               page: response.page,
               limit: response.limit,
-              totalPages: response.totalPages
+              totalPages: response.totalPages,
             },
             loading: false,
           });
@@ -63,14 +61,10 @@ export const useWarrantyStore = create<WarrantyState>()(
       },
 
       getAllWarranties: async () => {
-        // This populates the list for dropdowns. 
-        // Assuming we use the same list state or different? 
-        // Usually for dropdowns we might want a separate state or just replace the main list if pagination not used on that page.
-        // But BasicDetailsForm uses 'warranties' which comes from this store.
-        // I'll update 'warranties' with ALL data.
+        // Populates dropdown list — writes to allWarranties, NOT warranties (table data)
         try {
           const data = await warrantyService.getAllWarranties();
-          set({ warranties: data });
+          set({ allWarranties: data });
         } catch (error: any) {
           console.error(error);
         }

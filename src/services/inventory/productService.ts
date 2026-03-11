@@ -73,7 +73,6 @@ const transformProduct = (p: any): Product => ({
 });
 
 export const productService = {
-    // Get all products with pagination
     getProducts: async (params: ProductPaginationParams): Promise<ProductResponse> => {
         const backendParams: any = {
             page: params.page,
@@ -83,28 +82,21 @@ export const productService = {
             subcategory_id: params.subcategoryId || undefined,
             brand_id: params.brandId || undefined,
             product_type: params.productType || undefined,
-            include_inactive: params.status !== "active" && params.status !== undefined ? true : undefined,
+            include_inactive: params.status === 'inactive' ? true : undefined,
+            is_active: params.status === 'active' ? true : params.status === 'inactive' ? false : undefined,
         };
 
-        if (params.status === "inactive") {
-            backendParams.is_active = false;
-        } else if (params.status === "active") {
-            backendParams.is_active = true;
-        }
-
-        const response = await axiosInstance.get("/admin/products", { params: backendParams });
-
-        const productsData = response.data.products || response.data.data || [];
-        const products: Product[] = Array.isArray(productsData)
-            ? productsData.map(transformProduct)
-            : [];
+        const response = await axiosInstance.get('/admin/products', { params: backendParams });
+        const rd = response.data;
+        const raw = rd.data ?? rd.products ?? [];
+        const products: Product[] = Array.isArray(raw) ? raw.map(transformProduct) : [];
 
         return {
-            data: products,
-            total: response.data.total || products.length,
-            page: response.data.page || params.page,
-            limit: response.data.per_page || params.limit,
-            totalPages: response.data.total_pages || Math.ceil((response.data.total || products.length) / params.limit),
+            data:       products,
+            total:      rd.total       ?? rd.meta?.total       ?? products.length,
+            page:       rd.page        ?? rd.meta?.page        ?? params.page,
+            limit:      rd.per_page    ?? rd.meta?.per_page    ?? params.limit,
+            totalPages: rd.total_pages ?? rd.meta?.total_pages ?? Math.ceil((rd.meta?.total ?? products.length) / params.limit),
         };
     },
 

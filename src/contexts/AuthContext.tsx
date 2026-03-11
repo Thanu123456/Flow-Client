@@ -6,8 +6,7 @@ import type {
   RegisterRequest,
   UserInfo,
   TenantInfo,
-  LoginResponse,
-  MfaVerifyLoginRequest
+  LoginResponse
 } from '../types/auth/auth.types';
 import type {
   KioskLoginRequest,
@@ -328,7 +327,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('tenant', JSON.stringify(response.tenant));
     }
 
-    setState({
+    setState(prev => ({
+        ...prev,
         user: response.user,
         tenant: response.tenant || null,
         isAuthenticated: true,
@@ -336,7 +336,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role: role,
         isKiosk: false,
         mustChangePassword: response.must_change_password,
-    });
+    }));
   };
 
   const handleSuperAdminLoginSuccess = (response: SuperAdminLoginResponse) => {
@@ -346,7 +346,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('mustChangePassword', String(response.must_change_password));
       localStorage.setItem('isKiosk', 'false');
 
-      setState({
+      setState(prev => ({
+          ...prev,
           user: response.user,
           tenant: null, // SuperAdmin doesn't have a specific tenant
           isAuthenticated: true,
@@ -354,7 +355,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: 'super_admin',
           isKiosk: false,
           mustChangePassword: response.must_change_password,
-      });
+      }));
   };
 
   const handleKioskLoginSuccess = (response: KioskLoginResponse) => {
@@ -367,7 +368,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('mustChangePassword', String(response.must_change_pin));
       localStorage.setItem('isKiosk', 'true');
 
-      setState({
+      setState(prev => ({
+          ...prev,
           user: response.user,
           tenant: response.tenant,
           isAuthenticated: true,
@@ -375,7 +377,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: role,
           isKiosk: true,
           mustChangePassword: response.must_change_pin,
-      });
+      }));
   };
 
   return (
