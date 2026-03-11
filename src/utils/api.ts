@@ -4,125 +4,141 @@ export const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 const api = axios.create({
   baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  withCredentials: true, // For HttpOnly cookies
+  headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,  // For HttpOnly refresh-token cookie
+  timeout: 25000,         // 25 s – gives Neon cold-start time to wake up
 });
 
-// Request interceptor for adding the auth token (if stored in localStorage/memory instead of cookies)
-// Requirements say HttpOnly secure cookies, so we might not need to attach Authorization header manually
-// but often standard JWT implementations still use the header. Use cookie for refresh token.
-// Let's assume we might need it, or we rely on cookies. The generic requirement mentions "Generate JWT token".
-// Usually, access token is sent via Header, Refresh token via Cookie.
-// Let's add the interceptor to be safe, checking localStorage.
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// Helper function to get the appropriate login redirect URL based on user type
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 const getLoginRedirectUrl = (): string => {
-  const role = localStorage.getItem('role');
+  const role    = localStorage.getItem('role');
   const isKiosk = localStorage.getItem('isKiosk') === 'true';
-
-  if (role === 'super_admin') {
-    return '/superadmin/login';
-  } else if (isKiosk) {
-    return '/kiosk/login';
-  }
+  if (role === 'super_admin') return '/superadmin/login';
+  if (isKiosk) return '/kiosk/login';
   return '/login';
 };
 
-// Helper function to clear all auth data
-const clearAuthData = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
-  localStorage.removeItem('tenant');
-  localStorage.removeItem('role');
-  localStorage.removeItem('isKiosk');
-  localStorage.removeItem('mustChangePassword');
-};
+const clearAuthData = () =>
+  ['token', 'user', 'tenant', 'role', 'isKiosk', 'mustChangePassword'].forEach((k) =>
+    localStorage.removeItem(k)
+  );
+
+// ─── Request interceptor – attach JWT ────────────────────────────────────────
+
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) config.headers['Authorization'] = `Bearer ${token}`;
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// ─── Response interceptor ────────────────────────────────────────────────────
 
 api.interceptors.response.use(
+  // SUCCESS: normalise pagination meta so every service can read top-level fields
   (response) => {
-    // Gracefully handle backend nested meta objects so that older services safely read pagination totals
-    if (response.data && response.data.meta) {
-      if (response.data.total === undefined) response.data.total = response.data.meta.total;
-      if (response.data.page === undefined) response.data.page = response.data.meta.page;
-      if (response.data.per_page === undefined) response.data.per_page = response.data.meta.per_page;
-      if (response.data.total_pages === undefined) response.data.total_pages = response.data.meta.total_pages;
+    if (response.data?.meta) {
+      const m = response.data.meta;
+      if (response.data.total       === undefined) response.data.total       = m.total;
+      if (response.data.page        === undefined) response.data.page        = m.page;
+      if (response.data.per_page    === undefined) response.data.per_page    = m.per_page;
+      if (response.data.total_pages === undefined) response.data.total_pages = m.total_pages;
     }
     return response;
   },
+
+  // ERROR HANDLING
   async (error) => {
-    const originalRequest = error.config;
-    const isAuthRequest = originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/check-email');
-    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
-      originalRequest._retry = true;
+    const req = error.config;
+    if (!req) return Promise.reject(error);
+
+    const url            = req.url ?? '';
+    const isAuthEndpoint = url.includes('/auth/login') ||
+                           url.includes('/auth/check-email') ||
+                           url.includes('/auth/refresh-token');
+    const status         = error.response?.status as number | undefined;
+
+    // ── 401: try a token refresh exactly once ──────────────────────────────
+    if (status === 401 && !req._authRetried && !isAuthEndpoint) {
+      req._authRetried = true;
       try {
-        // Attempt refresh
-        const response = await api.post('/auth/refresh-token');
-        const { token } = response.data.data;
+        const res    = await api.post('/auth/refresh-token');
+        const { token } = res.data.data;
         localStorage.setItem('token', token);
-        originalRequest.headers['Authorization'] = `Bearer ${token}`;
-        return api(originalRequest);
-      } catch (refreshError) {
-        // Refresh failed, show alert and THEN redirect
-        const redirectUrl = getLoginRedirectUrl();
+        req.headers['Authorization'] = `Bearer ${token}`;
+        return api(req);
+      } catch {
         clearAuthData();
-        const event = new CustomEvent('api-error', {
-          detail: {
-            status: 401,
-            redirectUrl,
-            message: 'Your session has expired. Please login again.'
-          }
-        });
-        window.dispatchEvent(event);
-        return Promise.reject(refreshError);
+        window.dispatchEvent(
+          new CustomEvent('api-error', {
+            detail: {
+              status: 401,
+              redirectUrl: getLoginRedirectUrl(),
+              message: 'Session expired. Please login again.',
+            },
+          })
+        );
+        return Promise.reject(error);
       }
     }
-    if (error.response?.status === 429) {
-      const retryAfter = error.response.headers['retry-after'];
-      const event = new CustomEvent('api-error', {
-        detail: {
-          status: 429,
-          message: `Too many attempts. Please try again ${retryAfter ? 'in ' + retryAfter + ' seconds' : 'later'}.`
-        }
-      });
-      window.dispatchEvent(event);
+
+    // ── 429: surface to UI ─────────────────────────────────────────────────
+    if (status === 429) {
+      const retryAfter = error.response?.headers?.['retry-after'];
+      window.dispatchEvent(
+        new CustomEvent('api-error', {
+          detail: {
+            status: 429,
+            message: `Too many attempts. Please try again ${retryAfter ? 'in ' + retryAfter + ' seconds' : 'later'}.`,
+          },
+        })
+      );
       return Promise.reject(error);
     }
+
+    // ── 5xx or network error: retry with exponential back-off ──────────────
+    // Covers Neon serverless cold-starts (DB wakes slowly → 503/502/ETIMEDOUT)
+    const isServerError  = status !== undefined && status >= 500;
+    const isNetworkError = !error.response; // includes Axios timeout (ECONNABORTED)
+
+    if ((isServerError || isNetworkError) && !isAuthEndpoint) {
+      req._serverRetries = (req._serverRetries ?? 0) + 1;
+
+      if (req._serverRetries <= 4) {
+        // Back-off: 1 s, 2 s, 4 s, 8 s
+        const waitMs = Math.min(1000 * 2 ** (req._serverRetries - 1), 8000);
+        console.warn(
+          `[API] ${isNetworkError ? 'Network/timeout error' : `HTTP ${status}`} – ` +
+          `retrying ${url} in ${waitMs} ms (attempt ${req._serverRetries}/4)`
+        );
+        await sleep(waitMs);
+        return api(req);
+      }
+    }
+
     return Promise.reject(error);
   }
 );
 
-// Check email existence
+// ─── Utility exports ──────────────────────────────────────────────────────────
+
 export const checkEmailExists = async (email: string): Promise<boolean> => {
   try {
     const response = await api.get(`/auth/check-email?email=${encodeURIComponent(email)}`);
-    // API returns { available: boolean } or { data: { available: boolean } }
-    // If available is true, it does NOT exist.
     const data = response.data;
     if (data && typeof data === 'object') {
-      if ('data' in data && (data as any).data && 'available' in (data as any).data) {
+      if ('data' in data && (data as any).data && 'available' in (data as any).data)
         return !((data as any).data.available);
-      }
-      if ('available' in data) {
-        return !(data.available); // available: true -> exists: false
-      }
+      if ('available' in data)
+        return !data.available;
     }
     return false;
-  } catch (error) {
-    console.error("Error checking email:", error);
+  } catch {
     return false;
   }
 };

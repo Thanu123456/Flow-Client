@@ -21,45 +21,40 @@ const transformSubcategory = (s: any): Subcategory => ({
 });
 
 export const subcategoryService = {
-  // Get all subcategories with pagination
   getSubcategories: async (params: SubcategoryPaginationParams): Promise<SubcategoryResponse> => {
-    // Convert frontend params to backend params
     const backendParams: any = {
       page: params.page,
       per_page: params.limit,
       search: params.search || undefined,
-      include_inactive: params.status !== "active",
+      include_inactive: params.status === 'inactive' ? true : undefined,
     };
 
-    const response = await axiosInstance.get("/admin/subcategories", { params: backendParams });
-
-    // Backend returns { subcategories: [...], total, page, per_page, total_pages }
-    const subcategoriesData = response.data.subcategories || response.data.data || response.data || [];
-    const subcategories: Subcategory[] = Array.isArray(subcategoriesData)
-      ? subcategoriesData.map(transformSubcategory)
-      : [];
+    const response = await axiosInstance.get('/admin/subcategories', { params: backendParams });
+    const rd = response.data;
+    const raw = rd.data ?? rd.subcategories ?? rd ?? [];
+    const subcategories: Subcategory[] = Array.isArray(raw) ? raw.map(transformSubcategory) : [];
 
     return {
-      data: subcategories,
-      total: response.data.total || subcategories.length,
-      page: response.data.page || params.page,
-      limit: response.data.per_page || params.limit,
-      totalPages: response.data.total_pages || Math.ceil((response.data.total || subcategories.length) / params.limit),
+      data:       subcategories,
+      total:      rd.total       ?? rd.meta?.total       ?? subcategories.length,
+      page:       rd.page        ?? rd.meta?.page        ?? params.page,
+      limit:      rd.per_page    ?? rd.meta?.per_page    ?? params.limit,
+      totalPages: rd.total_pages ?? rd.meta?.total_pages ?? Math.ceil((rd.meta?.total ?? subcategories.length) / params.limit),
     };
   },
 
   // Get subcategories by category
   getSubcategoriesByCategory: async (categoryId: string): Promise<Subcategory[]> => {
     const response = await axiosInstance.get(`/admin/subcategories/by-category/${categoryId}`);
-    const subcategoriesData = response.data.subcategories || response.data.data || response.data || [];
-    return Array.isArray(subcategoriesData) ? subcategoriesData.map(transformSubcategory) : [];
+    const raw = response.data.data ?? response.data.subcategories ?? response.data ?? [];
+    return Array.isArray(raw) ? raw.map(transformSubcategory) : [];
   },
 
   // Get all subcategories (no pagination, for dropdowns)
   getAllSubcategories: async (): Promise<Subcategory[]> => {
-    const response = await axiosInstance.get("/admin/subcategories/all");
-    const subcategoriesData = response.data.subcategories || response.data.data || response.data || [];
-    return Array.isArray(subcategoriesData) ? subcategoriesData.map(transformSubcategory) : [];
+    const response = await axiosInstance.get('/admin/subcategories/all');
+    const raw = response.data.data ?? response.data.subcategories ?? response.data ?? [];
+    return Array.isArray(raw) ? raw.map(transformSubcategory) : [];
   },
 
   // Get subcategory by ID

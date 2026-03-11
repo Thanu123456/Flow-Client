@@ -23,37 +23,36 @@ const transformCategory = (c: any): Category => ({
 export const categoryService = {
   // Get all categories with pagination
   getCategories: async (params: CategoryPaginationParams): Promise<CategoryResponse> => {
-    // Convert frontend params to backend params
     const backendParams: any = {
       page: params.page,
       per_page: params.limit,
       search: params.search || undefined,
-      include_inactive: params.status !== "active",
+      include_inactive: params.status === 'inactive' ? true : undefined,
     };
 
-    const response = await axiosInstance.get("/admin/categories", { params: backendParams });
+    const response = await axiosInstance.get('/admin/categories', { params: backendParams });
+    const rd = response.data;
 
-    // Backend returns { categories: [...], total, page, per_page, total_pages }
-    const categoriesData = response.data.categories || response.data.data || response.data || [];
-    const categories: Category[] = Array.isArray(categoriesData)
-      ? categoriesData.map(transformCategory)
-      : [];
+    // Backend returns { success, data: [...], meta: { page, per_page, total, total_pages } }
+    const raw = rd.data ?? rd.categories ?? rd ?? [];
+    const categories: Category[] = Array.isArray(raw) ? raw.map(transformCategory) : [];
 
     return {
-      data: categories,
-      total: response.data.total || categories.length,
-      page: response.data.page || params.page,
-      limit: response.data.per_page || params.limit,
-      totalPages: response.data.total_pages || Math.ceil((response.data.total || categories.length) / params.limit),
+      data:       categories,
+      total:      rd.total       ?? rd.meta?.total       ?? categories.length,
+      page:       rd.page        ?? rd.meta?.page        ?? params.page,
+      limit:      rd.per_page    ?? rd.meta?.per_page    ?? params.limit,
+      totalPages: rd.total_pages ?? rd.meta?.total_pages ?? Math.ceil((rd.meta?.total ?? categories.length) / params.limit),
     };
   },
 
   // Get all categories (no pagination, for dropdowns)
   getAllCategories: async (): Promise<Category[]> => {
-    const response = await axiosInstance.get("/admin/categories/all");
-    const categoriesData = response.data.categories || response.data.data || response.data || [];
-    return Array.isArray(categoriesData) ? categoriesData.map(transformCategory) : [];
+    const response = await axiosInstance.get('/admin/categories/all');
+    const raw = response.data.data ?? response.data.categories ?? response.data ?? [];
+    return Array.isArray(raw) ? raw.map(transformCategory) : [];
   },
+
 
   // Get category by ID
   getCategoryById: async (id: string): Promise<Category> => {

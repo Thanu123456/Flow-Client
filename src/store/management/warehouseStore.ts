@@ -8,7 +8,10 @@ import type {
 } from "../../types/entities/warehouse.types";
 
 interface WarehouseState {
+  // Paginated table data
   warehouses: Warehouse[];
+  // Full list for dropdowns — separate so table data is never overwritten
+  allWarehouses: Warehouse[];
   loading: boolean;
   error: string | null;
   pagination: {
@@ -18,7 +21,6 @@ interface WarehouseState {
     totalPages: number;
   };
 
-  // Actions
   getWarehouses: (params: WarehousePaginationParams) => Promise<void>;
   getWarehouseById: (id: string) => Promise<Warehouse | null>;
   getAllWarehouses: () => Promise<Warehouse[]>;
@@ -30,35 +32,40 @@ interface WarehouseState {
 
 export const useWarehouseStore = create<WarehouseState>()(
   devtools(
-    (set) => ({
+    (set, get) => ({
       warehouses: [],
+      allWarehouses: [],
       loading: false,
       error: null,
-      pagination: {
-        total: 0,
-        page: 1,
-        limit: 10,
-        totalPages: 0,
-      },
+      pagination: { total: 0, page: 1, limit: 10, totalPages: 0 },
 
       getWarehouses: async (params) => {
         set({ loading: true, error: null });
         try {
           const response = await warehouseService.getWarehouses(params);
-          set({
-            warehouses: response.data,
-            pagination: {
-              total: response.total,
-              page: response.page,
-              limit: response.limit,
-              totalPages: response.totalPages,
-            },
-            loading: false,
-          });
+          const data = response.data ?? [];
+          const total = response.total ?? data.length;
+          
+          if (params.limit === 1) {
+            set(state => ({
+              pagination: { ...state.pagination, total },
+              loading: false
+            }));
+          } else {
+            set({
+              warehouses: data,
+              pagination: {
+                total: total,
+                page: response.page || params.page || 1,
+                limit: response.limit || params.limit || 10,
+                totalPages: response.totalPages || Math.ceil(total / (response.limit || 10)),
+              },
+              loading: false,
+            });
+          }
         } catch (error: any) {
-          const errorMessage = error.response?.data?.message || error.message || "Failed to fetch warehouses";
           set({
-            error: errorMessage,
+            error: error.response?.data?.message || error.message || "Failed to fetch warehouses",
             loading: false,
           });
         }
@@ -66,23 +73,22 @@ export const useWarehouseStore = create<WarehouseState>()(
 
       getWarehouseById: async (id) => {
         try {
-          const warehouse = await warehouseService.getWarehouseById(id);
-          return warehouse;
+          return await warehouseService.getWarehouseById(id);
         } catch (error: any) {
-          const errorMessage = error.response?.data?.message || error.message || "Failed to fetch warehouse";
-          set({ error: errorMessage });
+          set({ error: error.response?.data?.message || error.message || "Failed to fetch warehouse" });
           return null;
         }
       },
 
       getAllWarehouses: async () => {
+        const cached = get().allWarehouses;
         try {
           const warehouses = await warehouseService.getAllWarehouses();
-          set({ warehouses });
+          set({ allWarehouses: warehouses });  // ← separate field, never touches paginated table data
           return warehouses;
         } catch (error: any) {
-          const errorMessage = error.response?.data?.message || error.message || "Failed to fetch warehouses";
-          set({ error: errorMessage });
+          if (cached.length > 0) return cached;
+          set({ error: error.response?.data?.message || error.message || "Failed to fetch warehouses" });
           return [];
         }
       },
@@ -93,11 +99,7 @@ export const useWarehouseStore = create<WarehouseState>()(
           await warehouseService.createWarehouse(data);
           set({ loading: false });
         } catch (error: any) {
-          const errorMessage = error.response?.data?.message || error.message || "Failed to create warehouse";
-          set({
-            error: errorMessage,
-            loading: false,
-          });
+          set({ error: error.response?.data?.message || error.message || "Failed to create warehouse", loading: false });
           throw error;
         }
       },
@@ -108,11 +110,7 @@ export const useWarehouseStore = create<WarehouseState>()(
           await warehouseService.updateWarehouse(id, data);
           set({ loading: false });
         } catch (error: any) {
-          const errorMessage = error.response?.data?.message || error.message || "Failed to update warehouse";
-          set({
-            error: errorMessage,
-            loading: false,
-          });
+          set({ error: error.response?.data?.message || error.message || "Failed to update warehouse", loading: false });
           throw error;
         }
       },
@@ -123,19 +121,13 @@ export const useWarehouseStore = create<WarehouseState>()(
           await warehouseService.deleteWarehouse(id);
           set({ loading: false });
         } catch (error: any) {
-          const errorMessage = error.response?.data?.message || error.message || "Failed to delete warehouse";
-          set({
-            error: errorMessage,
-            loading: false,
-          });
+          set({ error: error.response?.data?.message || error.message || "Failed to delete warehouse", loading: false });
           throw error;
         }
       },
 
       clearError: () => set({ error: null }),
     }),
-    {
-      name: "warehouse-store",
-    }
+    { name: "warehouse-store" }
   )
 );

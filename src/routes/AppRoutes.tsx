@@ -43,6 +43,8 @@ import EditProduct from "../pages/management/EditProduct";
 import Purchases from "../pages/transactions/Purchases";
 import AddPurchase from "../pages/transactions/AddPurchase";
 
+import POS from "../pages/pos/POS";
+
 // Super Admin Pages
 import SuperAdminDashboard from "../pages/superadmin/SuperAdminDashboard";
 import PendingRegistrations from "../pages/superadmin/PendingRegistrations";
@@ -166,6 +168,7 @@ const AppRoutes: React.FC = () => {
           <Route path="/purchases/add" element={<AddPurchase />} />
           <Route path="/purchases/:id/edit" element={<AddPurchase />} />
         </Route>
+        <Route path="/pos" element={<POS />} />
       </Route>
 
       {/* Super Admin Private Routes */}

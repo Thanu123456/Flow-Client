@@ -9,10 +9,11 @@ import type {
 } from "../../types/entities/brand.types";
 import { brandService } from "../../services/management/brandService";
 
-// Interface for the Brand
-
 interface BrandState {
+  // Paginated table data
   brands: Brand[];
+  // Full list for dropdowns — separate so table data is never overwritten
+  allBrands: Brand[];
   currentBrand: Brand | null;
   loading: boolean;
   error: string | null;
@@ -28,10 +29,7 @@ interface BrandState {
   getAllBrands: () => Promise<Brand[]>;
   getBrandById: (id: string) => Promise<void>;
   createBrand: (brandData: BrandFormData) => Promise<Brand>;
-  updateBrand: (
-    id: string,
-    brandData: Partial<BrandFormData>
-  ) => Promise<Brand>;
+  updateBrand: (id: string, brandData: Partial<BrandFormData>) => Promise<Brand>;
   deleteBrand: (id: string) => Promise<void>;
   setFilters: (filters: BrandFilters) => void;
   clearError: () => void;
@@ -40,30 +38,43 @@ interface BrandState {
 
 export const useBrandStore = create<BrandState>()(
   devtools(
-    (set, _get) => ({
+    (set, get) => ({
       brands: [],
+      allBrands: [],
       currentBrand: null,
       loading: false,
       error: null,
       pagination: { total: 0, page: 1, limit: 10, totalPages: 0 },
       filters: {},
 
-      // Get All Brands
-
       getBrands: async (params) => {
         set({ loading: true, error: null });
         try {
           const response: BrandResponse = await brandService.getBrands(params);
-          set({ brands: response.data, pagination: response, loading: false });
+          const data = response.data ?? [];
+          const total = response.total ?? data.length;
+          
+          if (params.limit === 1) {
+            set(state => ({
+              pagination: { ...state.pagination, total },
+              loading: false
+            }));
+          } else {
+            set({
+              brands: data,
+              pagination: {
+                total: total,
+                page: response.page || params.page || 1,
+                limit: response.limit || params.limit || 10,
+                totalPages: response.totalPages || Math.ceil(total / (response.limit || 10)),
+              },
+              loading: false,
+            });
+          }
         } catch (err: any) {
-          set({
-            error: err.response?.data?.message || "Failed to fetch brands",
-            loading: false,
-          });
+          set({ error: err.response?.data?.message || "Failed to fetch brands", loading: false });
         }
       },
-
-      // Get specific Brand
 
       getBrandById: async (id) => {
         set({ loading: true, error: null });
@@ -71,45 +82,35 @@ export const useBrandStore = create<BrandState>()(
           const brand = await brandService.getBrandById(id);
           set({ currentBrand: brand, loading: false });
         } catch (err: any) {
-          set({
-            error: err.response?.data?.message || "Failed to fetch brand",
-            loading: false,
-          });
+          set({ error: err.response?.data?.message || "Failed to fetch brand", loading: false });
         }
       },
 
-      // Get all brands for dropdowns
       getAllBrands: async () => {
+        const cached = get().allBrands;
         try {
           const brands = await brandService.getAllBrands();
-          set({ brands });
+          set({ allBrands: brands });   // ← separate field, never touches paginated table data
           return brands;
         } catch (err: any) {
+          if (cached.length > 0) return cached;
           set({ error: err.response?.data?.message || "Failed to fetch brands" });
           return [];
         }
       },
 
-      // Create New Brand
-
       createBrand: async (brandData) => {
         set({ loading: true, error: null });
         try {
           const newBrand = await brandService.createBrand(brandData);
-          set((state) => ({
-            brands: [newBrand, ...state.brands],
-            loading: false,
-          }));
+          set((state) => ({ brands: [newBrand, ...state.brands], loading: false }));
           return newBrand;
         } catch (err: any) {
-          const message =
-            err.response?.data?.message || "Failed to create brand";
+          const message = err.response?.data?.message || "Failed to create brand";
           set({ error: message, loading: false });
           throw new Error(message);
         }
       },
-
-      // Update existing Brand
 
       updateBrand: async (id, brandData) => {
         set({ loading: true, error: null });
@@ -117,32 +118,24 @@ export const useBrandStore = create<BrandState>()(
           const updatedBrand = await brandService.updateBrand(id, brandData);
           set((state) => ({
             brands: state.brands.map((b) => (b.id === id ? updatedBrand : b)),
-            currentBrand:
-              state.currentBrand?.id === id ? updatedBrand : state.currentBrand,
+            currentBrand: state.currentBrand?.id === id ? updatedBrand : state.currentBrand,
             loading: false,
           }));
           return updatedBrand;
         } catch (err: any) {
-          const message =
-            err.response?.data?.message || "Failed to update brand";
+          const message = err.response?.data?.message || "Failed to update brand";
           set({ error: message, loading: false });
           throw new Error(message);
         }
       },
 
-      // Delete existing Brand
-
       deleteBrand: async (id) => {
         set({ loading: true, error: null });
         try {
           await brandService.deleteBrand(id);
-          set((state) => ({
-            brands: state.brands.filter((b) => b.id !== id),
-            loading: false,
-          }));
+          set((state) => ({ brands: state.brands.filter((b) => b.id !== id), loading: false }));
         } catch (err: any) {
-          const message =
-            err.response?.data?.message || "Failed to delete brand";
+          const message = err.response?.data?.message || "Failed to delete brand";
           set({ error: message, loading: false });
           throw new Error(message);
         }

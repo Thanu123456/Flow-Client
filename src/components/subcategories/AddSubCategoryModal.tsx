@@ -37,8 +37,8 @@ const AddSubCategoryModal: React.FC<AddSubCategoryModalProps> = ({
   const fetchCategories = async () => {
     setLoadingCategories(true);
     try {
-      const response = await categoryService.getCategories({ page: 1, limit: 100, status: "active" });
-      setCategories(response.data.map((c) => ({ id: c.id, name: c.name })));
+      const cats = await categoryService.getAllCategories();
+      setCategories(cats.map((c) => ({ id: c.id, name: c.name })));
     } catch (error) {
       console.error("Failed to fetch categories", error);
     } finally {

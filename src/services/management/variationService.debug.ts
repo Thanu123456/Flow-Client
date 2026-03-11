@@ -1,7 +1,6 @@
 import { axiosInstance } from "../api/axiosInstance";
 import type {
     Variation,
-    VariationFormData,
     VariationPaginationParams,
     VariationValue,
     VariationResponse,
@@ -51,7 +50,7 @@ const transformVariation = (v: any): Variation => {
         name: String(data.name || data.Name || "Unnamed Variation"),
         values: valuesData.map(transformVariationValue),
         valuesCount: Number(data.values_count || data.valuesCount || valuesData.length),
-        status: (data.is_active === true || data.is_active === "true" || data.status === "active" || data.IsActive === true) ? "active" : "inactive",
+        status: ((data.is_active === true || data.is_active === "true" || data.status === "active" || data.IsActive === true) ? "active" : "inactive") as "active" | "inactive",
         createdAt: data.created_at || data.createdAt || data.CreatedAt || data.created_at || "",
         updatedAt: data.updated_at || data.updatedAt || data.UpdatedAt || data.updated_at || "",
     };
@@ -72,7 +71,7 @@ export const variationServiceDebug = {
             page: params.page,
             per_page: params.limit,
             search: params.search || undefined,
-            include_inactive: params.status !== "active",
+            include_inactive: params.status === false,
         };
 
         const response = await axiosInstance.get("/admin/variations", {

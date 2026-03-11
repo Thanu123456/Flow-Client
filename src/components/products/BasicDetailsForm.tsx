@@ -24,19 +24,19 @@ interface BasicDetailsFormProps {
 }
 
 const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
-    const { categories, getAllCategories } = useCategoryStore();
-    const { subcategories, getSubcategoriesByCategory } = useSubcategoryStore();
-    const { brands, getAllBrands } = useBrandStore();
-    const { units, getAllUnits } = useUnitStore();
-    const { warehouses, getAllWarehouses } = useWarehouseStore();
-    const { warranties, getAllWarranties } = useWarrantyStore();
+    // Read from the dedicated *dropdown* fields, not the paginated table fields
+    const { allCategories, getAllCategories } = useCategoryStore();
+    const { allSubcategories, getSubcategoriesByCategory } = useSubcategoryStore();
+    const { allBrands, getAllBrands } = useBrandStore();
+    const { allUnits, getAllUnits } = useUnitStore();
+    const { allWarehouses, getAllWarehouses } = useWarehouseStore();
+    const { allWarranties, getAllWarranties } = useWarrantyStore();
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const loadDropdownData = async () => {
             setLoading(true);
             try {
-                // Use Promise.allSettled to ensure all fetches complete even if some fail
                 await Promise.allSettled([
                     getAllCategories(),
                     getAllBrands(),
@@ -56,13 +56,13 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
     // Auto-load subcategories if a category is already selected (e.g., when editing)
     useEffect(() => {
         const categoryId = form.getFieldValue("category_id");
-        if (categoryId && subcategories.length === 0) {
+        if (categoryId && allSubcategories.length === 0) {
             getSubcategoriesByCategory(categoryId);
         }
-    }, [form, getSubcategoriesByCategory, subcategories.length]);
+    }, [form, getSubcategoriesByCategory, allSubcategories.length]);
 
     const handleCategoryChange = (categoryId: string) => {
-        form.setFieldsValue({ subcategory_id: undefined });
+        form.setFieldValue("subcategory_id", undefined);
         if (categoryId) {
             getSubcategoriesByCategory(categoryId);
         }
@@ -165,7 +165,7 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
                                         className="w-full"
                                         size="large"
                                     >
-                                        {categories.map((cat) => (
+                                        {allCategories.map((cat) => (
                                             <Select.Option key={cat.id} value={cat.id}>
                                                 {cat.name}
                                             </Select.Option>
@@ -189,7 +189,7 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
                                         optionFilterProp="children"
                                         size="large"
                                     >
-                                        {subcategories.map((sub) => (
+                                        {allSubcategories.map((sub) => (
                                             <Select.Option key={sub.id} value={sub.id}>
                                                 {sub.name}
                                             </Select.Option>
@@ -204,7 +204,7 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
                                     label={<span className="font-normal">Brand</span>}
                                 >
                                     <Select placeholder="Select Brand" allowClear showSearch optionFilterProp="children" size="large">
-                                        {brands.map((brand) => (
+                                        {allBrands.map((brand) => (
                                             <Select.Option key={brand.id} value={brand.id}>
                                                 {brand.name}
                                             </Select.Option>
@@ -219,7 +219,7 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
                                     rules={[{ required: true, message: "Please select unit" }]}
                                 >
                                     <Select placeholder="Select Unit" showSearch optionFilterProp="children" size="large">
-                                        {units.map((unit) => (
+                                        {allUnits.map((unit) => (
                                             <Select.Option key={unit.id} value={unit.id}>
                                                 {unit.name} ({unit.shortName})
                                             </Select.Option>
@@ -239,7 +239,7 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
                                     }
                                 >
                                     <Select placeholder="Select Warehouse" allowClear showSearch optionFilterProp="children" size="large">
-                                        {warehouses.map((wh) => (
+                                        {allWarehouses.map((wh) => (
                                             <Select.Option key={wh.id} value={wh.id}>
                                                 {wh.name}
                                             </Select.Option>
@@ -258,7 +258,7 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
                                     }
                                 >
                                     <Select placeholder="Select Warranty" allowClear showSearch optionFilterProp="children" size="large">
-                                        {warranties.map((w) => (
+                                        {allWarranties.map((w) => (
                                             <Select.Option key={w.id} value={w.id}>
                                                 {w.name}
                                             </Select.Option>

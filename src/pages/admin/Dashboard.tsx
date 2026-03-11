@@ -128,178 +128,180 @@ const Dashboard: React.FC = () => {
     ];
 
     return (
-        <div style={{ padding: 24, background: token.colorBgLayout, minHeight: '100vh' }}>
+        <div style={{ background: token.colorBgLayout, minHeight: '100vh' }}>
             <HeaderWithSearch />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <Title level={2} style={{ margin: 0 }}>Admin Dashboard</Title>
-                <Dropdown menu={{ items: userMenuItems }} trigger={['click']} placement="bottomRight">
-                    <Button
-                        style={{ height: 'auto', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 8 }}
-                    >
-                        <Avatar
-                            size="small"
-                            style={{ backgroundColor: token.colorPrimary }}
-                            icon={<UserOutlined />}
-                        />
-                        <Text strong>{user?.full_name}</Text>
-                        <DownOutlined style={{ fontSize: 12, color: token.colorTextSecondary }} />
-                    </Button>
-                </Dropdown>
-            </div>
+            <div style={{ padding: 24 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                    <Title level={2} style={{ margin: 0 }}>Admin Dashboard</Title>
+                    <Dropdown menu={{ items: userMenuItems }} trigger={['click']} placement="bottomRight">
+                        <Button
+                            style={{ height: 'auto', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 8 }}
+                        >
+                            <Avatar
+                                size="small"
+                                style={{ backgroundColor: token.colorPrimary }}
+                                icon={<UserOutlined />}
+                            />
+                            <Text strong>{user?.full_name}</Text>
+                            <DownOutlined style={{ fontSize: 12, color: token.colorTextSecondary }} />
+                        </Button>
+                    </Dropdown>
+                </div>
 
-            <Card style={{ marginBottom: 24 }}>
-                <Text>
-                    Welcome back, <strong>{user?.full_name}</strong>!
-                </Text>
-                <br />
-                {tenant && (
-                    <Text type="secondary">
-                        Managing: {tenant.shop_name} ({tenant.business_type})
+                <Card style={{ marginBottom: 24 }}>
+                    <Text>
+                        Welcome back, <strong>{user?.full_name}</strong>!
                     </Text>
-                )}
-            </Card>
+                    <br />
+                    {tenant && (
+                        <Text type="secondary">
+                            Managing: {tenant.shop_name} ({tenant.business_type})
+                        </Text>
+                    )}
+                </Card>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 }}>
-                <Title level={4} style={{ margin: 0 }}>Quick Statistics</Title>
-                <Button
-                    icon={<ReloadOutlined />}
-                    onClick={fetchDashboardData}
-                    loading={loading}
-                    style={{
-                        backgroundColor: token.colorPrimaryBg,
-                        color: token.colorPrimary,
-                        borderColor: token.colorPrimaryBorder,
-                        borderRadius: token.borderRadius
-                    }}
-                >
-                    Sync Data
-                </Button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 }}>
+                    <Title level={4} style={{ margin: 0 }}>Quick Statistics</Title>
+                    <Button
+                        icon={<ReloadOutlined />}
+                        onClick={fetchDashboardData}
+                        loading={loading}
+                        style={{
+                            backgroundColor: token.colorPrimaryBg,
+                            color: token.colorPrimary,
+                            borderColor: token.colorPrimaryBorder,
+                            borderRadius: token.borderRadius
+                        }}
+                    >
+                        Sync Data
+                    </Button>
+                </div>
+
+                <Spin spinning={loading} tip="Loading Analytics...">
+                    <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                        <Col xs={24} sm={12} md={6}>
+                            <Card
+                                hoverable
+                                bordered={false}
+                                onClick={() => navigate('/products')}
+                                style={{ cursor: 'pointer', transition: 'all 0.3s', borderRadius: token.borderRadiusLG }}
+                            >
+                                <Statistic
+                                    title="Total Products"
+                                    value={productPagination.total || 0}
+                                    prefix={<DatabaseOutlined />}
+                                    valueStyle={{ color: '#1890ff' }}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Card
+                                hoverable
+                                bordered={false}
+                                onClick={() => navigate('/categories')}
+                                style={{ cursor: 'pointer', transition: 'all 0.3s', borderRadius: token.borderRadiusLG }}
+                            >
+                                <Statistic
+                                    title="Categories"
+                                    value={categoryPagination.total || 0}
+                                    prefix={<AppstoreOutlined />}
+                                    valueStyle={{ color: '#13c2c2' }}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Card
+                                hoverable
+                                bordered={false}
+                                onClick={() => navigate('/subcategories')}
+                                style={{ cursor: 'pointer', transition: 'all 0.3s', borderRadius: token.borderRadiusLG }}
+                            >
+                                <Statistic
+                                    title="Sub-Categories"
+                                    value={subCategoryPagination.total || 0}
+                                    prefix={<NodeIndexOutlined />}
+                                    valueStyle={{ color: '#52c41a' }}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Card
+                                hoverable
+                                bordered={false}
+                                onClick={() => navigate('/brands')}
+                                style={{ cursor: 'pointer', transition: 'all 0.3s', borderRadius: token.borderRadiusLG }}
+                            >
+                                <Statistic
+                                    title="Brands"
+                                    value={brandPagination.total || 0}
+                                    prefix={<TagsOutlined />}
+                                    valueStyle={{ color: '#722ed1' }}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Card
+                                hoverable
+                                bordered={false}
+                                onClick={() => navigate('/units')}
+                                style={{ cursor: 'pointer', transition: 'all 0.3s', borderRadius: token.borderRadiusLG }}
+                            >
+                                <Statistic
+                                    title="Units"
+                                    value={unitPagination.total || 0}
+                                    prefix={<BlockOutlined />}
+                                    valueStyle={{ color: '#eb2f96' }}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Card
+                                hoverable
+                                bordered={false}
+                                onClick={() => navigate('/warehouses')}
+                                style={{ cursor: 'pointer', transition: 'all 0.3s', borderRadius: token.borderRadiusLG }}
+                            >
+                                <Statistic
+                                    title="Warehouses"
+                                    value={warehousePagination.total || 0}
+                                    prefix={<ShopOutlined />}
+                                    valueStyle={{ color: '#fa8c16' }}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Card
+                                hoverable
+                                bordered={false}
+                                onClick={() => navigate('/warranties')}
+                                style={{ cursor: 'pointer', transition: 'all 0.3s', borderRadius: token.borderRadiusLG }}
+                            >
+                                <Statistic
+                                    title="Warranties"
+                                    value={warrantyPagination.total || 0}
+                                    prefix={<SafetyCertificateOutlined />}
+                                    valueStyle={{ color: '#faad14' }}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Card
+                                hoverable
+                                bordered={false}
+                                onClick={() => navigate('/variations')}
+                                style={{ cursor: 'pointer', transition: 'all 0.3s', borderRadius: token.borderRadiusLG }}
+                            >
+                                <Statistic
+                                    title="Variations"
+                                    value={variationPagination.total || 0}
+                                    prefix={<ControlOutlined />}
+                                    valueStyle={{ color: '#f5222d' }}
+                                />
+                            </Card>
+                        </Col>
+                    </Row>
+                </Spin>
             </div>
-
-            <Spin spinning={loading} tip="Loading Analytics...">
-                <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-                    <Col xs={24} sm={12} md={6}>
-                        <Card
-                            hoverable
-                            bordered={false}
-                            onClick={() => navigate('/products')}
-                            style={{ cursor: 'pointer', transition: 'all 0.3s', borderRadius: token.borderRadiusLG }}
-                        >
-                            <Statistic
-                                title="Total Products"
-                                value={productPagination.total || 0}
-                                prefix={<DatabaseOutlined />}
-                                valueStyle={{ color: '#1890ff' }}
-                            />
-                        </Card>
-                    </Col>
-                    <Col xs={24} sm={12} md={6}>
-                        <Card
-                            hoverable
-                            bordered={false}
-                            onClick={() => navigate('/categories')}
-                            style={{ cursor: 'pointer', transition: 'all 0.3s', borderRadius: token.borderRadiusLG }}
-                        >
-                            <Statistic
-                                title="Categories"
-                                value={categoryPagination.total || 0}
-                                prefix={<AppstoreOutlined />}
-                                valueStyle={{ color: '#13c2c2' }}
-                            />
-                        </Card>
-                    </Col>
-                    <Col xs={24} sm={12} md={6}>
-                        <Card
-                            hoverable
-                            bordered={false}
-                            onClick={() => navigate('/subcategories')}
-                            style={{ cursor: 'pointer', transition: 'all 0.3s', borderRadius: token.borderRadiusLG }}
-                        >
-                            <Statistic
-                                title="Sub-Categories"
-                                value={subCategoryPagination.total || 0}
-                                prefix={<NodeIndexOutlined />}
-                                valueStyle={{ color: '#52c41a' }}
-                            />
-                        </Card>
-                    </Col>
-                    <Col xs={24} sm={12} md={6}>
-                        <Card
-                            hoverable
-                            bordered={false}
-                            onClick={() => navigate('/brands')}
-                            style={{ cursor: 'pointer', transition: 'all 0.3s', borderRadius: token.borderRadiusLG }}
-                        >
-                            <Statistic
-                                title="Brands"
-                                value={brandPagination.total || 0}
-                                prefix={<TagsOutlined />}
-                                valueStyle={{ color: '#722ed1' }}
-                            />
-                        </Card>
-                    </Col>
-                    <Col xs={24} sm={12} md={6}>
-                        <Card
-                            hoverable
-                            bordered={false}
-                            onClick={() => navigate('/units')}
-                            style={{ cursor: 'pointer', transition: 'all 0.3s', borderRadius: token.borderRadiusLG }}
-                        >
-                            <Statistic
-                                title="Units"
-                                value={unitPagination.total || 0}
-                                prefix={<BlockOutlined />}
-                                valueStyle={{ color: '#eb2f96' }}
-                            />
-                        </Card>
-                    </Col>
-                    <Col xs={24} sm={12} md={6}>
-                        <Card
-                            hoverable
-                            bordered={false}
-                            onClick={() => navigate('/warehouses')}
-                            style={{ cursor: 'pointer', transition: 'all 0.3s', borderRadius: token.borderRadiusLG }}
-                        >
-                            <Statistic
-                                title="Warehouses"
-                                value={warehousePagination.total || 0}
-                                prefix={<ShopOutlined />}
-                                valueStyle={{ color: '#fa8c16' }}
-                            />
-                        </Card>
-                    </Col>
-                    <Col xs={24} sm={12} md={6}>
-                        <Card
-                            hoverable
-                            bordered={false}
-                            onClick={() => navigate('/warranties')}
-                            style={{ cursor: 'pointer', transition: 'all 0.3s', borderRadius: token.borderRadiusLG }}
-                        >
-                            <Statistic
-                                title="Warranties"
-                                value={warrantyPagination.total || 0}
-                                prefix={<SafetyCertificateOutlined />}
-                                valueStyle={{ color: '#faad14' }}
-                            />
-                        </Card>
-                    </Col>
-                    <Col xs={24} sm={12} md={6}>
-                        <Card
-                            hoverable
-                            bordered={false}
-                            onClick={() => navigate('/variations')}
-                            style={{ cursor: 'pointer', transition: 'all 0.3s', borderRadius: token.borderRadiusLG }}
-                        >
-                            <Statistic
-                                title="Variations"
-                                value={variationPagination.total || 0}
-                                prefix={<ControlOutlined />}
-                                valueStyle={{ color: '#f5222d' }}
-                            />
-                        </Card>
-                    </Col>
-                </Row>
-            </Spin>
         </div>
     );
 };
