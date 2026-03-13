@@ -31,7 +31,7 @@ interface WarrantyState {
 
 export const useWarrantyStore = create<WarrantyState>()(
   devtools(
-    (set) => ({
+    (set, get) => ({
       warranties: [],
       allWarranties: [],
       loading: false,
@@ -62,12 +62,20 @@ export const useWarrantyStore = create<WarrantyState>()(
 
       getAllWarranties: async () => {
         // Populates dropdown list — writes to allWarranties, NOT warranties (table data)
-        try {
-          const data = await warrantyService.getAllWarranties();
-          set({ allWarranties: data });
-        } catch (error: any) {
-          console.error(error);
-        }
+        const cached = get().allWarranties;
+        const tryFetch = async (attemptsLeft: number): Promise<void> => {
+          try {
+            const data = await warrantyService.getAllWarranties();
+            set({ allWarranties: data });
+          } catch (err: any) {
+            if (cached.length === 0 && attemptsLeft > 0) {
+              await new Promise(r => setTimeout(r, 3000));
+              return tryFetch(attemptsLeft - 1);
+            }
+            if (cached.length === 0) console.error("Failed to fetch warranties:", err);
+          }
+        };
+        return tryFetch(2);
       },
 
       getWarrantyById: async (id) => {

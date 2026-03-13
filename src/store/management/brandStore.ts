@@ -88,15 +88,22 @@ export const useBrandStore = create<BrandState>()(
 
       getAllBrands: async () => {
         const cached = get().allBrands;
-        try {
-          const brands = await brandService.getAllBrands();
-          set({ allBrands: brands });   // ← separate field, never touches paginated table data
-          return brands;
-        } catch (err: any) {
-          if (cached.length > 0) return cached;
-          set({ error: err.response?.data?.message || "Failed to fetch brands" });
-          return [];
-        }
+        const tryFetch = async (attemptsLeft: number): Promise<Brand[]> => {
+          try {
+            const brands = await brandService.getAllBrands();
+            set({ allBrands: brands });
+            return brands;
+          } catch (err: any) {
+            if (cached.length === 0 && attemptsLeft > 0) {
+              await new Promise(r => setTimeout(r, 3000));
+              return tryFetch(attemptsLeft - 1);
+            }
+            if (cached.length > 0) return cached;
+            set({ error: err.response?.data?.message || "Failed to fetch brands" });
+            return [];
+          }
+        };
+        return tryFetch(2);
       },
 
       createBrand: async (brandData) => {

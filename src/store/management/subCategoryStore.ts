@@ -83,16 +83,23 @@ export const useSubcategoryStore = create<SubcategoryState>()(
       // Returns subcategories for a specific category — stored in allSubcategories to avoid
       // overwriting the paginated `subcategories` table list
       getSubcategoriesByCategory: async (categoryId) => {
-        try {
-          const subcategories = await subcategoryService.getSubcategoriesByCategory(categoryId);
-          set({ allSubcategories: subcategories });  // ← separate field
-          return subcategories;
-        } catch (error: any) {
-          const cached = get().allSubcategories.filter((s) => s.categoryId === categoryId);
-          if (cached.length > 0) return cached;
-          set({ error: error.response?.data?.message || error.message || "Failed to fetch subcategories" });
-          return [];
-        }
+        const cached = get().allSubcategories.filter((s) => s.categoryId === categoryId);
+        const tryFetch = async (attemptsLeft: number): Promise<Subcategory[]> => {
+          try {
+            const subcategories = await subcategoryService.getSubcategoriesByCategory(categoryId);
+            set({ allSubcategories: subcategories });
+            return subcategories;
+          } catch (err: any) {
+            if (cached.length === 0 && attemptsLeft > 0) {
+              await new Promise(r => setTimeout(r, 3000));
+              return tryFetch(attemptsLeft - 1);
+            }
+            if (cached.length > 0) return cached;
+            set({ error: err.response?.data?.message || err.message || "Failed to fetch subcategories" });
+            return [];
+          }
+        };
+        return tryFetch(2);
       },
 
       createSubcategory: async (data) => {

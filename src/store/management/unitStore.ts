@@ -78,15 +78,22 @@ export const useUnitStore = create<UnitState>()(
 
       getAllUnits: async () => {
         const cached = get().allUnits;
-        try {
-          const units = await unitService.getAllUnits();
-          set({ allUnits: units });  // ← separate field, never touches paginated table data
-          return units;
-        } catch (error: any) {
-          if (cached.length > 0) return cached;
-          set({ error: error.response?.data?.message || error.message || "Failed to fetch units" });
-          return [];
-        }
+        const tryFetch = async (attemptsLeft: number): Promise<Unit[]> => {
+          try {
+            const units = await unitService.getAllUnits();
+            set({ allUnits: units });
+            return units;
+          } catch (err: any) {
+            if (cached.length === 0 && attemptsLeft > 0) {
+              await new Promise(r => setTimeout(r, 3000));
+              return tryFetch(attemptsLeft - 1);
+            }
+            if (cached.length > 0) return cached;
+            set({ error: err.response?.data?.message || err.message || "Failed to fetch units" });
+            return [];
+          }
+        };
+        return tryFetch(2);
       },
 
       createUnit: async (unitData) => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Typography, message, Modal } from 'antd';
+import { App, Card, Typography } from 'antd';
 import PendingRegistrationsTable from '../../components/superadmin/PendingRegistrations/PendingRegistrationsTable';
 import RegistrationDetailsModal from '../../components/superadmin/PendingRegistrations/RegistrationDetailsModal';
 import RejectModal from '../../components/superadmin/PendingRegistrations/RejectModal';
@@ -10,6 +10,7 @@ import HeaderWithSearch from '../../components/common/Layout/HeaderWithSearch';
 const { Title } = Typography;
 
 const PendingRegistrations: React.FC = () => {
+  const { modal, message } = App.useApp();
   const [data, setData] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -49,7 +50,7 @@ const PendingRegistrations: React.FC = () => {
   };
 
   const handleApprove = (id: string) => {
-    Modal.confirm({
+    modal.confirm({
       title: 'Approve Registration',
       content: 'Are you sure you want to approve this registration? This will create a new tenant schema.',
       okText: 'Approve',

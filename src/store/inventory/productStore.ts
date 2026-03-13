@@ -28,57 +28,68 @@ interface ProductState {
 
 export const useProductStore = create<ProductState>()(
     devtools(
-        (set) => ({
+        (set, get) => ({
             products: [],
             loading: false,
             error: null,
             pagination: {
                 total: 0,
                 page: 1,
-                limit: 10,
+                limit: 50,
                 totalPages: 0,
             },
 
             getProducts: async (params) => {
-                set({ loading: true, error: null });
-                try {
-                    const response = await productService.getProducts(params);
-                    const data = response.data ?? [];
-                    const total = response.total ?? data.length;
-                    const limit = response.limit ?? params.limit ?? 10;
-                    const page = response.page ?? params.page ?? 1;
-                    const totalPages = response.totalPages ?? Math.ceil(total / limit);
-                    
-                    // Update pagination total regardless of limit (good for counters)
-                    // But only update the products list if we're doing a real fetch
-                    if (params.limit === 1) {
+                // Only show the full-page loading spinner on the very first fetch
+                // (when there are no products yet). Subsequent fetches keep the
+                // existing list visible so the UI never goes blank during refreshes.
+                const hasExisting = get().products.length > 0;
+                set({ loading: !hasExisting, error: null });
+
+                // Inner function so we can retry without re-triggering the loading flag.
+                // On first load (empty products): keeps spinner alive and retries up to
+                // `attemptsLeft` more times after the axios interceptor exhausts its own
+                // 4 retries — prevents the "blank on first load, need one manual refresh"
+                // symptom caused by serverless DB cold-starts.
+                const tryFetch = async (attemptsLeft: number): Promise<void> => {
+                    try {
+                        const response = await productService.getProducts(params);
+                        const data = response.data ?? [];
+                        const total = response.total ?? data.length;
+                        const limit = response.limit ?? params.limit ?? 50;
+                        const page = response.page ?? params.page ?? 1;
+                        const totalPages = response.totalPages ?? Math.ceil(total / limit);
+
+                        if (params.limit === 1) {
+                            // Counter-only call — update total without touching the list
+                            set(state => ({
+                                pagination: { ...state.pagination, total },
+                                loading: false,
+                            }));
+                        } else {
+                            set({
+                                products: data,
+                                pagination: { total, page, limit, totalPages },
+                                loading: false,
+                            });
+                        }
+                    } catch (err: any) {
+                        if (!hasExisting && attemptsLeft > 0) {
+                            // Keep the spinner visible; pause then try again
+                            await new Promise(r => setTimeout(r, 3000));
+                            return tryFetch(attemptsLeft - 1);
+                        }
+                        // Final failure — preserve existing products, surface the error
                         set(state => ({
-                            pagination: {
-                                ...state.pagination,
-                                total,
-                            },
+                            ...state,
+                            error: err.response?.data?.message || "Failed to fetch products",
                             loading: false,
                         }));
-                    } else {
-                        set({
-                            products: data,
-                            pagination: {
-                                total,
-                                page,
-                                limit,
-                                totalPages,
-                            },
-                            loading: false,
-                        });
+                        throw err;
                     }
-                    return response;
-                } catch (error: any) {
-                    set({
-                        error: error.response?.data?.message || "Failed to fetch products",
-                        loading: false,
-                    });
-                    throw error;
-                }
+                };
+
+                return tryFetch(2);
             },
 
             getProductById: async (id) => {

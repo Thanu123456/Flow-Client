@@ -82,15 +82,22 @@ export const useWarehouseStore = create<WarehouseState>()(
 
       getAllWarehouses: async () => {
         const cached = get().allWarehouses;
-        try {
-          const warehouses = await warehouseService.getAllWarehouses();
-          set({ allWarehouses: warehouses });  // ← separate field, never touches paginated table data
-          return warehouses;
-        } catch (error: any) {
-          if (cached.length > 0) return cached;
-          set({ error: error.response?.data?.message || error.message || "Failed to fetch warehouses" });
-          return [];
-        }
+        const tryFetch = async (attemptsLeft: number): Promise<Warehouse[]> => {
+          try {
+            const warehouses = await warehouseService.getAllWarehouses();
+            set({ allWarehouses: warehouses });
+            return warehouses;
+          } catch (err: any) {
+            if (cached.length === 0 && attemptsLeft > 0) {
+              await new Promise(r => setTimeout(r, 3000));
+              return tryFetch(attemptsLeft - 1);
+            }
+            if (cached.length > 0) return cached;
+            set({ error: err.response?.data?.message || err.message || "Failed to fetch warehouses" });
+            return [];
+          }
+        };
+        return tryFetch(2);
       },
 
       createWarehouse: async (data) => {

@@ -73,16 +73,22 @@ export const useCategoryStore = create<CategoryState>()(
 
       getAllCategories: async () => {
         const cached = get().allCategories;
-        try {
-          const categories = await categoryService.getAllCategories();
-          set({ allCategories: categories });   // ← separate field, never touches table data
-          return categories;
-        } catch (error: any) {
-          if (cached.length > 0) return cached;
-          const errorMessage = error.response?.data?.message || error.message || "Failed to fetch categories";
-          set({ error: errorMessage });
-          return [];
-        }
+        const tryFetch = async (attemptsLeft: number): Promise<Category[]> => {
+          try {
+            const categories = await categoryService.getAllCategories();
+            set({ allCategories: categories });
+            return categories;
+          } catch (err: any) {
+            if (cached.length === 0 && attemptsLeft > 0) {
+              await new Promise(r => setTimeout(r, 3000));
+              return tryFetch(attemptsLeft - 1);
+            }
+            if (cached.length > 0) return cached;
+            set({ error: err.response?.data?.message || err.message || "Failed to fetch categories" });
+            return [];
+          }
+        };
+        return tryFetch(2);
       },
 
       getCategoryById: async (id) => {

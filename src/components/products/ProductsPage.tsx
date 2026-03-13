@@ -40,7 +40,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
     const debouncedSearch = useDebounce(searchTerm, 300);
     const { products, loading, pagination, getProducts } = useProductStore();
 
-    const fetchProducts = useCallback(async (page = 1, limit = 10) => {
+    const fetchProducts = useCallback(async (page = 1, limit = 50) => {
         await getProducts({
             page,
             limit,
@@ -51,7 +51,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
     }, [getProducts, debouncedSearch, typeFilter, statusFilter]);
 
     useEffect(() => {
-        fetchProducts(1, pagination.limit || 10);
+        fetchProducts(1, pagination.limit || 50);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [debouncedSearch, typeFilter, statusFilter, fetchProducts]);
 
