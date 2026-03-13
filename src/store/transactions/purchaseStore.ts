@@ -46,7 +46,7 @@ interface PurchaseState {
 
 export const usePurchaseStore = create<PurchaseState>()(
   devtools(
-    (set) => ({
+    (set, get) => ({
       grns: [],
       selectedGRN: null,
       loading: false,
@@ -60,27 +60,44 @@ export const usePurchaseStore = create<PurchaseState>()(
       },
 
       listGRNs: async (params) => {
-        set({ loading: true, error: null });
-        try {
-          const response = await purchaseService.listGRNs(params);
-          set({
-            grns: response.data,
-            pagination: {
-              total: response.total,
-              page: response.page,
-              perPage: response.perPage,
-              totalPages: response.totalPages,
-            },
-            loading: false,
-          });
-        } catch (error: any) {
-          const errData = error.response?.data;
-          const errMsg = errData?.error?.message || errData?.error?.details || errData?.message || "Failed to fetch purchases";
-          set({
-            error: errMsg,
-            loading: false,
-          });
-        }
+        // Show spinner only on first load; subsequent fetches keep the table
+        // visible so it never goes blank during filter changes or refreshes.
+        const hasExisting = get().grns.length > 0;
+        set({ loading: !hasExisting, error: null });
+
+        const tryFetch = async (attemptsLeft: number): Promise<void> => {
+          try {
+            const response = await purchaseService.listGRNs(params);
+            // Retry if backend returned 0 items on first load — cold-start can
+            // return an empty result with HTTP 200 before the DB is fully warm.
+            if (!hasExisting && response.data.length === 0 && attemptsLeft > 0) {
+              await new Promise(r => setTimeout(r, 3000));
+              return tryFetch(attemptsLeft - 1);
+            }
+            set({
+              grns: response.data,
+              pagination: {
+                total: response.total,
+                page: response.page,
+                perPage: response.perPage,
+                totalPages: response.totalPages,
+              },
+              loading: false,
+            });
+          } catch (err: any) {
+            if (!hasExisting && attemptsLeft > 0) {
+              // First load failed — keep spinner alive and retry
+              await new Promise(r => setTimeout(r, 3000));
+              return tryFetch(attemptsLeft - 1);
+            }
+            // Preserve existing GRNs on error; only surface the error flag
+            const errData = err.response?.data;
+            const errMsg = errData?.error?.message || errData?.error?.details || errData?.message || "Failed to fetch purchases";
+            set(state => ({ ...state, error: errMsg, loading: false }));
+          }
+        };
+
+        return tryFetch(2);
       },
 
       getGRN: async (id) => {
