@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button, Input, Select, Modal, Radio, Checkbox, Typography, Row, Col, Spin, Empty, message, AutoComplete, Avatar, Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
 import { SearchOutlined, UserOutlined, SettingOutlined, DeleteOutlined, CloseOutlined, PlusOutlined, MinusOutlined, ShoppingOutlined, DashboardOutlined, KeyOutlined, LogoutOutlined } from '@ant-design/icons';
@@ -53,22 +53,9 @@ const POS: React.FC = () => {
         { key: "logout", icon: <LogoutOutlined />, label: "Logout", danger: true },
     ];
 
-    // --- Stable Zustand selectors ---
-    // Select DATA fields and LOADING state separately from ACTIONS.
-    // This prevents the useEffect from re-running every time any unrelated
-    // state changes, which was causing a second empty-result API call.
-    const products = useProductStore(state => state.products);
-    const productsLoading = useProductStore(state => state.loading);
-    const allCategories = useCategoryStore(state => state.allCategories);
-    const categoriesLoading = useCategoryStore(state => state.loading);
-
-    // Actions are stable references in Zustand (they never change identity),
-    // but we still capture them once in a ref so they can never accidentally
-    // appear in a useEffect dependency array and trigger extra fetches.
-    const getProductsAction = useProductStore.getState().getProducts;
-    const getAllCategoriesAction = useCategoryStore.getState().getAllCategories;
-    const actionsRef = useRef({ getProducts: getProductsAction, getAllCategories: getAllCategoriesAction });
-
+    // Stores
+    const { products, loading: productsLoading, getProducts } = useProductStore();
+    const { categories: allCategories, loading: categoriesLoading, getAllCategories } = useCategoryStore();
     const { cart, loading: posLoading, paymentMethod, isRefundMode, addToCart, updateQuantity, removeItem, clearCart, setCustomer, setPaymentMethod, setRefundMode, checkout } = usePOSStore();
     const { searchCustomers } = useCustomerStore();
 
@@ -80,52 +67,100 @@ const POS: React.FC = () => {
         return () => clearInterval(timer);
     }, []);
 
-    // Fetch categories ONCE on mount — action ref is stable, no deps needed.
     useEffect(() => {
-        actionsRef.current.getAllCategories();
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+        getAllCategories();
+    }, [getAllCategories]);
 
-    // Fetch products when the selected category changes.
-    // Using a stable callback that reads from the ref avoids putting the
-    // action function itself into deps (which would re-trigger on every render).
-    const fetchProducts = useCallback((categoryId?: string) => {
-        actionsRef.current.getProducts({
+    useEffect(() => {
+        getProducts({
             page: 1,
-            limit: 1000,
-            categoryId: categoryId,
-            status: 'active',
+            limit: 1000, // Fetch larger limit for local POS caching
+            categoryId: selectedCategory === 'All Categories' ? undefined : selectedCategory,
+            status: 'active'
         });
-    }, []); // no deps — actionsRef.current is always up to date
+    }, [selectedCategory, getProducts]);
 
-    useEffect(() => {
-        fetchProducts(selectedCategory === 'All Categories' ? undefined : selectedCategory);
-    }, [selectedCategory, fetchProducts]);
+    interface POSItem {
+        cardId: string;
+        product: Product;
+        variation?: ProductVariation;
+        displayName: string;
+        variationLabel?: string;
+        typeName: string;
+        price: number;
+        stock: number;
+        imageUrl?: string;
+        sku?: string;
+        barcode?: string;
+    }
 
-    const filteredProducts = React.useMemo(() => {
-        if (!searchTerm.trim()) return products;
-        const lowerSearch = searchTerm.toLowerCase();
-        return products.filter(p =>
-            p.name.toLowerCase().includes(lowerSearch) ||
-            (p.sku && p.sku.toLowerCase().includes(lowerSearch)) ||
-            (p.barcode && p.barcode.toLowerCase().includes(lowerSearch))
+    const posItems = React.useMemo((): POSItem[] => {
+        const expanded: POSItem[] = [];
+
+        for (const product of products) {
+            const isVariable = product.productType?.toLowerCase() === 'variable';
+            const hasVariations = Array.isArray(product.variations) && product.variations.length > 0;
+
+            if (isVariable && hasVariations) {
+                // One card per variation
+                for (const v of (product.variations || [])) {
+                    const label = v.options && v.options.length > 0
+                        ? v.options.map((o: any) => o.value).join(' / ')
+                        : v.variationName;
+                    expanded.push({
+                        cardId: v.id,
+                        product,
+                        variation: v,
+                        displayName: product.name,
+                        variationLabel: label,
+                        typeName: 'Variation',
+                        price: v.retailPrice ?? v.costPrice ?? 0,
+                        stock: v.currentStock,
+                        imageUrl: v.imageUrl || product.imageUrl,
+                        sku: v.sku,
+                        barcode: v.barcode,
+                    });
+                }
+            } else {
+                // Single product
+                expanded.push({
+                    cardId: product.id,
+                    product,
+                    variation: undefined,
+                    displayName: product.name,
+                    variationLabel: undefined,
+                    typeName: 'Single',
+                    price: product.retailPrice ?? product.costPrice ?? 0,
+                    stock: product.currentStock,
+                    imageUrl: product.imageUrl,
+                    sku: product.sku,
+                    barcode: product.barcode,
+                });
+            }
+        }
+
+        if (!searchTerm.trim()) return expanded;
+        const q = searchTerm.toLowerCase();
+        return expanded.filter(item =>
+            item.displayName.toLowerCase().includes(q) ||
+            (item.variationLabel && item.variationLabel.toLowerCase().includes(q)) ||
+            (item.sku && item.sku.toLowerCase().includes(q)) ||
+            (item.barcode && item.barcode.toLowerCase().includes(q))
         );
     }, [products, searchTerm]);
 
-    const handleAddToCart = (product: Product, variation?: ProductVariation) => {
-        let maxStock = variation ? variation.currentStock : product.currentStock;
-        let price = variation ? (variation.retailPrice || variation.costPrice) : (product.retailPrice || product.costPrice || 0);
-        let name = variation ? `${product.name} - ${variation.variationName}` : product.name;
-        let id = variation ? variation.id : product.id;
-
+    const handleAddToCart = (item: POSItem) => {
         addToCart({
-            id: id,
-            productId: product.id,
-            variationId: variation?.id,
-            name: name,
-            unit: product.unitShortName || product.unitName || 'Units',
+            id: item.cardId,
+            productId: item.product.id,
+            variationId: item.variation?.id,
+            name: item.variationLabel
+                ? `${item.displayName} - ${item.variationLabel}`
+                : item.displayName,
+            unit: item.product.unitShortName || item.product.unitName || 'Units',
             quantity: 1,
-            price: price,
-            maxStock: maxStock
+            price: item.price,
+            maxStock: item.stock
         });
     };
 
@@ -176,9 +211,14 @@ const POS: React.FC = () => {
             message.success("Payment completed successfully!");
             setIsPaymentModalOpen(false);
             setPaidAmount(0);
-            
-            // Refresh products to show updated stock after checkout
-            fetchProducts(selectedCategory === 'All Categories' ? undefined : selectedCategory);
+
+            // Refresh products to show updated stock
+            getProducts({
+                page: 1,
+                limit: 1000,
+                categoryId: selectedCategory === 'All Categories' ? undefined : selectedCategory,
+                status: 'active'
+            });
         } catch (e) {
             message.error("Failed to complete checkout.");
         }
@@ -276,44 +316,73 @@ const POS: React.FC = () => {
                     <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                         {productsLoading ? (
                             <div className="flex items-center justify-center h-full"><Spin size="large" /></div>
-                        ) : filteredProducts.length === 0 ? (
+                        ) : posItems.length === 0 ? (
                             <div className="flex items-center justify-center h-full"><Empty description="No products found" /></div>
                         ) : (
                             <Row gutter={[16, 16]}>
-                                {filteredProducts.map((product) => (
-                                    <Col span={6} key={product.id}>
+                                {posItems.map((item) => (
+                                    <Col span={6} key={item.cardId}>
                                         <div
-                                            className="bg-white rounded-xl border border-gray-200 overflow-hidden cursor-pointer hover:shadow-md hover:border-indigo-300 transition-all duration-200 flex flex-col h-full group pb-2 relative"
-                                            onClick={() => {
-                                                if (product.productType === 'variable' && product.variations && product.variations.length > 0) {
-                                                    // For simple POS we add the first variation if clicked directly
-                                                    // In a real scenario, this would pop up a variation selector modal
-                                                    handleAddToCart(product, product.variations[0]);
-                                                } else {
-                                                    handleAddToCart(product);
-                                                }
-                                            }}
+                                            className="bg-white rounded-2xl border border-gray-200/60 overflow-hidden cursor-pointer hover:shadow-xl hover:-translate-y-1 hover:border-indigo-400 transition-all duration-300 flex flex-col h-full group relative"
+                                            onClick={() => handleAddToCart(item)}
                                         >
-                                            <div className="h-32 bg-gray-50 flex items-center justify-center relative p-4 mb-2">
-                                                <div className={`absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-full border ${product.currentStock > 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
-                                                    {product.currentStock > 0 ? `${product.currentStock} in stock` : 'Out of stock'}
+                                            <div className="h-52 bg-slate-50 flex items-center justify-center relative p-4 overflow-hidden">
+                                                <div className={`absolute top-3 right-3 z-10 text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest border shadow-sm whitespace-nowrap ${
+                                                    item.stock > 0
+                                                        ? 'bg-emerald-500 text-white border-emerald-400'
+                                                        : 'bg-rose-500 text-white border-rose-400'
+                                                }`}>
+                                                    {item.stock > 0 ? `${item.stock} IN STOCK` : 'OUT OF STOCK'}
                                                 </div>
-                                                {product.imageUrl ? (
-                                                    <img src={product.imageUrl} alt={product.name} className="w-20 h-20 object-contain group-hover:scale-110 transition-transform duration-300" />
+
+                                                {item.imageUrl ? (
+                                                    <img
+                                                        src={item.imageUrl}
+                                                        alt={item.displayName}
+                                                        className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500 p-2"
+                                                    />
                                                 ) : (
-                                                    <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center border border-gray-100 group-hover:scale-110 transition-transform duration-300">
-                                                        <span className="text-3xl text-indigo-400 font-black italic">{product.name.charAt(0)}</span>
+                                                    <div className="w-24 h-24 bg-gradient-to-br from-indigo-50 to-slate-100 rounded-3xl shadow-inner flex items-center justify-center border border-white group-hover:scale-110 transition-transform duration-500">
+                                                        <span className="text-4xl text-indigo-400 font-black italic select-none">
+                                                            {item.displayName.charAt(0)}
+                                                        </span>
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="px-3 flex-1 flex flex-col">
-                                                <div className="text-xs font-medium text-gray-700 leading-snug line-clamp-2 h-8 group-hover:text-indigo-600 transition-colors">{product.name}</div>
-                                                <div className="text-indigo-600 font-bold text-sm mt-auto pt-2">
-                                                    LKR {(product.retailPrice || product.costPrice || 0).toFixed(2)}
+
+                                            <div className="p-4 flex-1 flex flex-col bg-white">
+                                                <div className="mb-2">
+                                                    <div className="text-sm font-bold text-slate-800 leading-snug line-clamp-2 min-h-[40px] group-hover:text-indigo-600 transition-colors">
+                                                        {item.displayName}
+                                                    </div>
                                                 </div>
-                                                {product.productType === 'variable' && (
-                                                    <div className="text-[10px] text-gray-400 mt-1">{product.variationCount} Variations</div>
-                                                )}
+
+                                                <div className="mb-4">
+                                                    <div className={`inline-flex flex-col py-1 px-2.5 rounded-lg border ${
+                                                        item.variation 
+                                                            ? 'bg-indigo-50 border-indigo-100 text-indigo-100 text-indigo-600' 
+                                                            : 'bg-slate-50 border-slate-100 text-slate-500'
+                                                    }`}>
+                                                        <span className="text-[7px] font-black uppercase tracking-widest leading-none mb-1 opacity-60">
+                                                            {item.variation ? 'Variation' : 'Type'}
+                                                        </span>
+                                                        <span className="text-[10px] font-bold truncate uppercase tracking-tight">
+                                                            {item.variation ? item.variationLabel : item.typeName}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-auto pt-3 border-t border-slate-100 flex items-end justify-between">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Price</span>
+                                                        <div className="flex items-baseline gap-1">
+                                                            <span className="text-[10px] font-bold text-indigo-400 uppercase">LKR</span>
+                                                            <span className="text-xl font-black text-indigo-600 tracking-tighter">
+                                                                {item.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </Col>
