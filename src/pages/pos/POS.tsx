@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button, Input, Select, Modal, Radio, Checkbox, Typography, Row, Col, Spin, Empty, message, AutoComplete, Avatar, Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
 import { SearchOutlined, UserOutlined, SettingOutlined, DeleteOutlined, CloseOutlined, PlusOutlined, MinusOutlined, ShoppingOutlined, DashboardOutlined, KeyOutlined, LogoutOutlined } from '@ant-design/icons';
@@ -53,9 +53,22 @@ const POS: React.FC = () => {
         { key: "logout", icon: <LogoutOutlined />, label: "Logout", danger: true },
     ];
 
-    // Stores
-    const { products, loading: productsLoading, getProducts } = useProductStore();
-    const { categories: allCategories, loading: categoriesLoading, getAllCategories } = useCategoryStore();
+    // --- Stable Zustand selectors ---
+    // Select DATA fields and LOADING state separately from ACTIONS.
+    // This prevents the useEffect from re-running every time any unrelated
+    // state changes, which was causing a second empty-result API call.
+    const products = useProductStore(state => state.products);
+    const productsLoading = useProductStore(state => state.loading);
+    const allCategories = useCategoryStore(state => state.allCategories);
+    const categoriesLoading = useCategoryStore(state => state.loading);
+
+    // Actions are stable references in Zustand (they never change identity),
+    // but we still capture them once in a ref so they can never accidentally
+    // appear in a useEffect dependency array and trigger extra fetches.
+    const getProductsAction = useProductStore.getState().getProducts;
+    const getAllCategoriesAction = useCategoryStore.getState().getAllCategories;
+    const actionsRef = useRef({ getProducts: getProductsAction, getAllCategories: getAllCategoriesAction });
+
     const { cart, loading: posLoading, paymentMethod, isRefundMode, addToCart, updateQuantity, removeItem, clearCart, setCustomer, setPaymentMethod, setRefundMode, checkout } = usePOSStore();
     const { searchCustomers } = useCustomerStore();
 
@@ -67,18 +80,26 @@ const POS: React.FC = () => {
         return () => clearInterval(timer);
     }, []);
 
+    // Fetch categories ONCE on mount — action ref is stable, no deps needed.
     useEffect(() => {
-        getAllCategories();
-    }, [getAllCategories]);
+        actionsRef.current.getAllCategories();
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Fetch products when the selected category changes.
+    // Using a stable callback that reads from the ref avoids putting the
+    // action function itself into deps (which would re-trigger on every render).
+    const fetchProducts = useCallback((categoryId?: string) => {
+        actionsRef.current.getProducts({
+            page: 1,
+            limit: 1000,
+            categoryId: categoryId,
+            status: 'active',
+        });
+    }, []); // no deps — actionsRef.current is always up to date
 
     useEffect(() => {
-        getProducts({
-            page: 1,
-            limit: 1000, // Fetch larger limit for local POS caching
-            categoryId: selectedCategory === 'All Categories' ? undefined : selectedCategory,
-            status: 'active'
-        });
-    }, [selectedCategory, getProducts]);
+        fetchProducts(selectedCategory === 'All Categories' ? undefined : selectedCategory);
+    }, [selectedCategory, fetchProducts]);
 
     const filteredProducts = React.useMemo(() => {
         if (!searchTerm.trim()) return products;
@@ -156,13 +177,8 @@ const POS: React.FC = () => {
             setIsPaymentModalOpen(false);
             setPaidAmount(0);
             
-            // Refresh products to show updated stock
-            getProducts({
-                page: 1,
-                limit: 1000,
-                categoryId: selectedCategory === 'All Categories' ? undefined : selectedCategory,
-                status: 'active'
-            });
+            // Refresh products to show updated stock after checkout
+            fetchProducts(selectedCategory === 'All Categories' ? undefined : selectedCategory);
         } catch (e) {
             message.error("Failed to complete checkout.");
         }

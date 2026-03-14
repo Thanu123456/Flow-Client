@@ -67,11 +67,20 @@ export const useProductStore = create<ProductState>()(
                                 loading: false,
                             }));
                         } else {
-                            set({
-                                products: data,
-                                pagination: { total, page, limit, totalPages },
-                                loading: false,
-                            });
+                            // Safety guard: never replace an existing loaded list
+                            // with an empty response (guards against duplicate/stale calls).
+                            const currentProducts = get().products;
+                            const shouldUpdate = data.length > 0 || currentProducts.length === 0;
+                            if (shouldUpdate) {
+                                set({
+                                    products: data,
+                                    pagination: { total, page, limit, totalPages },
+                                    loading: false,
+                                });
+                            } else {
+                                // Got empty data but already have products loaded — keep existing
+                                set({ loading: false });
+                            }
                         }
                     } catch (err: any) {
                         if (!hasExisting && attemptsLeft > 0) {

@@ -12,6 +12,7 @@ interface CategoryState {
   categories: Category[];
   // Full list for dropdowns — NEVER overwritten by table calls
   allCategories: Category[];
+  allCategoriesLoading: boolean; // tracks in-flight getAllCategories request
   loading: boolean;
   error: string | null;
   pagination: {
@@ -35,6 +36,7 @@ export const useCategoryStore = create<CategoryState>()(
     (set, get) => ({
       categories: [],
       allCategories: [],
+      allCategoriesLoading: false,
       loading: false,
       error: null,
       pagination: { total: 0, page: 1, limit: 10, totalPages: 0 },
@@ -73,16 +75,25 @@ export const useCategoryStore = create<CategoryState>()(
 
       getAllCategories: async () => {
         const cached = get().allCategories;
+        // Deduplicate: if a fetch is already in flight, skip.
+        if (get().allCategoriesLoading) return cached.length > 0 ? cached : [];
+        set({ allCategoriesLoading: true });
         const tryFetch = async (attemptsLeft: number): Promise<Category[]> => {
           try {
             const categories = await categoryService.getAllCategories();
-            set({ allCategories: categories });
-            return categories;
+            // Safety guard: never overwrite a loaded list with an empty response
+            if (categories.length > 0 || cached.length === 0) {
+              set({ allCategories: categories, allCategoriesLoading: false });
+            } else {
+              set({ allCategoriesLoading: false });
+            }
+            return categories.length > 0 ? categories : cached;
           } catch (err: any) {
             if (cached.length === 0 && attemptsLeft > 0) {
               await new Promise(r => setTimeout(r, 3000));
               return tryFetch(attemptsLeft - 1);
             }
+            set({ allCategoriesLoading: false });
             if (cached.length > 0) return cached;
             set({ error: err.response?.data?.message || err.message || "Failed to fetch categories" });
             return [];
