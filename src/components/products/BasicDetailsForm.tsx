@@ -16,14 +16,16 @@ import { useUnitStore } from "../../store/management/unitStore";
 import { useWarehouseStore } from "../../store/management/warehouseStore";
 import { useWarrantyStore } from "../../store/management/warrantyStore";
 import type { FormInstance } from "antd";
+import type { Product } from "../../types/entities/product.types";
 
 const { Text } = Typography;
 
 interface BasicDetailsFormProps {
     form: FormInstance;
+    editProduct?: Product | null;
 }
 
-const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
+const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form, editProduct }) => {
     // Read from the dedicated *dropdown* fields, not the paginated table fields
     const { allCategories, getAllCategories } = useCategoryStore();
     const { allSubcategories, getSubcategoriesByCategory } = useSubcategoryStore();
@@ -165,6 +167,11 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
                                         className="w-full"
                                         size="large"
                                     >
+                                        {editProduct?.categoryId && !allCategories.some(c => c.id === editProduct.categoryId) && (
+                                            <Select.Option key={editProduct.categoryId} value={editProduct.categoryId}>
+                                                {editProduct.categoryName}
+                                            </Select.Option>
+                                        )}
                                         {allCategories.map((cat) => (
                                             <Select.Option key={cat.id} value={cat.id}>
                                                 {cat.name}
@@ -189,6 +196,11 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
                                         optionFilterProp="children"
                                         size="large"
                                     >
+                                        {editProduct?.subcategoryId && !allSubcategories.some(s => s.id === editProduct.subcategoryId) && (
+                                            <Select.Option key={editProduct.subcategoryId} value={editProduct.subcategoryId}>
+                                                {editProduct.subcategoryName}
+                                            </Select.Option>
+                                        )}
                                         {allSubcategories.map((sub) => (
                                             <Select.Option key={sub.id} value={sub.id}>
                                                 {sub.name}
@@ -204,6 +216,11 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
                                     label={<span className="font-normal">Brand</span>}
                                 >
                                     <Select placeholder="Select Brand" allowClear showSearch optionFilterProp="children" size="large">
+                                        {editProduct?.brandId && !allBrands.some(b => b.id === editProduct.brandId) && (
+                                            <Select.Option key={editProduct.brandId} value={editProduct.brandId}>
+                                                {editProduct.brandName}
+                                            </Select.Option>
+                                        )}
                                         {allBrands.map((brand) => (
                                             <Select.Option key={brand.id} value={brand.id}>
                                                 {brand.name}
@@ -219,6 +236,11 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
                                     rules={[{ required: true, message: "Please select unit" }]}
                                 >
                                     <Select placeholder="Select Unit" showSearch optionFilterProp="children" size="large">
+                                        {editProduct?.unitId && !allUnits.some(u => u.id === editProduct.unitId) && (
+                                            <Select.Option key={editProduct.unitId} value={editProduct.unitId}>
+                                                {editProduct.unitName} ({editProduct.unitShortName})
+                                            </Select.Option>
+                                        )}
                                         {allUnits.map((unit) => (
                                             <Select.Option key={unit.id} value={unit.id}>
                                                 {unit.name} ({unit.shortName})
@@ -239,6 +261,11 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
                                     }
                                 >
                                     <Select placeholder="Select Warehouse" allowClear showSearch optionFilterProp="children" size="large">
+                                        {editProduct?.warehouseId && !allWarehouses.some(w => w.id === editProduct.warehouseId) && (
+                                            <Select.Option key={editProduct.warehouseId} value={editProduct.warehouseId}>
+                                                {editProduct.warehouseName}
+                                            </Select.Option>
+                                        )}
                                         {allWarehouses.map((wh) => (
                                             <Select.Option key={wh.id} value={wh.id}>
                                                 {wh.name}
@@ -258,6 +285,11 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
                                     }
                                 >
                                     <Select placeholder="Select Warranty" allowClear showSearch optionFilterProp="children" size="large">
+                                        {editProduct?.warrantyId && !allWarranties.some(w => w.id === editProduct.warrantyId) && (
+                                            <Select.Option key={editProduct.warrantyId} value={editProduct.warrantyId}>
+                                                {editProduct.warrantyName}
+                                            </Select.Option>
+                                        )}
                                         {allWarranties.map((w) => (
                                             <Select.Option key={w.id} value={w.id}>
                                                 {w.name}

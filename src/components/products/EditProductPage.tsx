@@ -7,6 +7,14 @@ import {
     EditOutlined
 } from "@ant-design/icons";
 import { useProductStore } from "../../store/inventory/productStore";
+import { useCategoryStore } from "../../store/management/categoryStore";
+import { useSubcategoryStore } from "../../store/management/subCategoryStore";
+import { useBrandStore } from "../../store/management/brandStore";
+import { useUnitStore } from "../../store/management/unitStore";
+import { useWarehouseStore } from "../../store/management/warehouseStore";
+import { useWarrantyStore } from "../../store/management/warrantyStore";
+import { useVariationStore } from "../../store/management/variationStore";
+import type { Product } from "../../types/entities/product.types";
 import BasicDetailsForm from "./BasicDetailsForm";
 import SingleProductForm from "./SingleProductForm";
 import VariableProductForm from "./VariableProductForm";
@@ -16,15 +24,52 @@ const EditProductPage: React.FC = () => {
     const navigate = useNavigate();
     const [form] = Form.useForm();
     const { getProductById, updateProduct, loading } = useProductStore();
+    // Use selectors to avoid re-rendering when unrelated store state changes
+    const getAllCategories = useCategoryStore(s => s.getAllCategories);
+    const getSubcategoriesByCategory = useSubcategoryStore(s => s.getSubcategoriesByCategory);
+    const getAllBrands = useBrandStore(s => s.getAllBrands);
+    const getAllUnits = useUnitStore(s => s.getAllUnits);
+    const getAllWarehouses = useWarehouseStore(s => s.getAllWarehouses);
+    const getAllWarranties = useWarrantyStore(s => s.getAllWarranties);
+    const getAllVariations = useVariationStore(s => s.getAllVariations);
     const [fetching, setFetching] = useState(true);
     const [productType, setProductType] = useState<"single" | "variable">("single");
+    const [editProduct, setEditProduct] = useState<Product | null>(null);
 
     useEffect(() => {
+        let cancelled = false;
+
         const fetchProduct = async () => {
             if (!id) return;
             try {
+                // Start loading dropdown data in parallel (failures won't block the page)
+                const dropdownsPromise = Promise.allSettled([
+                    getAllCategories(),
+                    getAllBrands(),
+                    getAllUnits(),
+                    getAllWarehouses(),
+                    getAllWarranties(),
+                    getAllVariations(),
+                ]);
+
+                // Fetch product data (this is the only critical call)
                 const product = await getProductById(id);
-                setProductType(product.productType);
+
+                // Abort if the effect was cleaned up (React StrictMode double-invocation)
+                if (cancelled) return;
+
+                // Wait for dropdowns to finish loading
+                await dropdownsPromise;
+                if (cancelled) return;
+
+                // Load subcategories for the product's category before rendering
+                if (product.categoryId) {
+                    await getSubcategoriesByCategory(product.categoryId).catch(() => {});
+                }
+                if (cancelled) return;
+
+                setEditProduct(product);
+                setProductType(product.productType || "single");
 
                 // Transform product data to form values
                 const formValues: any = {
@@ -79,16 +124,24 @@ const EditProductPage: React.FC = () => {
                 }
 
                 form.setFieldsValue(formValues);
-            } catch (error) {
-                message.error("Failed to fetch product details");
-                navigate("/products");
+            } catch (error: any) {
+                if (cancelled) return;
+                console.error("EditProductPage fetch error:", error);
+                const msg = error?.response?.data?.error?.message
+                    || error?.response?.data?.message
+                    || error?.message
+                    || "Failed to fetch product details";
+                message.error(msg);
             } finally {
-                setFetching(false);
+                if (!cancelled) setFetching(false);
             }
         };
 
         fetchProduct();
-    }, [id, getProductById, form, navigate]);
+
+        return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id]);
 
     const handleValuesChange = (changedValues: any) => {
         if (changedValues.product_type) {
@@ -233,7 +286,7 @@ const EditProductPage: React.FC = () => {
                     onValuesChange={handleValuesChange}
                     size="large"
                 >
-                    <BasicDetailsForm form={form} />
+                    <BasicDetailsForm form={form} editProduct={editProduct} />
 
                     <div className="mt-8">
                         <Divider orientation="left" className="text-slate-400 font-normal uppercase tracking-wider text-xs">
@@ -244,7 +297,7 @@ const EditProductPage: React.FC = () => {
                     {productType === "single" ? (
                         <SingleProductForm />
                     ) : (
-                        <VariableProductForm />
+                        <VariableProductForm editProduct={editProduct} />
                     )}
 
                     <div className="mt-8 flex justify-end">
@@ -271,5 +324,6 @@ const EditProductPage: React.FC = () => {
         </div>
     );
 };
+
 
 export default EditProductPage;

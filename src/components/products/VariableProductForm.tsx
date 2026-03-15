@@ -9,15 +9,31 @@ import {
 import { useVariationStore } from "../../store/management/variationStore";
 import { generateBarcode } from "../../utils/helpers/barcode";
 import VariationFields from "./VariationFields";
+import type { Product } from "../../types/entities/product.types";
 
 const { Text: AntText } = Typography;
 
-const VariableProductForm: React.FC = () => {
+interface VariableProductFormProps {
+    editProduct?: Product | null;
+}
+
+const VariableProductForm: React.FC<VariableProductFormProps> = ({ editProduct }) => {
     const { variations, getAllVariations } = useVariationStore();
-    const [selectedVariationId, setSelectedVariationId] = useState<string | null>(null);
-    const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
 
     const form = Form.useFormInstance();
+
+    // Initialize state from form values (for edit mode) to avoid flash of empty state
+    const [selectedVariationId, setSelectedVariationId] = useState<string | null>(() => {
+        const vp = form.getFieldValue("variable_product");
+        return vp?.variation_id ? String(vp.variation_id) : null;
+    });
+    const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>(() => {
+        const vp = form.getFieldValue("variable_product");
+        const vars = vp?.variations || [];
+        return vars
+            .map((v: any) => v.variation_option_ids?.[0] ? String(v.variation_option_ids[0]) : null)
+            .filter(Boolean) as string[];
+    });
 
     // Watch form state to dynamically react to any late data injections or resets
     const formVariationId = Form.useWatch(["variable_product", "variation_id"], form);
@@ -139,6 +155,13 @@ const VariableProductForm: React.FC = () => {
                                     size="large"
                                     className="rounded-lg"
                                 >
+                                    {/* Fallback option from product data so the name shows before store loads */}
+                                    {editProduct?.variations?.[0]?.variationId &&
+                                        !variations.some(v => String(v.id) === String(editProduct.variations![0].variationId)) && (
+                                        <Select.Option key={editProduct.variations[0].variationId} value={editProduct.variations[0].variationId}>
+                                            {editProduct.variations[0].variationName}
+                                        </Select.Option>
+                                    )}
                                     {variations.map((v) => (
                                         <Select.Option key={v.id} value={v.id}>
                                             {v.name}
@@ -162,13 +185,17 @@ const VariableProductForm: React.FC = () => {
                                     {selectedVariationInfo?.values.map(opt => (
                                         <Select.Option key={opt.id} value={String(opt.id)}>{opt.value}</Select.Option>
                                     ))}
-                                    {/* Guarantee exact IDs show even before full load to prevent empty inputs */}
+                                    {/* Fallback options from product data — show option values instead of UUIDs */}
                                     {selectedOptionIds.map(id => {
-                                        const exists = selectedVariationInfo?.values.some(v => String(v.id) === String(id));
-                                        if (exists) return null;
+                                        const existsInStore = selectedVariationInfo?.values.some(v => String(v.id) === String(id));
+                                        if (existsInStore) return null;
+                                        // Find the option label from the product's variation data
+                                        const productOption = editProduct?.variations
+                                            ?.flatMap(v => v.options || [])
+                                            .find(o => String(o.id) === String(id));
                                         return (
-                                            <Select.Option key={`fallback-${id}`} value={String(id)} style={{ display: 'none' }}>
-                                                {id}
+                                            <Select.Option key={`fallback-${id}`} value={String(id)}>
+                                                {productOption?.value || id}
                                             </Select.Option>
                                         );
                                     })}
@@ -212,7 +239,16 @@ const VariableProductForm: React.FC = () => {
                                     {fields.map(({ key, name }) => {
                                         const itemData = form.getFieldValue(["variable_product", "variations", name]);
                                         const optId = itemData?.variation_option_ids?.[0];
-                                        const optLabel = selectedVariationInfo?.values.find(v => String(v.id) === String(optId))?.value;
+                                        let optLabel = selectedVariationInfo?.values.find(v => String(v.id) === String(optId))?.value;
+                                        // Fallback to product data for the label
+                                        if (!optLabel && editProduct?.variations) {
+                                            optLabel = editProduct.variations
+                                                .flatMap(v => v.options || [])
+                                                .find(o => String(o.id) === String(optId))?.value;
+                                        }
+                                        const variationName = selectedVariationInfo?.name
+                                            || editProduct?.variations?.[0]?.variationName
+                                            || "Variation";
 
                                         return (
                                             <VariationFields
@@ -224,7 +260,7 @@ const VariableProductForm: React.FC = () => {
                                                         setSelectedOptionIds(prev => prev.filter(id => String(id) !== String(optId)));
                                                     }
                                                 }}
-                                                optionLabel={optLabel ? `${selectedVariationInfo?.name}: ${optLabel}` : (optId ? `Variation: ${optId}` : undefined)}
+                                                optionLabel={optLabel ? `${variationName}: ${optLabel}` : (optId ? `Variation: ${optId}` : undefined)}
                                             />
                                         )
                                     })}
