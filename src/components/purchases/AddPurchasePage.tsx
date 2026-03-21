@@ -548,25 +548,36 @@ const AddPurchasePage: React.FC = () => {
   };
 
   const handleReset = () => {
+    const doReset = () => {
+      setItems([]);
+      resetProductForm();
+      // Reset header / purchase information fields
+      setWarehouseId('');
+      setSupplierId(undefined);
+      setSupplierName('');
+      setSupplierBalance(0);
+      setPaymentMethod('cash');
+      setGrnDate(dayjs().format('YYYY-MM-DD'));
+      setNotes('');
+      setSupplierLocked(false);
+      // Reset payment fields
+      setDiscountAmount(0);
+      setPaidAmount(0);
+      setDebitBalanceUsed(0);
+      setChequeNumber('');
+      setChequeDate('');
+      setChequeNote('');
+    };
+
     if (activeItems.length > 0) {
       Modal.confirm({
         title: 'Reset Form',
         icon: <ExclamationCircleOutlined />,
-        content: 'This will clear all items. Are you sure?',
-        onOk: () => {
-          setItems([]);
-          resetProductForm();
-          setDiscountAmount(0);
-          setPaidAmount(0);
-          setDebitBalanceUsed(0);
-          setChequeNumber('');
-          setChequeDate('');
-          setChequeNote('');
-          setSupplierLocked(false);
-        },
+        content: 'This will clear all items and purchase information. Are you sure?',
+        onOk: doReset,
       });
     } else {
-      resetProductForm();
+      doReset();
     }
   };
 
@@ -623,10 +634,8 @@ const AddPurchasePage: React.FC = () => {
                 options={supplierOptions}
                 onSearch={handleSupplierSearch}
                 onSelect={handleSelectSupplier}
-                onChange={(val) => {
-                  if (!val) handleClearSupplier();
-                  else setSupplierName(val);
-                }}
+                onChange={(val) => setSupplierName(val ?? '')}
+                onClear={handleClearSupplier}
                 placeholder="Search supplier..."
                 allowClear
                 disabled={supplierLocked && Boolean(supplierId)}

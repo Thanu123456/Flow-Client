@@ -59,6 +59,18 @@ const PurchaseItemsTable: React.FC<Props> = ({
         record.unitShortName || record.unitName || '-',
     },
     {
+      title: 'Stock',
+      key: 'stock',
+      width: 80,
+      align: 'right' as const,
+      render: (_: any, record: GRNItemLocal) => (
+        <span style={{ color: record.currentStock <= 0 ? '#ff4d4f' : '#52c41a', fontWeight: 500 }}>
+          {record.currentStock}
+          {record.unitShortName ? ` ${record.unitShortName}` : ''}
+        </span>
+      ),
+    },
+    {
       title: 'Quantity',
       key: 'quantity',
       width: 120,
