@@ -36,12 +36,14 @@ import Customers from "../pages/management/Customers";
 import Suppliers from "../pages/management/Suppliers";
 import Warranties from "../pages/management/Warranties";
 import Products from "../pages/management/Products";
+import Stock from "../pages/management/Stock";
 import AddProduct from "../pages/management/AddProduct";
 import EditProduct from "../pages/management/EditProduct";
 
 // Transaction Pages
 import Purchases from "../pages/transactions/Purchases";
 import AddPurchase from "../pages/transactions/AddPurchase";
+import Sales from "../pages/transactions/Sales";
 
 import POS from "../pages/pos/POS";
 
@@ -85,7 +87,7 @@ const AppRoutes: React.FC = () => {
           }
         >
           <Route path="/products" element={<Products />} />
-          <Route path="/inventory" element={<Navigate to="/products" replace />} />
+          <Route path="/inventory" element={<Stock />} />
         </Route>
         <Route
           element={
@@ -169,6 +171,15 @@ const AppRoutes: React.FC = () => {
           <Route path="/purchases/:id/edit" element={<AddPurchase />} />
         </Route>
         <Route path="/pos" element={<POS />} />
+
+        {/* Sales Routes */}
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.SALES_VIEW} />
+          }
+        >
+          <Route path="/sales" element={<Sales />} />
+        </Route>
       </Route>
 
       {/* Super Admin Private Routes */}

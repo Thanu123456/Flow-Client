@@ -125,7 +125,8 @@ const AddPurchasePage: React.FC = () => {
 
   // ── Data lists ───────────────────────────────────────────
   const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([]);
-  const [supplierOptions, setSupplierOptions] = useState<{ value: string; label: string; id: string }[]>([]);
+  const [supplierOptions, setSupplierOptions] = useState<{ value: string; label: string }[]>([]);
+  const [searchingSuppliers, setSearchingSuppliers] = useState(false);
 
   // ── Product selection state ──────────────────────────────
   const [productSearch, setProductSearch] = useState('');
@@ -273,25 +274,28 @@ const AddPurchasePage: React.FC = () => {
 
   // ── Supplier search ──────────────────────────────────────
   const handleSupplierSearch = async (query: string) => {
-    if (!query || query.length < 2) {
+    if (!query || query.length < 1) {
       setSupplierOptions([]);
       return;
     }
+    setSearchingSuppliers(true);
     try {
       const results = await searchSuppliers(query);
       setSupplierOptions(
-        results.map((s) => ({ value: s.displayName, label: s.displayName, id: s.id }))
+        results.map((s) => ({ value: s.id, label: `${s.displayName} (${s.phone})` }))
       );
     } catch {
       setSupplierOptions([]);
+    } finally {
+      setSearchingSuppliers(false);
     }
   };
 
-  const handleSelectSupplier = (value: string, option: any) => {
-    setSupplierId(option.id);
-    setSupplierName(value);
+  const handleSelectSupplier = (id: string, option: any) => {
+    setSupplierId(id);
+    setSupplierName(option.label);
     // Fetch supplier balance
-    purchaseService.getSupplierBalance(option.id)
+    purchaseService.getSupplierBalance(id)
       .then((b) => setSupplierBalance(b.outstandingBalance))
       .catch(() => setSupplierBalance(0));
   };
@@ -618,19 +622,23 @@ const AddPurchasePage: React.FC = () => {
               }
               style={{ marginBottom: 0 }}
             >
-              <AutoComplete
-                value={supplierName}
+              <Select
+                showSearch
+                value={supplierId}
                 options={supplierOptions}
                 onSearch={handleSupplierSearch}
                 onSelect={handleSelectSupplier}
+                notFoundContent={searchingSuppliers ? <Spin size="small" /> : null}
                 onChange={(val) => {
                   if (!val) handleClearSupplier();
-                  else setSupplierName(val);
                 }}
                 placeholder="Search supplier..."
                 allowClear
                 disabled={supplierLocked && Boolean(supplierId)}
                 style={{ width: '100%' }}
+                filterOption={false}
+                defaultActiveFirstOption={false}
+                suffixIcon={<SearchOutlined />}
               />
             </Form.Item>
           </Col>
