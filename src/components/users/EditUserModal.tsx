@@ -159,9 +159,9 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             <Form.Item
               name="roleId"
               label="Role"
-              rules={[{ required: true, message: 'Please select a role' }]}
+              rules={[{ required: user?.userType !== 'owner', message: 'Please select a role' }]}
             >
-              <Select placeholder="Select role">
+              <Select placeholder={user?.userType === 'owner' ? 'N/A (Owner has full access)' : 'Select role'} allowClear={user?.userType === 'owner'} disabled={user?.userType === 'owner'}>
                 {allRoles
                   .filter((role) => role.isActive)
                   .map((role) => (
