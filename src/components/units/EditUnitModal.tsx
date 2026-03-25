@@ -90,7 +90,7 @@ const EditUnitModal: React.FC<EditUnitModalProps> = ({
           </Form.Item>
 
           <Form.Item label="Status" name="status" valuePropName="checked">
-            <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
+            <Switch />
           </Form.Item>
         </>
       )}

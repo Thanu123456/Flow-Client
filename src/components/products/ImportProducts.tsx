@@ -46,7 +46,7 @@ const ImportProducts: React.FC<ImportProductsProps> = ({ visible, onClose, onSuc
                         <p className="ant-upload-hint">Support for .csv, .xls, .xlsx files.</p>
                     </Dragger>
                     <div className="mt-4 text-center">
-                        <Button type="link" icon={<FileExcelOutlined />}>
+                        <Button type="link" icon={<FileExcelOutlined style={{ color: "#107C41" }} />}>
                             Download Sample Template
                         </Button>
                     </div>

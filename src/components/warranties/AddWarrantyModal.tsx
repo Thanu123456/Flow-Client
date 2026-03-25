@@ -140,10 +140,7 @@ const AddWarrantyModal: React.FC<AddWarrantyModalProps> = ({
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="isActive" label="Status" valuePropName="checked">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Switch defaultChecked />
-                <Text>Active</Text>
-              </div>
+              <Switch />
             </Form.Item>
           </Col>
         </Row>

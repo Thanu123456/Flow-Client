@@ -108,7 +108,7 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form, editProduct }
                                     rules={[{ required: true, message: "Please select product type" }]}
                                     initialValue="single"
                                 >
-                                    <Radio.Group buttonStyle="solid" className="w-full flex">
+                                    <Radio.Group buttonStyle="solid" className="w-full flex" disabled={!!editProduct}>
                                         <Radio.Button value="single" className="flex-1 text-center h-11 flex items-center justify-center">Single</Radio.Button>
                                         <Radio.Button value="variable" className="flex-1 text-center h-11 flex items-center justify-center">Variable</Radio.Button>
                                     </Radio.Group>

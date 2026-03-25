@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Space, Tooltip, Avatar, Modal, message, Popconfirm } from 'antd';
+import { Space, Tooltip, Avatar, Modal, message, Popconfirm } from 'antd';
 import { EditOutlined, DeleteOutlined, ShopOutlined, EyeOutlined, WarningOutlined } from '@ant-design/icons';
 import { CommonTable } from '../common/Table';
 import type { Supplier, PaymentTerms } from '../../types/entities/supplier.types';
@@ -150,18 +150,20 @@ const SuppliersTable: React.FC<Props> = ({
       render: (_: any, record: Supplier) => (
         <Space size="middle">
           <Tooltip title="View Details">
-            <Button
-              type="text"
-              icon={<EyeOutlined />}
+            <div
+              className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
               onClick={() => onView(record)}
-            />
+            >
+              <EyeOutlined style={{ color: "black" }} />
+            </div>
           </Tooltip>
           <Tooltip title="Edit">
-            <Button
-              type="text"
-              icon={<EditOutlined />}
+            <div
+              className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
               onClick={() => onEdit(record)}
-            />
+            >
+              <EditOutlined style={{ color: "#1890ff" }} />
+            </div>
           </Tooltip>
           <Tooltip title="Delete">
             <Popconfirm
@@ -172,10 +174,11 @@ const SuppliersTable: React.FC<Props> = ({
               cancelText="Cancel"
               okButtonProps={{ danger: true }}
             >
-              <Button
-                type="text"
-                icon={<DeleteOutlined style={{ color: '#ff4d4f' }} />}
-              />
+              <div
+                className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
+              >
+                <DeleteOutlined style={{ color: 'red' }} />
+              </div>
             </Popconfirm>
           </Tooltip>
         </Space>

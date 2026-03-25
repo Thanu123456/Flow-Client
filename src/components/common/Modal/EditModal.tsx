@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
-import { Modal, Form, Button, App } from "antd";
+import { Modal, Form, Button, App, Typography, Space } from "antd";
+import { EditOutlined } from "@ant-design/icons";
 import type { EditModalProps } from "./Modal.types";
+
+const { Title, Text } = Typography;
 
 function EditModal<T = any>({
   visible,
@@ -16,6 +19,8 @@ function EditModal<T = any>({
   submitButtonText = "Update",
   cancelButtonText = "Cancel",
   mapDataToForm,
+  icon,
+  subtitle,
   ...restProps
 }: EditModalProps<T>) {
   const [internalForm] = Form.useForm();
@@ -29,7 +34,7 @@ function EditModal<T = any>({
       const formValues = mapDataToForm ? mapDataToForm(data) : data;
       form.setFieldsValue(formValues);
     }
-  }, [visible, data, form]); // Removed mapDataToForm from dependencies
+  }, [visible, data, form, mapDataToForm]);
 
   const handleSubmit = async () => {
     if (!data) return;
@@ -56,9 +61,9 @@ function EditModal<T = any>({
 
   return (
     <Modal
-      title={title}
       open={visible}
       onCancel={onCancel}
+      width={width}
       footer={[
         <Button key="cancel" onClick={onCancel}>
           {cancelButtonText}
@@ -72,12 +77,40 @@ function EditModal<T = any>({
           {submitButtonText}
         </Button>,
       ]}
-      width={width}
+      title={
+        <div style={{
+          background: 'linear-gradient(90deg, #f0f5ff 0%, #ffffff 100%)',
+          padding: '16px 24px',
+          margin: '-20px -24px 0 -24px',
+          borderBottom: '1px solid #f0f0f0',
+          borderRadius: '8px 8px 0 0',
+        }}>
+          <Space align="start">
+            <div style={{
+              background: '#e6f7ff',
+              padding: '8px',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#1890ff'
+            }}>
+              {icon || <EditOutlined style={{ fontSize: '20px' }} />}
+            </div>
+            <Space direction="vertical" size={0}>
+              <Title level={4} style={{ margin: 0 }}>{title}</Title>
+              {subtitle && <Text type="secondary" style={{ fontSize: '13px' }}>{subtitle}</Text>}
+            </Space>
+          </Space>
+        </div>
+      }
       {...restProps}
     >
-      <Form form={form} layout="vertical">
-        {typeof children === "function" ? children(form, data) : children}
-      </Form>
+      <div style={{ padding: '16px 0' }}>
+        <Form form={form} layout="vertical">
+          {typeof children === "function" ? children(form, data) : children}
+        </Form>
+      </div>
     </Modal>
   );
 }

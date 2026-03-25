@@ -54,7 +54,12 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
       const values = await form.validateFields();
       setSubmitting(true);
 
-      await createUser(values);
+      const userValues = {
+        ...values,
+        status: values.status ? 'active' : 'inactive'
+      } as UserFormData;
+
+      await createUser(userValues);
       message.success('User created successfully');
       onSuccess();
       form.resetFields();
@@ -94,7 +99,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
         form={form}
         layout="vertical"
         initialValues={{
-          status: 'active',
+          status: true,
           kioskEnabled: false,
         }}
       >
@@ -179,11 +184,8 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item name="status" label="Status">
-              <Select>
-                <Option value="active">Active</Option>
-                <Option value="inactive">Inactive</Option>
-              </Select>
+            <Form.Item name="status" label="Status" valuePropName="checked">
+              <Switch />
             </Form.Item>
           </Col>
           <Col span={12}>

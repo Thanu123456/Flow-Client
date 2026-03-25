@@ -1,6 +1,7 @@
 import React from 'react';
-import { Table, Tag, Button, Tooltip } from 'antd';
+import { Tag, Tooltip } from 'antd';
 import { EyeOutlined } from '@ant-design/icons';
+import { CommonTable } from '../common/Table';
 import type { GRNListItem, GRNStatus, PaymentMethod } from '../../types/entities/purchase.types';
 import dayjs from 'dayjs';
 
@@ -8,12 +9,13 @@ interface Props {
   data: GRNListItem[];
   loading: boolean;
   onView: (grn: GRNListItem) => void;
-  pagination?: {
-    current: number;
-    pageSize: number;
+  pagination: {
+    page: number;
+    perPage: number;
     total: number;
-    onChange: (page: number, pageSize: number) => void;
+    totalPages: number;
   };
+  onPageChange: (page: number, pageSize: number) => void;
 }
 
 const statusColor: Record<GRNStatus, string> = {
@@ -33,6 +35,7 @@ const PurchasesTable: React.FC<Props> = ({
   loading,
   onView,
   pagination,
+  onPageChange,
 }) => {
   const columns = [
     {
@@ -40,7 +43,7 @@ const PurchasesTable: React.FC<Props> = ({
       dataIndex: 'grnNumber',
       key: 'grnNumber',
       render: (num: string) => (
-        <span style={{ fontWeight: 600, fontFamily: 'monospace' }}>{num}</span>
+        <span style={{ fontWeight: 600, fontFamily: 'monospace', color: '#1890ff' }}>{num}</span>
       ),
     },
     {
@@ -58,9 +61,10 @@ const PurchasesTable: React.FC<Props> = ({
       title: 'Payment',
       dataIndex: 'paymentMethod',
       key: 'paymentMethod',
+      align: 'center' as const,
       render: (method: PaymentMethod) => (
-        <Tag color={paymentColor[method]}>
-          {method.charAt(0).toUpperCase() + method.slice(1)}
+        <Tag color={paymentColor[method]} style={{ borderRadius: '4px' }}>
+          {method.toUpperCase()}
         </Tag>
       ),
     },
@@ -81,25 +85,19 @@ const PurchasesTable: React.FC<Props> = ({
       key: 'netAmount',
       align: 'right' as const,
       render: (amount: number) => (
-        <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>
+        <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#1890ff' }}>
           Rs. {amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </span>
       ),
     },
     {
-      title: 'Items',
-      dataIndex: 'itemCount',
-      key: 'itemCount',
-      align: 'center' as const,
-      render: (count: number) => <Tag>{count}</Tag>,
-    },
-    {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
+      align: 'center' as const,
       render: (status: GRNStatus) => (
-        <Tag color={statusColor[status]}>
-          {status.charAt(0).toUpperCase() + status.slice(1)}
+        <Tag color={statusColor[status]} style={{ borderRadius: '12px', padding: '0 12px' }}>
+          {status.toUpperCase()}
         </Tag>
       ),
     },
@@ -112,39 +110,34 @@ const PurchasesTable: React.FC<Props> = ({
     {
       title: 'Actions',
       key: 'actions',
+      align: 'center' as const,
       render: (_: any, record: GRNListItem) => (
         <Tooltip title="View Details">
-          <Button
-            type="text"
-            icon={<EyeOutlined />}
+          <div
+            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
             onClick={() => onView(record)}
-          />
+          >
+            <EyeOutlined style={{ color: "black" }} />
+          </div>
         </Tooltip>
       ),
     },
   ];
 
   return (
-    <Table
+    <CommonTable<GRNListItem>
       columns={columns}
       dataSource={data}
       rowKey="id"
       loading={loading}
-      scroll={{ x: 900 }}
-      pagination={
-        pagination
-          ? {
-              current: pagination.current,
-              pageSize: pagination.pageSize,
-              total: pagination.total,
-              onChange: pagination.onChange,
-              showSizeChanger: true,
-              pageSizeOptions: ['10', '25', '50', '100'],
-              showTotal: (total, range) =>
-                `${range[0]}-${range[1]} of ${total} purchases`,
-            }
-          : false
-      }
+      pagination={{
+        page: pagination.page,
+        limit: pagination.perPage,
+        total: pagination.total,
+        totalPages: pagination.totalPages,
+      }}
+      onPageChange={onPageChange}
+      scroll={{ x: 1000 }}
     />
   );
 };

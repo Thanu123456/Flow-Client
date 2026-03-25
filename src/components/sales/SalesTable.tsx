@@ -17,23 +17,23 @@ const productTypeColor: Record<string, string> = {
 const SalesTable: React.FC<SalesTableProps> = ({ products, loading }) => {
   const columns: TableColumn<SaleProductItem>[] = [
     {
-      title: <div className="text-center w-full">Product ID</div>,
+      title: "Product ID",
       dataIndex: "productId",
       key: "productId",
-      align: "center" as const,
       render: (id: string) => (
         <Tooltip title={id}>
-          <span className="font-mono text-xs text-gray-500">
-            {id.slice(0, 8)}...
-          </span>
+          <div className="flex items-center justify-start">
+            <span className="font-mono text-[13px] font-bold text-blue-800 bg-blue-50/80 px-2.5 py-1.5 rounded-lg border border-blue-200/50 shadow-sm">
+              {id.slice(0, 12)}...
+            </span>
+          </div>
         </Tooltip>
       ),
     },
     {
-      title: <div className="text-center w-full">Product Type</div>,
+      title: "Product Type",
       dataIndex: "productType",
       key: "productType",
-      align: "center" as const,
       render: (type: string) => (
         <Tag color={productTypeColor[type] ?? "default"}>
           {type.charAt(0).toUpperCase() + type.slice(1)}
@@ -41,7 +41,7 @@ const SalesTable: React.FC<SalesTableProps> = ({ products, loading }) => {
       ),
     },
     {
-      title: <div className="text-center w-full">Product Name</div>,
+      title: "Product Name",
       dataIndex: "productName",
       key: "productName",
       sorter: (a: SaleProductItem, b: SaleProductItem) =>
@@ -51,7 +51,7 @@ const SalesTable: React.FC<SalesTableProps> = ({ products, loading }) => {
       ),
     },
     {
-      title: <div className="text-center w-full">Available Stock</div>,
+      title: "Available Stock",
       dataIndex: "availableStock",
       key: "availableStock",
       align: "center" as const,

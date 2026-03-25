@@ -169,7 +169,7 @@ const CategoriesTable: React.FC<CategoriesTableProps> = ({
       render: (_: React.ReactNode, record: Category) => (
         <Space>
           <div
-            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer"
+            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
             onClick={() => showViewModal(record)}
           >
             <Tooltip title="View">
@@ -178,7 +178,7 @@ const CategoriesTable: React.FC<CategoriesTableProps> = ({
           </div>
 
           <div
-            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer"
+            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
             onClick={() => onEdit(record)}
           >
             <Tooltip title="Edit">
@@ -187,7 +187,7 @@ const CategoriesTable: React.FC<CategoriesTableProps> = ({
           </div>
 
           <div
-            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer"
+            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
             onClick={() => showDeleteModal(record)}
           >
             <Tooltip title="Delete">

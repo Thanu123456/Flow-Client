@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { Modal, Space, Image, App } from "antd";
+import { Modal, Space, Image, App, Typography } from "antd";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 import { FaRegImages } from "react-icons/fa";
 import type { DeleteModalProps } from "./Modal.types";
+
+const { Title, Text } = Typography;
 
 function DeleteModal<T = any>({
   visible,
@@ -12,13 +14,15 @@ function DeleteModal<T = any>({
   onSuccess,
   onDelete,
   loading: externalLoading,
-  okText = "Yes",
-  cancelText = "No",
+  okText = "Delete",
+  cancelText = "Cancel",
   renderContent,
   getImageUrl,
   getName,
   customMessage,
   showImage = true,
+  icon,
+  subtitle,
   ...restProps
 }: DeleteModalProps<T>) {
   const { message } = App.useApp();
@@ -47,26 +51,47 @@ function DeleteModal<T = any>({
 
   return (
     <Modal
-      title={
-        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ color: "red" }}>
-            <ExclamationCircleOutlined />
-          </span>
-          <span style={{ color: "black" }}>{title}</span>
-        </span>
-      }
       open={visible}
       onOk={handleDelete}
       onCancel={onCancel}
+      width={450}
       okText={okText}
       cancelText={cancelText}
       centered
       confirmLoading={loading}
       okButtonProps={{
-        style: { fontSize: 16, padding: "6px 20px" },
         danger: true,
+        style: { borderRadius: '6px' }
       }}
-      cancelButtonProps={{ style: { fontSize: 16, padding: "6px 20px" } }}
+      cancelButtonProps={{ style: { borderRadius: '6px' } }}
+      title={
+        <div style={{
+          background: 'linear-gradient(90deg, #fff1f0 0%, #ffffff 100%)',
+          padding: '16px 24px',
+          margin: '-20px -24px 0 -24px',
+          borderBottom: '1px solid #f0f0f0',
+          borderRadius: '8px 8px 0 0',
+        }}>
+          <Space align="start">
+            <div style={{
+              background: '#fff1f0',
+              padding: '8px',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#f5222d',
+              border: '1px solid #ffa39e'
+            }}>
+              {icon || <ExclamationCircleOutlined style={{ fontSize: '20px' }} />}
+            </div>
+            <Space direction="vertical" size={0}>
+              <Title level={4} style={{ margin: 0 }}>{title}</Title>
+              {subtitle && <Text type="secondary" style={{ fontSize: '13px' }}>{subtitle}</Text>}
+            </Space>
+          </Space>
+        </div>
+      }
       {...restProps}
     >
       {renderContent ? (

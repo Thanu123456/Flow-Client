@@ -7,6 +7,8 @@ export interface BaseModalProps extends Omit<ModalProps, "onOk" | "children"> {
   onCancel: () => void;
   onSuccess?: () => void;
   loading?: boolean;
+  icon?: ReactNode;
+  subtitle?: ReactNode;
 }
 
 export interface AddModalProps<T = any> extends BaseModalProps {

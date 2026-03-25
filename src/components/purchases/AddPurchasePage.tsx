@@ -596,7 +596,7 @@ const AddPurchasePage: React.FC = () => {
           {isEdit ? 'Edit Purchase (GRN)' : 'Add Purchase (GRN)'}
         </Title>
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={handleReset}>Reset</Button>
+          <Button icon={<ReloadOutlined style={{ color: "blue" }} />} onClick={handleReset}>Reset</Button>
         </Space>
       </div>
 

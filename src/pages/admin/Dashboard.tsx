@@ -163,7 +163,7 @@ const Dashboard: React.FC = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 }}>
                     <Title level={4} style={{ margin: 0 }}>Quick Statistics</Title>
                     <Button
-                        icon={<ReloadOutlined />}
+                        icon={<ReloadOutlined style={{ color: "blue" }} />}
                         onClick={fetchDashboardData}
                         loading={loading}
                         style={{

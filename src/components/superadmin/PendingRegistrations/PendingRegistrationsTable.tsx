@@ -1,5 +1,5 @@
 import React from 'react';
-import { Table, Button, Space, Tooltip } from 'antd';
+import { Table, Space, Tooltip } from 'antd';
 import { EyeOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import type { Registration } from '../../../types/auth/superadmin.types';
 import dayjs from 'dayjs';
@@ -78,25 +78,28 @@ const PendingRegistrationsTable: React.FC<Props> = ({
       render: (_: any, record: Registration) => (
         <Space size="middle">
           <Tooltip title="View Details">
-            <Button
-              type="text"
-              icon={<EyeOutlined />}
+            <div
+              className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
               onClick={() => onView(record)}
-            />
+            >
+              <EyeOutlined style={{ color: "black" }} />
+            </div>
           </Tooltip>
           <Tooltip title="Approve">
-            <Button
-              type="text"
-              icon={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
+            <div
+              className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
               onClick={() => onApprove(record.id)}
-            />
+            >
+              <CheckCircleOutlined style={{ color: '#52c41a' }} />
+            </div>
           </Tooltip>
           <Tooltip title="Reject">
-            <Button
-              type="text"
-              icon={<CloseCircleOutlined style={{ color: '#ff4d4f' }} />}
+            <div
+              className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
               onClick={() => onReject(record.id)}
-            />
+            >
+              <CloseCircleOutlined style={{ color: 'red' }} />
+            </div>
           </Tooltip>
         </Space>
       ),

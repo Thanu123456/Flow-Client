@@ -126,15 +126,15 @@ const UnitsTable: React.FC<UnitsTableProps> = ({
       render: (_: React.ReactNode, record: Unit) => (
         <Space>
           <div
-            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer"
+            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
             onClick={() => onView(record)}
           >
             <Tooltip title="View">
-              <EyeOutlined style={{ color: "#52c41a" }} />
+              <EyeOutlined style={{ color: "black" }} />
             </Tooltip>
           </div>
           <div
-            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer"
+            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
             onClick={() => onEdit(record)}
           >
             <Tooltip title="Edit">
@@ -142,7 +142,7 @@ const UnitsTable: React.FC<UnitsTableProps> = ({
             </Tooltip>
           </div>
           <div
-            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer"
+            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
             onClick={() => onDelete(record)} // Added for Delete action
             style={{ opacity: (record.productCount ?? 0) > 0 ? 0.5 : 1 }}
           >
