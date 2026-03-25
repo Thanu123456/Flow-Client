@@ -55,7 +55,7 @@ const POS: React.FC = () => {
 
     // Stores
     const { products, loading: productsLoading, getProducts } = useProductStore();
-    const { categories: allCategories, loading: categoriesLoading, getAllCategories } = useCategoryStore();
+    const { allCategories, allCategoriesLoading: categoriesLoading, getAllCategories } = useCategoryStore();
     const { cart, loading: posLoading, paymentMethod, isRefundMode, addToCart, updateQuantity, removeItem, clearCart, setCustomer, setPaymentMethod, setRefundMode, checkout } = usePOSStore();
     const { searchCustomers } = useCustomerStore();
 

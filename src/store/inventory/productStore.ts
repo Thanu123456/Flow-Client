@@ -67,10 +67,13 @@ export const useProductStore = create<ProductState>()(
                                 loading: false,
                             }));
                         } else {
-                            // Safety guard: never replace an existing loaded list
-                            // with an empty response (guards against duplicate/stale calls).
+                            // Always update when a filter is active (category, search, brand, etc.)
+                            // so that selecting a category correctly replaces the product list.
+                            // For unfiltered calls, keep the existing list if the response is empty
+                            // (guards against stale/duplicate calls wiping a loaded list).
+                            const isFiltered = !!(params.categoryId || params.search || params.brandId || params.subcategoryId);
                             const currentProducts = get().products;
-                            const shouldUpdate = data.length > 0 || currentProducts.length === 0;
+                            const shouldUpdate = isFiltered || data.length > 0 || currentProducts.length === 0;
                             if (shouldUpdate) {
                                 set({
                                     products: data,
@@ -78,7 +81,6 @@ export const useProductStore = create<ProductState>()(
                                     loading: false,
                                 });
                             } else {
-                                // Got empty data but already have products loaded — keep existing
                                 set({ loading: false });
                             }
                         }
