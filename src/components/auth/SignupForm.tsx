@@ -93,7 +93,8 @@ const SignupForm: React.FC<SignupFormProps> = ({
 }) => {
   const [formData, setFormData] = useState<Partial<RegisterRequest>>({
     country: 'Sri Lanka',
-    business_type: 'retail'
+    business_type: 'retail',
+    accept_terms: false,
   });
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -146,6 +147,7 @@ const SignupForm: React.FC<SignupFormProps> = ({
     if (!formData.shop_name) errors.shop_name = 'Business name is required';
     if (!formData.address_line1) errors.address_line1 = 'Address is required';
     if (!formData.city) errors.city = 'City is required';
+    if (!formData.accept_terms) errors.accept_terms = 'You must accept the Terms & Conditions';
 
     return errors;
   };
@@ -440,9 +442,21 @@ const SignupForm: React.FC<SignupFormProps> = ({
 
       <div className="pt-8 space-y-10">
         <div className="mb-8">
-          <Checkbox className="text-slate-600 text-sm">
+          <Checkbox
+            checked={formData.accept_terms}
+            onChange={(e) => {
+              setFormData(prev => ({ ...prev, accept_terms: e.target.checked }));
+              if (fieldErrors.accept_terms) {
+                setFieldErrors(prev => { const next = { ...prev }; delete next.accept_terms; return next; });
+              }
+            }}
+            className="text-slate-600 text-sm"
+          >
             I agree to the <Link to="/terms" className="text-blue-600 font-semibold hover:underline">Terms & Conditions</Link> and <Link to="/privacy" className="text-blue-600 font-semibold hover:underline">Privacy Policy</Link>
           </Checkbox>
+          {fieldErrors.accept_terms && (
+            <p className="text-[11px] text-red-500 ml-1 mt-1">{fieldErrors.accept_terms}</p>
+          )}
         </div>
 
         <button

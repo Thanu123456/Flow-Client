@@ -108,7 +108,7 @@ const AddRoleModal: React.FC<AddRoleModalProps> = ({
           label="Status"
           valuePropName="checked"
         >
-          <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
+          <Switch />
         </Form.Item>
 
         <Form.Item label="Permissions">

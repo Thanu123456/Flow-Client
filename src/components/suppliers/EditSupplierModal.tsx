@@ -8,13 +8,11 @@ import {
   Divider,
   Row,
   Col,
-  Typography,
   App,
 } from 'antd';
 import { useSupplierStore } from '../../store/management/supplierStore';
 import type { Supplier, SupplierFormData } from '../../types/entities/supplier.types';
 
-const { Text } = Typography;
 const { TextArea } = Input;
 
 interface EditSupplierModalProps {
@@ -198,10 +196,7 @@ const EditSupplierModal: React.FC<EditSupplierModalProps> = ({
           </Col>
           <Col span={12}>
             <Form.Item name="isActive" label="Status" valuePropName="checked">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Switch />
-                <Text>Active</Text>
-              </div>
+              <Switch />
             </Form.Item>
           </Col>
         </Row>

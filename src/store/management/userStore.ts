@@ -34,7 +34,7 @@ interface UserState {
 
 export const useUserStore = create<UserState>()(
   devtools(
-    (set) => ({
+    (set, get) => ({
       users: [],
       selectedUser: null,
       loading: false,
@@ -47,7 +47,9 @@ export const useUserStore = create<UserState>()(
       },
 
       getUsers: async (params) => {
-        set({ loading: true, error: null });
+        const isCached = get().users.length > 0;
+        if (!isCached) set({ loading: true, error: null });
+        else set({ error: null });
         try {
           const response = await userService.getUsers(params);
           set({

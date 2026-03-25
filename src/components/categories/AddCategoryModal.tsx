@@ -92,7 +92,7 @@ const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
             <Button
               type="text"
               size="small"
-              icon={<ReloadOutlined />}
+              icon={<ReloadOutlined style={{ color: "blue" }} />}
               loading={loadingCode}
               onClick={handleGenerateCode}
             />
@@ -117,7 +117,7 @@ const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
       </Form.Item>
 
       <Form.Item label="Status" name="status" valuePropName="checked">
-        <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
+        <Switch />
       </Form.Item>
     </AddModal>
   );

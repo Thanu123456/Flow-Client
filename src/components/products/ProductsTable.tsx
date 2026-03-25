@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Space, Button, Tooltip, Image, Popconfirm, message, Modal } from "antd";
+import { Space, Tooltip, Image, Popconfirm, message, Modal } from "antd";
 import { EditOutlined, DeleteOutlined, EyeOutlined, WarningOutlined } from "@ant-design/icons";
 import { useProductStore } from "../../store/inventory/productStore";
 import type { Product } from "../../types/entities/product.types";
@@ -151,9 +151,8 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
             render: (record: Product) => (
                 <Space size="middle">
                     <Tooltip title="View Details">
-                        <Button
-                            type="text"
-                            icon={<EyeOutlined />}
+                        <div
+                            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
                             onClick={async () => {
                                 try {
                                     const fullProduct = await getProductById(record.id);
@@ -163,14 +162,17 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
                                     message.error("Failed to fetch product details");
                                 }
                             }}
-                        />
+                        >
+                            <EyeOutlined style={{ color: "black" }} />
+                        </div>
                     </Tooltip>
                     <Tooltip title="Edit">
-                        <Button
-                            type="text"
-                            icon={<EditOutlined />}
+                        <div
+                            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
                             onClick={() => navigate(`/products/edit/${record.id}`)}
-                        />
+                        >
+                            <EditOutlined style={{ color: "#1890ff" }} />
+                        </div>
                     </Tooltip>
                     <Popconfirm
                         title="Delete Product"
@@ -180,7 +182,11 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
                         cancelText="No"
                     >
                         <Tooltip title="Delete">
-                            <Button type="text" danger icon={<DeleteOutlined />} />
+                            <div
+                                className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
+                            >
+                                <DeleteOutlined style={{ color: "red" }} />
+                            </div>
                         </Tooltip>
                     </Popconfirm>
                 </Space>

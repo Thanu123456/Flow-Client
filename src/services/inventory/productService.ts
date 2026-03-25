@@ -11,9 +11,9 @@ const transformProduct = (p: any): Product => ({
     id: p.id,
     name: p.name,
     description: p.description,
-    sku: p.sku,
-    barcode: p.barcode || p.Barcode,
-    productType: p.product_type,
+    sku: p.sku || p.SKU,
+    barcode: p.barcode || p.Barcode || p.barCode,
+    productType: p.product_type || p.productType,
     categoryId: p.category_id,
     categoryName: p.category_name,
     subcategoryId: p.subcategory_id,
@@ -49,31 +49,30 @@ const transformProduct = (p: any): Product => ({
 
     variations: p.variations?.map((v: any) => ({
         id: v.id,
-        variationId: v.variation_id,
-        variationName: v.variation_name,
+        variationId: v.variation_id || v.variationId || v.id, // Fallback for list view
+        variationName: v.variation_name || v.variationName || "Variation",
         options: v.options?.map((o: any) => ({
             id: o.id,
             value: o.value,
-        })),
-        sku: v.sku,
-        barcode: v.barcode || v.Barcode,
-        costPrice: v.cost_price,
-        wholesalePrice: v.wholesale_price,
-        retailPrice: v.retail_price,
-        ourPrice: v.our_price,
-        discountType: v.discount_type,
-        discountValue: v.discount_value,
-        discountAppliesTo: v.discount_applies_to,
-        quantityAlert: v.quantity_alert,
-        currentStock: v.current_stock,
-        imageUrl: v.image_url,
+        })) || [], // Default to empty array for list view variations
+        sku: v.sku || v.SKU,
+        barcode: v.barcode || v.Barcode || v.barCode,
+        costPrice: v.cost_price ?? v.costPrice ?? 0,
+        wholesalePrice: v.wholesale_price ?? v.wholesalePrice ?? 0,
+        retailPrice: v.retail_price ?? v.retailPrice ?? 0,
+        ourPrice: v.our_price ?? v.ourPrice ?? 0,
+        discountType: v.discount_type || v.discountType,
+        discountValue: v.discount_value ?? v.discountValue ?? 0,
+        discountAppliesTo: v.discount_applies_to || v.discountAppliesTo,
+        quantityAlert: v.quantity_alert || v.quantityAlert || 0,
+        currentStock: v.current_stock ?? v.currentStock ?? 0,
+        imageUrl: v.image_url || v.imageUrl,
         status: v.is_active ? "active" : "inactive",
     })),
     variationCount: p.variation_count || p.variations?.length || 0,
 });
 
 export const productService = {
-    // Get all products with pagination
     getProducts: async (params: ProductPaginationParams): Promise<ProductResponse> => {
         const backendParams: any = {
             page: params.page,
@@ -83,28 +82,21 @@ export const productService = {
             subcategory_id: params.subcategoryId || undefined,
             brand_id: params.brandId || undefined,
             product_type: params.productType || undefined,
-            include_inactive: params.status !== "active" && params.status !== undefined ? true : undefined,
+            include_inactive: params.status === 'inactive' ? true : undefined,
+            is_active: params.status === 'active' ? true : params.status === 'inactive' ? false : undefined,
         };
 
-        if (params.status === "inactive") {
-            backendParams.is_active = false;
-        } else if (params.status === "active") {
-            backendParams.is_active = true;
-        }
-
-        const response = await axiosInstance.get("/admin/products", { params: backendParams });
-
-        const productsData = response.data.products || response.data.data || [];
-        const products: Product[] = Array.isArray(productsData)
-            ? productsData.map(transformProduct)
-            : [];
+        const response = await axiosInstance.get('/admin/products', { params: backendParams });
+        const rd = response.data;
+        const raw = rd.data ?? rd.products ?? [];
+        const products: Product[] = Array.isArray(raw) ? raw.map(transformProduct) : [];
 
         return {
-            data: products,
-            total: response.data.total || products.length,
-            page: response.data.page || params.page,
-            limit: response.data.per_page || params.limit,
-            totalPages: response.data.total_pages || Math.ceil((response.data.total || products.length) / params.limit),
+            data:       products,
+            total:      rd.total       ?? rd.meta?.total       ?? products.length,
+            page:       rd.page        ?? rd.meta?.page        ?? params.page,
+            limit:      rd.per_page    ?? rd.meta?.per_page    ?? params.limit,
+            totalPages: rd.total_pages ?? rd.meta?.total_pages ?? Math.ceil((rd.meta?.total ?? products.length) / params.limit),
         };
     },
 

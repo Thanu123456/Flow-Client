@@ -185,11 +185,11 @@ const VariationsTable: React.FC<VariationsTableProps> = ({
       render: (_: React.ReactNode, record: Variation) => (
         <Space>
           <div
-            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-gray-50"
+            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
             onClick={() => showViewModal(record)}
           >
             <Tooltip title="View">
-              <EyeOutlined />
+              <EyeOutlined style={{ color: "black" }} />
             </Tooltip>
           </div>
 
@@ -203,7 +203,7 @@ const VariationsTable: React.FC<VariationsTableProps> = ({
           </div>
 
           <div
-            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-red-50"
+            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
             onClick={() => showDeleteModal(record)}
           >
             <Tooltip title="Delete">

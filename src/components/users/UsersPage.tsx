@@ -227,13 +227,13 @@ const UsersPage: React.FC = () => {
                   onDelete={() => handleBulkAction('delete')}
                 />
               )}
-              <Button icon={<FilePdfOutlined />} onClick={handleExportPDF}>
+              <Button icon={<FilePdfOutlined style={{ color: "#FF0000" }} />} onClick={handleExportPDF}>
                 PDF
               </Button>
-              <Button icon={<FileExcelOutlined />} onClick={handleExportExcel}>
+              <Button icon={<FileExcelOutlined style={{ color: "#107C41" }} />} onClick={handleExportExcel}>
                 Excel
               </Button>
-              <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+              <Button icon={<ReloadOutlined style={{ color: "blue" }} />} onClick={handleRefresh}>
                 Refresh
               </Button>
               <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddModalVisible(true)}>

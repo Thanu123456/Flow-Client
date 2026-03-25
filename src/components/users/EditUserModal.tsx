@@ -62,7 +62,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         kioskEnabled: user.kioskEnabled,
         userId: user.userId,
         maxDiscountPercent: user.maxDiscountPercent,
-        status: user.status === 'active' ? 'active' : 'inactive',
+        status: (user.status === 'active') as any,
       });
     }
   }, [visible, user, form]);
@@ -74,7 +74,12 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       const values = await form.validateFields();
       setSubmitting(true);
 
-      await updateUser(user.id, values);
+      const userValues = {
+        ...values,
+        status: values.status ? 'active' : 'inactive'
+      } as Partial<UserFormData>;
+
+      await updateUser(user.id, userValues);
       message.success('User updated successfully');
       onSuccess();
     } catch (error: any) {
@@ -184,11 +189,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
 
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item name="status" label="Status">
-              <Select>
-                <Option value="active">Active</Option>
-                <Option value="inactive">Inactive</Option>
-              </Select>
+            <Form.Item name="status" label="Status" valuePropName="checked">
+              <Switch />
             </Form.Item>
           </Col>
           <Col span={12}>

@@ -1,4 +1,4 @@
-import { Button, Space, Tooltip, Popconfirm, Avatar, Modal, message } from 'antd';
+import { Space, Tooltip, Popconfirm, Avatar, Modal, message } from 'antd';
 import { EditOutlined, DeleteOutlined, KeyOutlined, UserOutlined, EyeOutlined, HistoryOutlined, WarningOutlined } from '@ant-design/icons';
 import { CommonTable } from '../common/Table';
 import type { User } from '../../types/entities/user.types';
@@ -129,38 +129,42 @@ const UsersTable: React.FC<Props> = ({
       render: (_: any, record: User) => (
         <Space size="middle">
           <Tooltip title="View Details">
-            <Button
-              type="text"
-              icon={<EyeOutlined />}
+            <div
+              className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
               onClick={() => onView(record)}
-            />
+            >
+              <EyeOutlined style={{ color: "black" }} />
+            </div>
           </Tooltip>
           {onViewActivity && (
             <Tooltip title="Activity Log">
-              <Button
-                type="text"
-                icon={<HistoryOutlined />}
+              <div
+                className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
                 onClick={() => onViewActivity(record)}
-              />
+              >
+                <HistoryOutlined />
+              </div>
             </Tooltip>
           )}
           {record.userType !== 'owner' && (
             <>
               {record.kioskEnabled && (
                 <Tooltip title="Reset PIN">
-                  <Button
-                    type="text"
-                    icon={<KeyOutlined />}
+                  <div
+                    className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
                     onClick={() => onResetPIN(record)}
-                  />
+                  >
+                    <KeyOutlined />
+                  </div>
                 </Tooltip>
               )}
               <Tooltip title="Edit">
-                <Button
-                  type="text"
-                  icon={<EditOutlined />}
+                <div
+                  className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
                   onClick={() => onEdit(record)}
-                />
+                >
+                  <EditOutlined style={{ color: "#1890ff" }} />
+                </div>
               </Tooltip>
               <Tooltip title="Delete">
                 <Popconfirm
@@ -171,10 +175,11 @@ const UsersTable: React.FC<Props> = ({
                   cancelText="Cancel"
                   okButtonProps={{ danger: true }}
                 >
-                  <Button
-                    type="text"
-                    icon={<DeleteOutlined style={{ color: '#ff4d4f' }} />}
-                  />
+                  <div
+                    className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
+                  >
+                    <DeleteOutlined style={{ color: 'red' }} />
+                  </div>
                 </Popconfirm>
               </Tooltip>
             </>

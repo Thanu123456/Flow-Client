@@ -170,26 +170,26 @@ const WarehousesTable: React.FC<WarehousesTableProps> = ({
         <Space size="middle">
           <Tooltip title="View">
             <div
-              className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer"
+              className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
               onClick={() => handleView(record)}
             >
-              <EyeOutlined style={{ color: "#1890ff" }} />
+              <EyeOutlined style={{ color: "black" }} />
             </div>
           </Tooltip>
           <Tooltip title="Edit">
             <div
-              className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer"
+              className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
               onClick={() => onEdit(record)}
             >
-              <EditOutlined style={{ color: "#faad14" }} />
+              <EditOutlined style={{ color: "#1890ff" }} />
             </div>
           </Tooltip>
           <Tooltip title="Delete">
             <div
-              className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer"
+              className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
               onClick={() => handleDeleteClick(record)}
             >
-              <DeleteOutlined style={{ color: "#ff4d4f" }} />
+              <DeleteOutlined style={{ color: "red" }} />
             </div>
           </Tooltip>
         </Space>

@@ -1,4 +1,4 @@
-import { Tag, Button, Space, Tooltip, Popconfirm } from 'antd';
+import { Tag, Space, Tooltip, Popconfirm } from 'antd';
 import { EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import { CommonTable } from '../common/Table';
 import type { Role } from '../../types/entities/role.types';
@@ -70,19 +70,21 @@ const RolesTable: React.FC<Props> = ({
       render: (_: any, record: Role) => (
         <Space size="middle">
           <Tooltip title="View Permissions">
-            <Button
-              type="text"
-              icon={<EyeOutlined />}
+            <div
+              className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
               onClick={() => onViewPermissions(record)}
-            />
+            >
+              <EyeOutlined style={{ color: "black" }} />
+            </div>
           </Tooltip>
           <Tooltip title={record.isSystem ? "System roles cannot be edited" : "Edit"}>
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              onClick={() => onEdit(record)}
-              disabled={record.isSystem}
-            />
+            <div
+              className={`flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md ${record.isSystem ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-blue-50'
+                }`}
+              onClick={() => !record.isSystem && onEdit(record)}
+            >
+              <EditOutlined style={{ color: record.isSystem ? undefined : "#1890ff" }} />
+            </div>
           </Tooltip>
           <Tooltip title={
             record.isSystem
@@ -100,11 +102,12 @@ const RolesTable: React.FC<Props> = ({
               cancelText="Cancel"
               okButtonProps={{ danger: true }}
             >
-              <Button
-                type="text"
-                icon={<DeleteOutlined style={{ color: record.isSystem || record.userCount > 0 ? undefined : '#ff4d4f' }} />}
-                disabled={record.isSystem || record.userCount > 0}
-              />
+              <div
+                className={`flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md ${(record.isSystem || record.userCount > 0) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-blue-50'
+                  }`}
+              >
+                <DeleteOutlined style={{ color: (record.isSystem || record.userCount > 0) ? undefined : 'red' }} />
+              </div>
             </Popconfirm>
           </Tooltip>
         </Space>

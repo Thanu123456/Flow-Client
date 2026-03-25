@@ -1,5 +1,5 @@
 import React from 'react';
-import { Table, Button, Space, Tooltip, Popconfirm } from 'antd';
+import { Table, Space, Tooltip, Popconfirm } from 'antd';
 import {
   EyeOutlined,
   PauseCircleOutlined,
@@ -88,27 +88,30 @@ const TenantsTable: React.FC<Props> = ({
       render: (_: any, record: Tenant) => (
         <Space size="middle">
           <Tooltip title="View Details">
-            <Button
-              type="text"
-              icon={<EyeOutlined />}
+            <div
+              className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
               onClick={() => onView(record)}
-            />
+            >
+              <EyeOutlined style={{ color: "black" }} />
+            </div>
           </Tooltip>
           {record.status === 'suspended' ? (
             <Tooltip title="Activate">
-              <Button
-                type="text"
-                icon={<PlayCircleOutlined style={{ color: '#52c41a' }} />}
+              <div
+                className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
                 onClick={() => onActivate(record.id)}
-              />
+              >
+                <PlayCircleOutlined style={{ color: '#52c41a' }} />
+              </div>
             </Tooltip>
           ) : (
             <Tooltip title="Suspend">
-              <Button
-                type="text"
-                icon={<PauseCircleOutlined style={{ color: '#faad14' }} />}
+              <div
+                className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
                 onClick={() => onSuspend(record.id)}
-              />
+              >
+                <PauseCircleOutlined style={{ color: '#faad14' }} />
+              </div>
             </Tooltip>
           )}
           <Tooltip title="Delete">
@@ -120,10 +123,11 @@ const TenantsTable: React.FC<Props> = ({
               cancelText="Cancel"
               okButtonProps={{ danger: true }}
             >
-              <Button
-                type="text"
-                icon={<DeleteOutlined style={{ color: '#ff4d4f' }} />}
-              />
+              <div
+                className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
+              >
+                <DeleteOutlined style={{ color: 'red' }} />
+              </div>
             </Popconfirm>
           </Tooltip>
         </Space>

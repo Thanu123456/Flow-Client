@@ -125,7 +125,8 @@ const AddPurchasePage: React.FC = () => {
 
   // ── Data lists ───────────────────────────────────────────
   const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([]);
-  const [supplierOptions, setSupplierOptions] = useState<{ value: string; label: string; id: string }[]>([]);
+  const [supplierOptions, setSupplierOptions] = useState<{ value: string; label: string }[]>([]);
+  const [searchingSuppliers, setSearchingSuppliers] = useState(false);
 
   // ── Product selection state ──────────────────────────────
   const [productSearch, setProductSearch] = useState('');
@@ -273,25 +274,28 @@ const AddPurchasePage: React.FC = () => {
 
   // ── Supplier search ──────────────────────────────────────
   const handleSupplierSearch = async (query: string) => {
-    if (!query || query.length < 2) {
+    if (!query || query.length < 1) {
       setSupplierOptions([]);
       return;
     }
+    setSearchingSuppliers(true);
     try {
       const results = await searchSuppliers(query);
       setSupplierOptions(
-        results.map((s) => ({ value: s.displayName, label: s.displayName, id: s.id }))
+        results.map((s) => ({ value: s.id, label: `${s.displayName} (${s.phone})` }))
       );
     } catch {
       setSupplierOptions([]);
+    } finally {
+      setSearchingSuppliers(false);
     }
   };
 
-  const handleSelectSupplier = (value: string, option: any) => {
-    setSupplierId(option.id);
-    setSupplierName(value);
+  const handleSelectSupplier = (id: string, option: any) => {
+    setSupplierId(id);
+    setSupplierName(option.label);
     // Fetch supplier balance
-    purchaseService.getSupplierBalance(option.id)
+    purchaseService.getSupplierBalance(id)
       .then((b) => setSupplierBalance(b.outstandingBalance))
       .catch(() => setSupplierBalance(0));
   };
@@ -548,25 +552,36 @@ const AddPurchasePage: React.FC = () => {
   };
 
   const handleReset = () => {
+    const doReset = () => {
+      setItems([]);
+      resetProductForm();
+      // Reset header / purchase information fields
+      setWarehouseId('');
+      setSupplierId(undefined);
+      setSupplierName('');
+      setSupplierBalance(0);
+      setPaymentMethod('cash');
+      setGrnDate(dayjs().format('YYYY-MM-DD'));
+      setNotes('');
+      setSupplierLocked(false);
+      // Reset payment fields
+      setDiscountAmount(0);
+      setPaidAmount(0);
+      setDebitBalanceUsed(0);
+      setChequeNumber('');
+      setChequeDate('');
+      setChequeNote('');
+    };
+
     if (activeItems.length > 0) {
       Modal.confirm({
         title: 'Reset Form',
         icon: <ExclamationCircleOutlined />,
-        content: 'This will clear all items. Are you sure?',
-        onOk: () => {
-          setItems([]);
-          resetProductForm();
-          setDiscountAmount(0);
-          setPaidAmount(0);
-          setDebitBalanceUsed(0);
-          setChequeNumber('');
-          setChequeDate('');
-          setChequeNote('');
-          setSupplierLocked(false);
-        },
+        content: 'This will clear all items and purchase information. Are you sure?',
+        onOk: doReset,
       });
     } else {
-      resetProductForm();
+      doReset();
     }
   };
 
@@ -581,7 +596,7 @@ const AddPurchasePage: React.FC = () => {
           {isEdit ? 'Edit Purchase (GRN)' : 'Add Purchase (GRN)'}
         </Title>
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={handleReset}>Reset</Button>
+          <Button icon={<ReloadOutlined style={{ color: "blue" }} />} onClick={handleReset}>Reset</Button>
         </Space>
       </div>
 
@@ -618,19 +633,21 @@ const AddPurchasePage: React.FC = () => {
               }
               style={{ marginBottom: 0 }}
             >
-              <AutoComplete
-                value={supplierName}
+              <Select
+                showSearch
+                value={supplierId}
                 options={supplierOptions}
                 onSearch={handleSupplierSearch}
                 onSelect={handleSelectSupplier}
-                onChange={(val) => {
-                  if (!val) handleClearSupplier();
-                  else setSupplierName(val);
-                }}
+                onChange={(val) => setSupplierName(val ?? '')}
+                onClear={handleClearSupplier}
                 placeholder="Search supplier..."
                 allowClear
                 disabled={supplierLocked && Boolean(supplierId)}
                 style={{ width: '100%' }}
+                filterOption={false}
+                defaultActiveFirstOption={false}
+                suffixIcon={<SearchOutlined />}
               />
             </Form.Item>
           </Col>

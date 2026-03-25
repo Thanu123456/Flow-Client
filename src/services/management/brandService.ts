@@ -21,37 +21,35 @@ const transformBrand = (b: any): Brand => ({
 export const brandService = {
   // Get All Brands with pagination
   getBrands: async (params: BrandPaginationParams): Promise<BrandResponse> => {
-    // Convert frontend params to backend params
     const backendParams: any = {
       page: params.page,
       per_page: params.limit,
       search: params.search || undefined,
-      include_inactive: params.status !== "active", // include inactive if not filtering for active only
+      include_inactive: params.status === 'inactive' ? true : undefined,
     };
 
-    const response = await axiosInstance.get("/admin/brands", { params: backendParams });
+    const response = await axiosInstance.get('/admin/brands', { params: backendParams });
+    const rd = response.data;
 
-    // Backend returns { brands: [...], total, page, per_page, total_pages }
-    const brandsData = response.data.brands || response.data.data || response.data || [];
-    const brands: Brand[] = Array.isArray(brandsData)
-      ? brandsData.map(transformBrand)
-      : [];
+    const raw = rd.data ?? rd.brands ?? rd ?? [];
+    const brands: Brand[] = Array.isArray(raw) ? raw.map(transformBrand) : [];
 
     return {
-      data: brands,
-      total: response.data.total || brands.length,
-      page: response.data.page || params.page,
-      limit: response.data.per_page || params.limit,
-      totalPages: response.data.total_pages || Math.ceil((response.data.total || brands.length) / params.limit),
+      data:       brands,
+      total:      rd.total       ?? rd.meta?.total       ?? brands.length,
+      page:       rd.page        ?? rd.meta?.page        ?? params.page,
+      limit:      rd.per_page    ?? rd.meta?.per_page    ?? params.limit,
+      totalPages: rd.total_pages ?? rd.meta?.total_pages ?? Math.ceil((rd.meta?.total ?? brands.length) / params.limit),
     };
   },
 
   // Get all brands (no pagination, for dropdowns)
   getAllBrands: async (): Promise<Brand[]> => {
-    const response = await axiosInstance.get("/admin/brands/all");
-    const brandsData = response.data.brands || response.data.data || response.data || [];
-    return Array.isArray(brandsData) ? brandsData.map(transformBrand) : [];
+    const response = await axiosInstance.get('/admin/brands/all');
+    const raw = response.data.data ?? response.data.brands ?? response.data ?? [];
+    return Array.isArray(raw) ? raw.map(transformBrand) : [];
   },
+
 
   // Get a specific Brand by ID
   getBrandById: async (id: string): Promise<Brand> => {

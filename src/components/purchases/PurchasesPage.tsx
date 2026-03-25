@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Card, Input, Button, Select, DatePicker, Space, Row, Col, message, Tooltip,
+  Input, Select, DatePicker, Space, Row, Col, message,
 } from 'antd';
 import {
   PlusOutlined, ReloadOutlined, FileExcelOutlined, FilePdfOutlined,
@@ -13,7 +13,8 @@ import { useWarehouseStore } from '../../store/management/warehouseStore';
 import PurchasesTable from './PurchasesTable';
 import PurchaseDetailsModal from './PurchaseDetailsModal';
 import type { GRN, GRNListItem } from '../../types/entities/purchase.types';
-import { useDebounce } from '../../hooks/ui/useDebounce';
+import PageLayout from '../common/PageLayout/PageLayout';
+import { CommonButton } from '../common/Button';
 
 const { Search } = Input;
 const { RangePicker } = DatePicker;
@@ -33,33 +34,29 @@ const PurchasesPage: React.FC = () => {
   const [selectedGRN, setSelectedGRN] = useState<GRN | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
-  const debouncedSearch = useDebounce(searchText, 300);
-
   const fetchGRNs = useCallback(
-    async (page = 1, perPage = 10) => {
-      await listGRNs({
-        page,
-        perPage,
-        search: debouncedSearch || undefined,
-        paymentMethod: paymentFilter || undefined,
-        status: statusFilter || undefined,
-        warehouseId: warehouseFilter || undefined,
-        dateFrom: dateRange ? dateRange[0] : undefined,
-        dateTo: dateRange ? dateRange[1] : undefined,
-      });
-    },
-    [listGRNs, debouncedSearch, paymentFilter, statusFilter, warehouseFilter, dateRange]
+    (page = 1, perPage = 10) => listGRNs({
+      page,
+      perPage,
+      search: searchText,
+      paymentMethod: paymentFilter || undefined,
+      status: statusFilter || undefined,
+      warehouseId: warehouseFilter || undefined,
+      dateFrom: dateRange?.[0],
+      dateTo: dateRange?.[1],
+    }),
+    [listGRNs, searchText, paymentFilter, statusFilter, warehouseFilter, dateRange]
   );
 
-  // Load warehouses once on mount
   useEffect(() => {
-    getAllWarehouses().then((whs) => setWarehouses(whs));
-  }, []);
+    fetchGRNs();
+  }, [fetchGRNs]);
 
-  // Fetch GRNs on mount and whenever filters change (same pattern as SuppliersPage/CustomersPage)
   useEffect(() => {
-    fetchGRNs(1, pagination.perPage);
-  }, [debouncedSearch, paymentFilter, statusFilter, warehouseFilter, dateRange]);
+    getAllWarehouses().then((data) => {
+      if (data) setWarehouses(data.map((w: any) => ({ id: w.id, name: w.name })));
+    });
+  }, [getAllWarehouses]);
 
   useEffect(() => {
     if (error) {
@@ -67,20 +64,13 @@ const PurchasesPage: React.FC = () => {
     }
   }, [error]);
 
-  const handleRefresh = () => {
-    setSearchText('');
-    setPaymentFilter('');
-    setStatusFilter('');
-    setWarehouseFilter('');
-    setDateRange(null);
-    listGRNs({ page: 1, perPage: 10 });
-  };
+  const handleRefresh = () => fetchGRNs(pagination.page, pagination.perPage);
 
-  const handleView = async (grn: GRNListItem) => {
+  const handleView = async (record: GRNListItem) => {
     setLoadingDetail(true);
     try {
-      const full = await getGRN(grn.id);
-      setSelectedGRN(full);
+      const data = await getGRN(record.id);
+      if (data) setSelectedGRN(data);
       setViewModalVisible(true);
     } catch {
       message.error('Failed to load GRN details');
@@ -92,12 +82,12 @@ const PurchasesPage: React.FC = () => {
   const buildExportParams = () => ({
     page: 1,
     perPage: 1000,
-    search: searchText || undefined,
+    search: searchText,
     paymentMethod: paymentFilter || undefined,
     status: statusFilter || undefined,
     warehouseId: warehouseFilter || undefined,
-    dateFrom: dateRange ? dateRange[0] : undefined,
-    dateTo: dateRange ? dateRange[1] : undefined,
+    dateFrom: dateRange?.[0],
+    dateTo: dateRange?.[1],
   });
 
   const handleExportPDF = async () => {
@@ -129,9 +119,21 @@ const PurchasesPage: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '24px' }}>
-      <Card>
-        <Row gutter={[12, 12]} style={{ marginBottom: 16 }} align="middle">
+    <PageLayout
+      title="Purchases (GRN)"
+      actions={
+        <Space>
+          <CommonButton icon={<FilePdfOutlined style={{ color: "#FF0000" }} />} onClick={handleExportPDF} tooltip="Download PDF">PDF</CommonButton>
+          <CommonButton icon={<FileExcelOutlined style={{ color: "#107C41" }} />} onClick={handleExportExcel} tooltip="Download Excel">Excel</CommonButton>
+          <CommonButton icon={<ReloadOutlined style={{ color: "blue" }} />} onClick={handleRefresh}>Refresh</CommonButton>
+          <CommonButton type="primary" icon={<PlusOutlined />} onClick={() => navigate('/purchases/add')}>
+            Add Purchase
+          </CommonButton>
+        </Space>
+      }
+    >
+      <div style={{ marginBottom: 16 }}>
+        <Row gutter={[12, 12]} align="middle">
           <Col xs={24} sm={12} md={6}>
             <Search
               placeholder="Search GRN number, supplier..."
@@ -190,34 +192,21 @@ const PurchasesPage: React.FC = () => {
               allowClear
             />
           </Col>
-          <Col xs={24} style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Space wrap>
-              <Tooltip title="Export PDF">
-                <Button icon={<FilePdfOutlined />} onClick={handleExportPDF}>PDF</Button>
-              </Tooltip>
-              <Tooltip title="Export Excel">
-                <Button icon={<FileExcelOutlined />} onClick={handleExportExcel}>Excel</Button>
-              </Tooltip>
-              <Button icon={<ReloadOutlined />} onClick={handleRefresh}>Refresh</Button>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/purchases/add')}>
-                Add Purchase
-              </Button>
-            </Space>
-          </Col>
         </Row>
+      </div>
 
-        <PurchasesTable
-          data={grns}
-          loading={loading || loadingDetail}
-          onView={handleView}
-          pagination={{
-            current: pagination.page,
-            pageSize: pagination.perPage,
-            total: pagination.total,
-            onChange: (page, pageSize) => fetchGRNs(page, pageSize),
-          }}
-        />
-      </Card>
+      <PurchasesTable
+        data={grns}
+        loading={loading || loadingDetail}
+        onView={handleView}
+        pagination={{
+          page: pagination.page,
+          perPage: pagination.perPage,
+          total: pagination.total,
+          totalPages: pagination.totalPages,
+        }}
+        onPageChange={(page, pageSize) => fetchGRNs(page, pageSize)}
+      />
 
       <PurchaseDetailsModal
         visible={viewModalVisible}
@@ -227,7 +216,7 @@ const PurchasesPage: React.FC = () => {
           setSelectedGRN(null);
         }}
       />
-    </div>
+    </PageLayout>
   );
 };
 

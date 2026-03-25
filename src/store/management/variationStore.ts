@@ -43,11 +43,26 @@ export const useVariationStore = create<VariationState>((set) => ({
     set({ loading: true, error: null });
     try {
       const response = await variationService.getVariations(params);
-      set({
-        variations: response.data,
-        pagination: response.pagination,
-        loading: false,
-      });
+      const data = response.data ?? [];
+      const total = response.total ?? data.length;
+      
+      if (params.limit === 1) {
+        set(state => ({
+          pagination: { ...state.pagination, total },
+          loading: false
+        }));
+      } else {
+        set({
+          variations: data,
+          pagination: {
+            total: total,
+            page: response.page || params.page || 1,
+            limit: response.limit || params.limit || 10,
+            totalPages: response.totalPages || Math.ceil(total / (response.limit || 10)),
+          },
+          loading: false,
+        });
+      }
     } catch (error: any) {
       set({
         error: error.response?.data?.message || "Failed to fetch variations",

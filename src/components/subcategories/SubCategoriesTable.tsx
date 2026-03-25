@@ -197,7 +197,7 @@ const SubCategoriesTable: React.FC<SubCategoriesTableProps> = ({
       render: (_: React.ReactNode, record: Subcategory) => (
         <Space>
           <div
-            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer"
+            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
             onClick={() => showViewModal(record)}
           >
             <Tooltip title="View">
@@ -205,7 +205,7 @@ const SubCategoriesTable: React.FC<SubCategoriesTableProps> = ({
             </Tooltip>
           </div>
           <div
-            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer"
+            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
             onClick={() => onEdit(record)}
           >
             <Tooltip title="Edit">
@@ -213,7 +213,7 @@ const SubCategoriesTable: React.FC<SubCategoriesTableProps> = ({
             </Tooltip>
           </div>
           <div
-            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer"
+            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
             onClick={() => showDeleteModal(record)}
             style={{ opacity: (record.productCount ?? 0) > 0 ? 0.5 : 1 }}
           >

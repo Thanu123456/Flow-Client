@@ -19,38 +19,33 @@ const transformUnit = (u: any): Unit => ({
 });
 
 export const unitService = {
-  // Get All Units with pagination
   getUnits: async (params: UnitPaginationParams): Promise<UnitResponse> => {
-    // Convert frontend params to backend params
     const backendParams: any = {
       page: params.page,
       per_page: params.limit,
       search: params.search || undefined,
-      include_inactive: params.status !== "active",
+      include_inactive: params.status === 'inactive' ? true : undefined,
     };
 
-    const response = await axiosInstance.get("/admin/units", { params: backendParams });
-
-    // Backend returns { units: [...], total, page, per_page, total_pages }
-    const unitsData = response.data.units || response.data.data || response.data || [];
-    const units: Unit[] = Array.isArray(unitsData)
-      ? unitsData.map(transformUnit)
-      : [];
+    const response = await axiosInstance.get('/admin/units', { params: backendParams });
+    const rd = response.data;
+    const raw = rd.data ?? rd.units ?? rd ?? [];
+    const units: Unit[] = Array.isArray(raw) ? raw.map(transformUnit) : [];
 
     return {
-      data: units,
-      total: response.data.total || units.length,
-      page: response.data.page || params.page,
-      limit: response.data.per_page || params.limit,
-      totalPages: response.data.total_pages || Math.ceil((response.data.total || units.length) / params.limit),
+      data:       units,
+      total:      rd.total       ?? rd.meta?.total       ?? units.length,
+      page:       rd.page        ?? rd.meta?.page        ?? params.page,
+      limit:      rd.per_page    ?? rd.meta?.per_page    ?? params.limit,
+      totalPages: rd.total_pages ?? rd.meta?.total_pages ?? Math.ceil((rd.meta?.total ?? units.length) / params.limit),
     };
   },
 
   // Get all units (no pagination, for dropdowns)
   getAllUnits: async (): Promise<Unit[]> => {
-    const response = await axiosInstance.get("/admin/units/all");
-    const unitsData = response.data.units || response.data.data || response.data || [];
-    return Array.isArray(unitsData) ? unitsData.map(transformUnit) : [];
+    const response = await axiosInstance.get('/admin/units/all');
+    const raw = response.data.data ?? response.data.units ?? response.data ?? [];
+    return Array.isArray(raw) ? raw.map(transformUnit) : [];
   },
 
   // Get a specific Unit by ID

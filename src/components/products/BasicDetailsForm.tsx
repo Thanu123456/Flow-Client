@@ -16,27 +16,29 @@ import { useUnitStore } from "../../store/management/unitStore";
 import { useWarehouseStore } from "../../store/management/warehouseStore";
 import { useWarrantyStore } from "../../store/management/warrantyStore";
 import type { FormInstance } from "antd";
+import type { Product } from "../../types/entities/product.types";
 
 const { Text } = Typography;
 
 interface BasicDetailsFormProps {
     form: FormInstance;
+    editProduct?: Product | null;
 }
 
-const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
-    const { categories, getAllCategories } = useCategoryStore();
-    const { subcategories, getSubcategoriesByCategory } = useSubcategoryStore();
-    const { brands, getAllBrands } = useBrandStore();
-    const { units, getAllUnits } = useUnitStore();
-    const { warehouses, getAllWarehouses } = useWarehouseStore();
-    const { warranties, getAllWarranties } = useWarrantyStore();
+const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form, editProduct }) => {
+    // Read from the dedicated *dropdown* fields, not the paginated table fields
+    const { allCategories, getAllCategories } = useCategoryStore();
+    const { allSubcategories, getSubcategoriesByCategory } = useSubcategoryStore();
+    const { allBrands, getAllBrands } = useBrandStore();
+    const { allUnits, getAllUnits } = useUnitStore();
+    const { allWarehouses, getAllWarehouses } = useWarehouseStore();
+    const { allWarranties, getAllWarranties } = useWarrantyStore();
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const loadDropdownData = async () => {
             setLoading(true);
             try {
-                // Use Promise.allSettled to ensure all fetches complete even if some fail
                 await Promise.allSettled([
                     getAllCategories(),
                     getAllBrands(),
@@ -56,13 +58,13 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
     // Auto-load subcategories if a category is already selected (e.g., when editing)
     useEffect(() => {
         const categoryId = form.getFieldValue("category_id");
-        if (categoryId && subcategories.length === 0) {
+        if (categoryId && allSubcategories.length === 0) {
             getSubcategoriesByCategory(categoryId);
         }
-    }, [form, getSubcategoriesByCategory, subcategories.length]);
+    }, [form, getSubcategoriesByCategory, allSubcategories.length]);
 
     const handleCategoryChange = (categoryId: string) => {
-        form.setFieldsValue({ subcategory_id: undefined });
+        form.setFieldValue("subcategory_id", undefined);
         if (categoryId) {
             getSubcategoriesByCategory(categoryId);
         }
@@ -106,7 +108,7 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
                                     rules={[{ required: true, message: "Please select product type" }]}
                                     initialValue="single"
                                 >
-                                    <Radio.Group buttonStyle="solid" className="w-full flex">
+                                    <Radio.Group buttonStyle="solid" className="w-full flex" disabled={!!editProduct}>
                                         <Radio.Button value="single" className="flex-1 text-center h-11 flex items-center justify-center">Single</Radio.Button>
                                         <Radio.Button value="variable" className="flex-1 text-center h-11 flex items-center justify-center">Variable</Radio.Button>
                                     </Radio.Group>
@@ -165,7 +167,12 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
                                         className="w-full"
                                         size="large"
                                     >
-                                        {categories.map((cat) => (
+                                        {editProduct?.categoryId && !allCategories.some(c => c.id === editProduct.categoryId) && (
+                                            <Select.Option key={editProduct.categoryId} value={editProduct.categoryId}>
+                                                {editProduct.categoryName}
+                                            </Select.Option>
+                                        )}
+                                        {allCategories.map((cat) => (
                                             <Select.Option key={cat.id} value={cat.id}>
                                                 {cat.name}
                                             </Select.Option>
@@ -189,7 +196,12 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
                                         optionFilterProp="children"
                                         size="large"
                                     >
-                                        {subcategories.map((sub) => (
+                                        {editProduct?.subcategoryId && !allSubcategories.some(s => s.id === editProduct.subcategoryId) && (
+                                            <Select.Option key={editProduct.subcategoryId} value={editProduct.subcategoryId}>
+                                                {editProduct.subcategoryName}
+                                            </Select.Option>
+                                        )}
+                                        {allSubcategories.map((sub) => (
                                             <Select.Option key={sub.id} value={sub.id}>
                                                 {sub.name}
                                             </Select.Option>
@@ -204,7 +216,12 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
                                     label={<span className="font-normal">Brand</span>}
                                 >
                                     <Select placeholder="Select Brand" allowClear showSearch optionFilterProp="children" size="large">
-                                        {brands.map((brand) => (
+                                        {editProduct?.brandId && !allBrands.some(b => b.id === editProduct.brandId) && (
+                                            <Select.Option key={editProduct.brandId} value={editProduct.brandId}>
+                                                {editProduct.brandName}
+                                            </Select.Option>
+                                        )}
+                                        {allBrands.map((brand) => (
                                             <Select.Option key={brand.id} value={brand.id}>
                                                 {brand.name}
                                             </Select.Option>
@@ -219,7 +236,12 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
                                     rules={[{ required: true, message: "Please select unit" }]}
                                 >
                                     <Select placeholder="Select Unit" showSearch optionFilterProp="children" size="large">
-                                        {units.map((unit) => (
+                                        {editProduct?.unitId && !allUnits.some(u => u.id === editProduct.unitId) && (
+                                            <Select.Option key={editProduct.unitId} value={editProduct.unitId}>
+                                                {editProduct.unitName} ({editProduct.unitShortName})
+                                            </Select.Option>
+                                        )}
+                                        {allUnits.map((unit) => (
                                             <Select.Option key={unit.id} value={unit.id}>
                                                 {unit.name} ({unit.shortName})
                                             </Select.Option>
@@ -239,7 +261,12 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
                                     }
                                 >
                                     <Select placeholder="Select Warehouse" allowClear showSearch optionFilterProp="children" size="large">
-                                        {warehouses.map((wh) => (
+                                        {editProduct?.warehouseId && !allWarehouses.some(w => w.id === editProduct.warehouseId) && (
+                                            <Select.Option key={editProduct.warehouseId} value={editProduct.warehouseId}>
+                                                {editProduct.warehouseName}
+                                            </Select.Option>
+                                        )}
+                                        {allWarehouses.map((wh) => (
                                             <Select.Option key={wh.id} value={wh.id}>
                                                 {wh.name}
                                             </Select.Option>
@@ -258,7 +285,12 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form }) => {
                                     }
                                 >
                                     <Select placeholder="Select Warranty" allowClear showSearch optionFilterProp="children" size="large">
-                                        {warranties.map((w) => (
+                                        {editProduct?.warrantyId && !allWarranties.some(w => w.id === editProduct.warrantyId) && (
+                                            <Select.Option key={editProduct.warrantyId} value={editProduct.warrantyId}>
+                                                {editProduct.warrantyName}
+                                            </Select.Option>
+                                        )}
+                                        {allWarranties.map((w) => (
                                             <Select.Option key={w.id} value={w.id}>
                                                 {w.name}
                                             </Select.Option>

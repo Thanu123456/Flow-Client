@@ -28,37 +28,77 @@ interface ProductState {
 
 export const useProductStore = create<ProductState>()(
     devtools(
-        (set) => ({
+        (set, get) => ({
             products: [],
             loading: false,
             error: null,
             pagination: {
                 total: 0,
                 page: 1,
-                limit: 10,
+                limit: 50,
                 totalPages: 0,
             },
 
             getProducts: async (params) => {
-                set({ loading: true, error: null });
-                try {
-                    const response = await productService.getProducts(params);
-                    set({
-                        products: response.data,
-                        pagination: {
-                            total: response.total,
-                            page: response.page,
-                            limit: response.limit,
-                            totalPages: response.totalPages,
-                        },
-                        loading: false,
-                    });
-                } catch (error: any) {
-                    set({
-                        error: error.response?.data?.message || "Failed to fetch products",
-                        loading: false,
-                    });
-                }
+                // Only show the full-page loading spinner on the very first fetch
+                // (when there are no products yet). Subsequent fetches keep the
+                // existing list visible so the UI never goes blank during refreshes.
+                const hasExisting = get().products.length > 0;
+                set({ loading: !hasExisting, error: null });
+
+                // Inner function so we can retry without re-triggering the loading flag.
+                // On first load (empty products): keeps spinner alive and retries up to
+                // `attemptsLeft` more times after the axios interceptor exhausts its own
+                // 4 retries — prevents the "blank on first load, need one manual refresh"
+                // symptom caused by serverless DB cold-starts.
+                const tryFetch = async (attemptsLeft: number): Promise<void> => {
+                    try {
+                        const response = await productService.getProducts(params);
+                        const data = response.data ?? [];
+                        const total = response.total ?? data.length;
+                        const limit = response.limit ?? params.limit ?? 50;
+                        const page = response.page ?? params.page ?? 1;
+                        const totalPages = response.totalPages ?? Math.ceil(total / limit);
+
+                        if (params.limit === 1) {
+                            // Counter-only call — update total without touching the list
+                            set(state => ({
+                                pagination: { ...state.pagination, total },
+                                loading: false,
+                            }));
+                        } else {
+                            // Safety guard: never replace an existing loaded list
+                            // with an empty response (guards against duplicate/stale calls).
+                            const currentProducts = get().products;
+                            const shouldUpdate = data.length > 0 || currentProducts.length === 0;
+                            if (shouldUpdate) {
+                                set({
+                                    products: data,
+                                    pagination: { total, page, limit, totalPages },
+                                    loading: false,
+                                });
+                            } else {
+                                // Got empty data but already have products loaded — keep existing
+                                set({ loading: false });
+                            }
+                        }
+                    } catch (err: any) {
+                        if (!hasExisting && attemptsLeft > 0) {
+                            // Keep the spinner visible; pause then try again
+                            await new Promise(r => setTimeout(r, 3000));
+                            return tryFetch(attemptsLeft - 1);
+                        }
+                        // Final failure — preserve existing products, surface the error
+                        set(state => ({
+                            ...state,
+                            error: err.response?.data?.message || "Failed to fetch products",
+                            loading: false,
+                        }));
+                        throw err;
+                    }
+                };
+
+                return tryFetch(2);
             },
 
             getProductById: async (id) => {

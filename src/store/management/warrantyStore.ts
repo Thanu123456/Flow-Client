@@ -9,6 +9,8 @@ import type {
 
 interface WarrantyState {
   warranties: Warranty[];
+  // Separate field for dropdowns so paginated table data is never overwritten
+  allWarranties: Warranty[];
   loading: boolean;
   error: string | null;
   pagination: {
@@ -29,16 +31,12 @@ interface WarrantyState {
 
 export const useWarrantyStore = create<WarrantyState>()(
   devtools(
-    (set) => ({
+    (set, get) => ({
       warranties: [],
+      allWarranties: [],
       loading: false,
       error: null,
-      pagination: {
-        total: 0,
-        page: 1,
-        limit: 10,
-        totalPages: 0,
-      },
+      pagination: { total: 0, page: 1, limit: 10, totalPages: 0 },
 
       getWarranties: async (params) => {
         set({ loading: true, error: null });
@@ -50,7 +48,7 @@ export const useWarrantyStore = create<WarrantyState>()(
               total: response.total,
               page: response.page,
               limit: response.limit,
-              totalPages: response.totalPages
+              totalPages: response.totalPages,
             },
             loading: false,
           });
@@ -63,17 +61,21 @@ export const useWarrantyStore = create<WarrantyState>()(
       },
 
       getAllWarranties: async () => {
-        // This populates the list for dropdowns. 
-        // Assuming we use the same list state or different? 
-        // Usually for dropdowns we might want a separate state or just replace the main list if pagination not used on that page.
-        // But BasicDetailsForm uses 'warranties' which comes from this store.
-        // I'll update 'warranties' with ALL data.
-        try {
-          const data = await warrantyService.getAllWarranties();
-          set({ warranties: data });
-        } catch (error: any) {
-          console.error(error);
-        }
+        // Populates dropdown list — writes to allWarranties, NOT warranties (table data)
+        const cached = get().allWarranties;
+        const tryFetch = async (attemptsLeft: number): Promise<void> => {
+          try {
+            const data = await warrantyService.getAllWarranties();
+            set({ allWarranties: data });
+          } catch (err: any) {
+            if (cached.length === 0 && attemptsLeft > 0) {
+              await new Promise(r => setTimeout(r, 3000));
+              return tryFetch(attemptsLeft - 1);
+            }
+            if (cached.length === 0) console.error("Failed to fetch warranties:", err);
+          }
+        };
+        return tryFetch(2);
       },
 
       getWarrantyById: async (id) => {
