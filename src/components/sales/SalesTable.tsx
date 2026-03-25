@@ -1,5 +1,5 @@
 import React from "react";
-import { Tag, Tooltip } from "antd";
+import { Tag, Badge } from "antd";
 import type { SaleProductItem } from "../../types/entities/sale.types";
 import { CommonTable } from "../common/Table";
 import type { TableColumn } from "../common/Table/Table.types";
@@ -21,19 +21,16 @@ const SalesTable: React.FC<SalesTableProps> = ({ products, loading }) => {
       dataIndex: "productId",
       key: "productId",
       render: (id: string) => (
-        <Tooltip title={id}>
-          <div className="flex items-center justify-start">
-            <span className="font-mono text-[13px] font-bold text-blue-800 bg-blue-50/80 px-2.5 py-1.5 rounded-lg border border-blue-200/50 shadow-sm">
-              {id.slice(0, 12)}...
-            </span>
-          </div>
-        </Tooltip>
+        <span className="text-gray-600 font-medium">
+          {id}
+        </span>
       ),
     },
     {
       title: "Product Type",
       dataIndex: "productType",
       key: "productType",
+      align: "center" as const,
       render: (type: string) => (
         <Tag color={productTypeColor[type] ?? "default"}>
           {type.charAt(0).toUpperCase() + type.slice(1)}
@@ -58,15 +55,23 @@ const SalesTable: React.FC<SalesTableProps> = ({ products, loading }) => {
       sorter: (a: SaleProductItem, b: SaleProductItem) =>
         a.availableStock - b.availableStock,
       render: (stock: number) => (
-        <span
-          className={`px-3 py-1 rounded-lg text-sm border ${
-            stock > 0
-              ? "border-green-500 text-green-600 bg-green-50/70"
-              : "border-red-400 text-red-500 bg-red-50/70"
-          }`}
-        >
-          {stock}
-        </span>
+        <Badge
+          count={stock}
+          showZero
+          overflowCount={99999}
+          style={{
+            backgroundColor: stock > 0 ? "#1890ff" : "#d9d9d9",
+            color: "#fff",
+            fontSize: "14px",
+            height: "28px",
+            minWidth: "28px",
+            lineHeight: "28px",
+            borderRadius: "14px",
+            cursor: "default",
+            boxShadow: "0 2px 0 rgba(0,0,0,0.045)",
+            padding: "0 8px",
+          }}
+        />
       ),
     },
   ];
@@ -78,7 +83,7 @@ const SalesTable: React.FC<SalesTableProps> = ({ products, loading }) => {
       rowKey="productId"
       loading={loading}
       pagination={{ total: products.length, page: 1, limit: products.length || 10, totalPages: 1 }}
-      onPageChange={() => {}}
+      onPageChange={() => { }}
     />
   );
 };
