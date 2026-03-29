@@ -72,3 +72,34 @@
 [data-theme='dark'] .ant-table-content::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.05);
 }
+
+/* Ensure InputNumber controls (up/down arrows) are always visible without hover */
+.ant-input-number-handler-wrap {
+  opacity: 1 !important;
+  visibility: visible !important;
+  width: 22px !important;
+  background: #f8f9fa !important;
+  border-left: 1px solid #d9d9d9 !important;
+}
+
+.ant-input-number-handler {
+  height: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-bottom: 1px solid #d9d9d9 !important;
+}
+
+.ant-input-number-handler:last-child {
+  border-bottom: none !important;
+}
+
+.ant-input-number-handler:hover {
+  background-color: #e9ecef !important;
+}
+
+.ant-input-number-handler-up-inner, 
+.ant-input-number-handler-down-inner {
+  font-size: 10px !important;
+  color: #555 !important;
+}

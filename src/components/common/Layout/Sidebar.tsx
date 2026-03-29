@@ -384,7 +384,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     if (isOwner || hasPermission(PERMISSIONS.SALES_VIEW))
       txItems.push({ key: "sales", label: "Sales", icon: <DollarOutlined />, path: "/sales" });
     if (isOwner || hasPermission(PERMISSIONS.PURCHASES_VIEW))
-      txItems.push({ key: "purchases", label: "Purchases", icon: <FileTextOutlined />, path: "/purchases" });
+      txItems.push({ key: "purchases", label: "GRN", icon: <FileTextOutlined />, path: "/purchases" });
     if (txItems.length > 0) {
       groups.push({
         title: "Transactions",

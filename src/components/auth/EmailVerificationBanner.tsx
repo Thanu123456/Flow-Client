@@ -11,7 +11,8 @@ interface EmailVerificationBannerProps {
 
 const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = ({
   email,
-  onVerified,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onVerified: _onVerified,
   style
 }) => {
   const [loading, setLoading] = useState(false);

@@ -44,9 +44,9 @@ const ViewCategoryModal: React.FC<ViewCategoryModalProps> = ({
 
         <Descriptions.Item label="Sub-Categories Count">
           <Badge
-            count={category?.subCategoryCount ?? 0}
+            count={category?.subcategoryCount ?? 0}
             showZero
-            style={{ backgroundColor: (category?.subCategoryCount ?? 0) > 0 ? "#1890ff" : "#d9d9d9", }}
+            style={{ backgroundColor: (category?.subcategoryCount ?? 0) > 0 ? "#1890ff" : "#d9d9d9", }}
           />
         </Descriptions.Item>
 

@@ -11,7 +11,6 @@ import {
   Result,
   Divider,
   Tag,
-  Modal,
   message,
   Tooltip
 } from 'antd';
@@ -25,9 +24,9 @@ import {
   ReloadOutlined
 } from '@ant-design/icons';
 import { authService } from '../../services/auth/authService';
-import type { MfaSetupResponse, MfaStatusResponse } from '../../types/auth/auth.types';
+import type { MfaSetupResponse } from '../../types/auth/auth.types';
 
-const { Title, Text, Paragraph } = Typography;
+const { Text, Paragraph } = Typography;
 
 interface MfaSetupProps {
   onComplete?: () => void;

@@ -69,7 +69,7 @@ const AddVariationModal: React.FC<AddVariationModalProps> = ({
       submitButtonText="Add Variation"
       width={600}
     >
-      {(form: FormInstance) => (
+      {(_form: FormInstance) => (
         <>
           <Form.Item
             label="Variation Name"

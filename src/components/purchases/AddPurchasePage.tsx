@@ -116,7 +116,7 @@ const AddPurchasePage: React.FC = () => {
   // ── Header state ────────────────────────────────────────
   const [warehouseId, setWarehouseId] = useState('');
   const [supplierId, setSupplierId] = useState<string | undefined>();
-  const [supplierName, setSupplierName] = useState('');
+  const [_supplierName, setSupplierName] = useState('');
   const [supplierBalance, setSupplierBalance] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [grnDate, setGrnDate] = useState(dayjs().format('YYYY-MM-DD'));
@@ -126,7 +126,7 @@ const AddPurchasePage: React.FC = () => {
   // ── Data lists ───────────────────────────────────────────
   const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([]);
   const [supplierOptions, setSupplierOptions] = useState<{ value: string; label: string }[]>([]);
-  const [searchingSuppliers, setSearchingSuppliers] = useState(false);
+  const [_searchingSuppliers, setSearchingSuppliers] = useState(false);
 
   // ── Product selection state ──────────────────────────────
   const [productSearch, setProductSearch] = useState('');
