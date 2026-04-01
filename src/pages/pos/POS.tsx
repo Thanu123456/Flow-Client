@@ -93,6 +93,7 @@ const POS: React.FC = () => {
         setCustomer, setPaymentMethod, setRefundMode,
         setDiscount, setDeliveryCharge,
         setCardBank, setCardFirstDigit, setCardLastFour, setCardType, setPriceMode,
+        updateCartItemPrices,
         initializePriceMode,
         checkout,
         holdBill, resumeHoldBill,
@@ -147,10 +148,10 @@ const POS: React.FC = () => {
     //  PAY_CODE    : C=Cash  D=Card  R=Credit  O=COD
     const generateBillNumber = useCallback((mode: string, method: string): string => {
         const modeMap: Record<string, string> = { our: 'O', cost: 'O', retail: 'R', wholesale: 'W' };
-        const payMap:  Record<string, string> = { Cash: 'C', Card: 'D', Credit: 'R', COD: 'O' };
+        const payMap: Record<string, string> = { Cash: 'C', Card: 'D', Credit: 'R', COD: 'O' };
 
         const modePrefix = modeMap[mode.toLowerCase()] ?? 'R';
-        const payCode    = payMap[method] ?? 'C';
+        const payCode = payMap[method] ?? 'C';
 
         const now = new Date();
         const pad = (n: number, d = 2) => String(n).padStart(d, '0');
@@ -389,7 +390,7 @@ const POS: React.FC = () => {
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape' && isPaymentModalOpen) { setIsPaymentModalOpen(false); return; }
-            
+
             if (isPaymentModalOpen) {
                 // Modal checkout shortcuts
                 if (e.key === 'Enter') { e.preventDefault(); handleCheckout(); return; }
@@ -452,7 +453,7 @@ const POS: React.FC = () => {
         }
 
         try {
-            await checkout(paidAmount);
+            await checkout(paidAmount, billNumber);
             message.success('Payment completed successfully!');
             setIsPaymentModalOpen(false);
             setPaidAmount(0);
@@ -1106,8 +1107,20 @@ const POS: React.FC = () => {
                 visible={isPriceModeVisible}
                 currentMode={priceMode as "our" | "retail" | "wholesale"}
                 onSelect={(mode) => {
-                    setPriceMode(mode);
-                    message.success(`Price mode changed to ${priceModeLabel[mode]}`);
+                    const newMode = mode as PriceMode;
+                    setPriceMode(newMode);
+
+                    // Update prices of all items already in the cart
+                    const updatedItems = cart.map(item => {
+                        const product = products.find(p => p.id === item.productId);
+                        if (!product) return { id: item.id, price: item.price };
+                        const variation = product.variations?.find(v => v.id === item.variationId);
+                        const newPrice = getPriceByMode(product as any, variation as any, newMode);
+                        return { id: item.id, price: newPrice };
+                    });
+
+                    updateCartItemPrices(updatedItems);
+                    message.success(`Price mode changed to ${priceModeLabel[newMode]}`);
                 }}
                 onClose={() => setIsPriceModeVisible(false)}
             />

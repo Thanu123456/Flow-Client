@@ -1,93 +1,73 @@
-import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Modal, Input, Select, DatePicker, message, Tag, Empty, Spin } from 'antd';
-import { EyeOutlined, PrinterOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+	Table, Button, Space, Modal, Input, Select,
+	DatePicker, message, Tag, Empty, Spin, Descriptions,
+} from 'antd';
+import { EyeOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
+import { saleService } from '../../services/transactions/saleService';
+import type { SaleListItem, SaleDetailItem } from '../../types/entities/sale.types';
 
-interface SaleItem {
-	id: string;
-	bill_number: string;
-	customer_name?: string;
-	total_amount: number;
-	payment_method: string;
-	created_at: string;
-	items?: any[];
-	subtotal: number;
-	discount_amount?: number;
-	delivery_charge?: number;
-}
+const PAYMENT_COLORS: Record<string, string> = {
+	cash: 'green',
+	card: 'blue',
+	cod: 'orange',
+	credit: 'purple',
+	hold: 'default',
+};
 
 const SalesHistoryTable: React.FC = () => {
-	const [sales, setSales] = useState<SaleItem[]>([]);
+	const [sales, setSales] = useState<SaleListItem[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [searchText, setSearchText] = useState('');
 	const [paymentFilter, setPaymentFilter] = useState<string>('');
 	const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
-	const [detailsModalVisible, setDetailsModalVisible] = useState(false);
-	const [selectedSale, setSelectedSale] = useState<SaleItem | null>(null);
+	const [detailVisible, setDetailVisible] = useState(false);
+	const [detailLoading, setDetailLoading] = useState(false);
+	const [selectedSale, setSelectedSale] = useState<SaleDetailItem | null>(null);
 
-	const loadSales = async () => {
+	const loadSales = useCallback(async () => {
 		setLoading(true);
 		try {
-			let url = '/api/admin/sales';
-			const params = new URLSearchParams();
-
-			if (searchText) {
-				params.append('search', searchText);
-			}
-			if (paymentFilter) {
-				params.append('payment_method', paymentFilter);
-			}
-			if (dateRange && dateRange[0] && dateRange[1]) {
-				params.append('date_from', dateRange[0].format('YYYY-MM-DD'));
-				params.append('date_to', dateRange[1].format('YYYY-MM-DD'));
-			}
-
-			if (params.toString()) {
-				url += '?' + params.toString();
-			}
-
-			const response = await fetch(url);
-			if (response.ok) {
-				const data = await response.json();
-				setSales(data.data || []);
-			}
-		} catch (error) {
+			const data = await saleService.listSales({
+				search: searchText || undefined,
+				payment_method: paymentFilter || undefined,
+				date_from: dateRange?.[0]?.format('YYYY-MM-DD') ?? undefined,
+				date_to: dateRange?.[1]?.format('YYYY-MM-DD') ?? undefined,
+			});
+			setSales(data);
+		} catch {
 			message.error('Failed to load sales');
 		} finally {
 			setLoading(false);
 		}
-	};
-
-	useEffect(() => {
-		loadSales();
 	}, [searchText, paymentFilter, dateRange]);
 
-	const handlePrint = async (saleId: string) => {
+	useEffect(() => { loadSales(); }, [loadSales]);
+
+	const openDetail = async (id: string) => {
+		setDetailVisible(true);
+		setDetailLoading(true);
+		setSelectedSale(null);
 		try {
-			const response = await fetch(`/api/admin/sales/${saleId}/receipt`);
-			if (response.ok) {
-				const data = await response.json();
-				// Trigger browser print dialog
-				const printWindow = window.open('', '', 'height=600,width=800');
-				if (printWindow) {
-					printWindow.document.write(data.receipt_html || 'Receipt data');
-					printWindow.document.close();
-					printWindow.print();
-				}
-			}
-		} catch (error) {
-			message.error('Failed to print receipt');
+			const detail = await saleService.getSaleDetail(id);
+			setSelectedSale(detail);
+		} catch {
+			message.error('Failed to load sale details');
+			setDetailVisible(false);
+		} finally {
+			setDetailLoading(false);
 		}
 	};
 
-	const columns: ColumnsType<SaleItem> = [
+	const columns: ColumnsType<SaleListItem> = [
 		{
-			title: 'Bill #',
-			dataIndex: 'bill_number',
-			key: 'bill_number',
-			width: 120,
-			render: (text) => <span style={{ fontWeight: 'bold' }}>{text}</span>,
+			title: 'Bill Number',
+			dataIndex: 'invoice_number',
+			key: 'invoice_number',
+			width: 180,
+			render: (text) => <strong>{text || '—'}</strong>,
 		},
 		{
 			title: 'Customer',
@@ -100,209 +80,195 @@ const SalesHistoryTable: React.FC = () => {
 			title: 'Subtotal',
 			dataIndex: 'subtotal',
 			key: 'subtotal',
-			width: 100,
-			render: (amount) => `LKR ${amount.toFixed(2)}`,
+			width: 110,
+			align: 'right',
+			render: (v: number) => `LKR ${v.toFixed(2)}`,
 		},
 		{
 			title: 'Discount',
 			dataIndex: 'discount_amount',
 			key: 'discount_amount',
 			width: 100,
-			render: (amount) => amount ? `LKR ${amount.toFixed(2)}` : '-',
+			align: 'right',
+			render: (v: number) => v > 0 ? `-LKR ${v.toFixed(2)}` : '—',
 		},
 		{
 			title: 'Delivery',
 			dataIndex: 'delivery_charge',
 			key: 'delivery_charge',
 			width: 100,
-			render: (charge) => charge ? `LKR ${charge.toFixed(2)}` : '-',
+			align: 'right',
+			render: (v: number) => v > 0 ? `+LKR ${v.toFixed(2)}` : '—',
 		},
 		{
 			title: 'Total',
 			dataIndex: 'total_amount',
 			key: 'total_amount',
-			width: 110,
-			render: (amount) => <span style={{ fontWeight: 'bold', color: '#1890ff' }}>{`LKR ${amount.toFixed(2)}`}</span>,
+			width: 120,
+			align: 'right',
+			render: (v: number) => (
+				<strong style={{ color: '#1890ff' }}>{`LKR ${v.toFixed(2)}`}</strong>
+			),
 		},
 		{
 			title: 'Payment',
 			dataIndex: 'payment_method',
 			key: 'payment_method',
 			width: 100,
-			render: (method) => {
-				const colorMap: Record<string, string> = {
-					cash: 'green',
-					card: 'blue',
-					cod: 'orange',
-				};
-				return <Tag color={colorMap[method] || 'default'}>{method.toUpperCase()}</Tag>;
-			},
+			render: (method: string) => (
+				<Tag color={PAYMENT_COLORS[method?.toLowerCase()] ?? 'default'}>
+					{method?.toUpperCase()}
+				</Tag>
+			),
 		},
 		{
 			title: 'Date',
 			dataIndex: 'created_at',
 			key: 'created_at',
 			width: 160,
-			render: (date) => new Date(date).toLocaleString(),
+			render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm'),
 		},
 		{
 			title: 'Actions',
 			key: 'actions',
-			width: 150,
+			width: 90,
 			render: (_, record) => (
-				<Space>
-					<Button
-						type="primary"
-						size="small"
-						icon={<EyeOutlined />}
-						onClick={() => {
-							setSelectedSale(record);
-							setDetailsModalVisible(true);
-						}}
-					>
-						View
-					</Button>
-					<Button
-						size="small"
-						icon={<PrinterOutlined />}
-						onClick={() => handlePrint(record.id)}
-					>
-						Print
-					</Button>
-				</Space>
+				<Button
+					type="primary"
+					size="small"
+					icon={<EyeOutlined />}
+					onClick={() => openDetail(record.id)}
+				>
+					View
+				</Button>
 			),
+		},
+	];
+
+	const itemColumns: ColumnsType<any> = [
+		{ title: 'Product', dataIndex: 'name', key: 'name' },
+		{
+			title: 'Qty', dataIndex: 'quantity', key: 'quantity', width: 80,
+			render: (v: number) => v % 1 === 0 ? v : v.toFixed(3),
+		},
+		{
+			title: 'Unit Price', dataIndex: 'price', key: 'price', width: 110, align: 'right',
+			render: (v: number) => `LKR ${v.toFixed(2)}`,
+		},
+		{
+			title: 'Total', key: 'total', width: 110, align: 'right',
+			render: (_: any, r: any) => `LKR ${(r.quantity * r.price).toFixed(2)}`,
 		},
 	];
 
 	return (
 		<>
-			<Space direction="vertical" style={{ width: '100%', marginBottom: '20px' }} size="large">
-				<Space wrap>
-					<Input
-						placeholder="Search bill # or customer..."
-						value={searchText}
-						onChange={(e) => setSearchText(e.target.value)}
-						style={{ width: 250 }}
-						allowClear
-					/>
-					<Select
-						placeholder="Payment Method"
-						value={paymentFilter}
-						onChange={setPaymentFilter}
-						style={{ width: 150 }}
-						allowClear
-						options={[
-							{ label: 'Cash', value: 'cash' },
-							{ label: 'Card', value: 'card' },
-							{ label: 'COD', value: 'cod' },
-						]}
-					/>
-					<DatePicker.RangePicker
-						value={dateRange}
-						onChange={(dates) => setDateRange(dates as [dayjs.Dayjs | null, dayjs.Dayjs | null] | null)}
-						format="YYYY-MM-DD"
-					/>
-					<Button onClick={loadSales}>Refresh</Button>
-				</Space>
+			{/* Filters */}
+			<Space wrap style={{ marginBottom: 16 }}>
+				<Input
+					placeholder="Search bill # or customer…"
+					value={searchText}
+					onChange={(e) => setSearchText(e.target.value)}
+					style={{ width: 240 }}
+					allowClear
+				/>
+				<Select
+					placeholder="Payment Method"
+					value={paymentFilter || undefined}
+					onChange={setPaymentFilter}
+					style={{ width: 160 }}
+					allowClear
+					options={[
+						{ label: 'Cash', value: 'cash' },
+						{ label: 'Card', value: 'card' },
+						{ label: 'COD', value: 'cod' },
+						{ label: 'Credit', value: 'credit' },
+					]}
+				/>
+				<DatePicker.RangePicker
+					value={dateRange}
+					onChange={(dates) =>
+						setDateRange(dates as [dayjs.Dayjs | null, dayjs.Dayjs | null] | null)
+					}
+					format="YYYY-MM-DD"
+				/>
+				<Button icon={<ReloadOutlined />} onClick={loadSales}>
+					Refresh
+				</Button>
 			</Space>
 
+			{/* Table */}
 			<Spin spinning={loading}>
-				{sales.length === 0 ? (
+				{sales.length === 0 && !loading ? (
 					<Empty description="No sales found" />
 				) : (
 					<Table
 						columns={columns}
 						dataSource={sales}
 						rowKey="id"
-						pagination={{ pageSize: 10 }}
+						pagination={{ pageSize: 15, showSizeChanger: true, showTotal: (t) => `${t} records` }}
 						size="small"
+						scroll={{ x: 900 }}
 					/>
 				)}
 			</Spin>
 
+			{/* Detail Modal */}
 			<Modal
-				title={`Sale Details - ${selectedSale?.bill_number}`}
-				open={detailsModalVisible}
-				onCancel={() => setDetailsModalVisible(false)}
-				footer={[
-					<Button key="close" onClick={() => setDetailsModalVisible(false)}>
-						Close
-					</Button>,
-					<Button
-						key="print"
-						type="primary"
-						icon={<PrinterOutlined />}
-						onClick={() => {
-							if (selectedSale) {
-								handlePrint(selectedSale.id);
-							}
-						}}
-					>
-						Print
-					</Button>,
-				]}
-				width={700}
+				title={selectedSale ? `Sale — ${selectedSale.invoice_number || selectedSale.id}` : 'Sale Details'}
+				open={detailVisible}
+				onCancel={() => setDetailVisible(false)}
+				footer={
+					<Button onClick={() => setDetailVisible(false)}>Close</Button>
+				}
+				width={760}
 			>
-				{selectedSale && (
-					<div>
-						<div style={{ marginBottom: '20px' }}>
-							<p><strong>Bill Number:</strong> {selectedSale.bill_number}</p>
-							<p><strong>Customer:</strong> {selectedSale.customer_name || 'Walk-in'}</p>
-							<p><strong>Payment Method:</strong> {selectedSale.payment_method.toUpperCase()}</p>
-							<p><strong>Date:</strong> {new Date(selectedSale.created_at).toLocaleString()}</p>
-						</div>
+				<Spin spinning={detailLoading}>
+					{selectedSale && (
+						<>
+							<Descriptions size="small" column={2} bordered style={{ marginBottom: 16 }}>
+								<Descriptions.Item label="Invoice #">{selectedSale.invoice_number || '—'}</Descriptions.Item>
+								<Descriptions.Item label="Customer">{selectedSale.customer_name}</Descriptions.Item>
+								<Descriptions.Item label="Payment">
+									<Tag color={PAYMENT_COLORS[selectedSale.payment_method?.toLowerCase()] ?? 'default'}>
+										{selectedSale.payment_method?.toUpperCase()}
+									</Tag>
+								</Descriptions.Item>
+								<Descriptions.Item label="Date">
+									{dayjs(selectedSale.created_at).format('YYYY-MM-DD HH:mm')}
+								</Descriptions.Item>
+								<Descriptions.Item label="Status">
+									<Tag color={selectedSale.status === 'completed' ? 'green' : 'orange'}>
+										{selectedSale.status?.toUpperCase()}
+									</Tag>
+								</Descriptions.Item>
+							</Descriptions>
 
-						<div style={{ marginBottom: '20px' }}>
-							<h4>Items</h4>
 							<Table
+								columns={itemColumns}
 								dataSource={selectedSale.items}
-								columns={[
-									{
-										title: 'Product',
-										dataIndex: 'name',
-										key: 'name',
-									},
-									{
-										title: 'Qty',
-										dataIndex: 'quantity',
-										key: 'quantity',
-										width: 80,
-									},
-									{
-										title: 'Price',
-										dataIndex: 'price',
-										key: 'price',
-										width: 100,
-										render: (price) => `LKR ${price.toFixed(2)}`,
-									},
-									{
-										title: 'Total',
-										dataIndex: 'total',
-										key: 'total',
-										width: 100,
-										render: (_, record) => `LKR ${(record.quantity * record.price).toFixed(2)}`,
-									},
-								]}
 								rowKey="id"
 								pagination={false}
 								size="small"
+								style={{ marginBottom: 16 }}
 							/>
-						</div>
 
-						<div style={{ textAlign: 'right', paddingTop: '20px', borderTop: '1px solid #ddd' }}>
-							<p><strong>Subtotal:</strong> LKR {selectedSale.subtotal.toFixed(2)}</p>
-							{selectedSale.discount_amount ? (
-								<p><strong>Discount:</strong> -LKR {selectedSale.discount_amount.toFixed(2)}</p>
-							) : null}
-							{selectedSale.delivery_charge ? (
-								<p><strong>Delivery:</strong> +LKR {selectedSale.delivery_charge.toFixed(2)}</p>
-							) : null}
-							<p style={{ fontSize: '16px', fontWeight: 'bold', color: '#1890ff' }}>
-								<strong>Total:</strong> LKR {selectedSale.total_amount.toFixed(2)}
-							</p>
-						</div>
-					</div>
-				)}
+							<div style={{ textAlign: 'right', lineHeight: '2em' }}>
+								<div>Subtotal: <strong>LKR {selectedSale.subtotal.toFixed(2)}</strong></div>
+								{selectedSale.discount_amount > 0 && (
+									<div>Discount: <strong style={{ color: '#f5222d' }}>-LKR {selectedSale.discount_amount.toFixed(2)}</strong></div>
+								)}
+								{selectedSale.delivery_charge > 0 && (
+									<div>Delivery: <strong>+LKR {selectedSale.delivery_charge.toFixed(2)}</strong></div>
+								)}
+								<div style={{ fontSize: 16 }}>
+									Total: <strong style={{ color: '#1890ff' }}>LKR {selectedSale.total_amount.toFixed(2)}</strong>
+								</div>
+								<div>Paid: <strong>LKR {selectedSale.paid_amount.toFixed(2)}</strong></div>
+							</div>
+						</>
+					)}
+				</Spin>
 			</Modal>
 		</>
 	);

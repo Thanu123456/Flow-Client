@@ -65,6 +65,7 @@ interface POSState {
     setPriceMode: (mode: "our" | "retail" | "wholesale") => void;
     initializePriceMode: () => void;
     checkout: (paidAmount: number, billNumber?: string) => Promise<void>;
+    updateCartItemPrices: (itemsWithNewPrices: { id: string; price: number }[]) => void;
 
     // Feature #10 – Hold Bills
     holdBill: () => Promise<void>;
@@ -218,7 +219,7 @@ export const usePOSStore = create<POSState>()(
                     }
 
                     const payload: POSSaleRequest = {
-                        bill_number: billNumber,                         // Feature #4
+                        invoice_number: billNumber,                         // Feature #4
                         customer_id: customerId || undefined,
                         payment_method: paymentMethod,
                         total_amount: Math.abs(totalAmount),
@@ -345,6 +346,16 @@ export const usePOSStore = create<POSState>()(
                     discountValue: billData.discount_value,
                     deliveryCharge: billData.delivery_charge,
                 });
+            },
+
+            // ─── updateCartItemPrices ─────────────────────────────────
+            updateCartItemPrices: (itemsWithNewPrices) => {
+                const { cart } = get();
+                const newCart = cart.map((item) => {
+                    const match = itemsWithNewPrices.find((m) => m.id === item.id);
+                    return match ? { ...item, price: match.price } : item;
+                });
+                set({ cart: newCart });
             },
         }),
         { name: "pos-store" }

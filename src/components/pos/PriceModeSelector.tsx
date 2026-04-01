@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Radio, Divider, Tag } from 'antd';
+import { Modal, Radio, Divider, Tag, Typography } from 'antd';
+import { 
+    ShoppingOutlined, 
+    GlobalOutlined, 
+    BankOutlined,
+    CheckCircleFilled 
+} from '@ant-design/icons';
+
+const { Text, Title } = Typography;
 
 interface PriceModeSelectorProps {
     visible: boolean;
@@ -8,11 +16,6 @@ interface PriceModeSelectorProps {
     onClose: () => void;
 }
 
-/**
- * Price Mode Selector Modal
- * Allows user to select between Our/Retail/Wholesale pricing
- * Feature #6: Price Mode Switching (2.1)
- */
 const PriceModeSelector: React.FC<PriceModeSelectorProps> = ({
     visible,
     currentMode,
@@ -21,7 +24,6 @@ const PriceModeSelector: React.FC<PriceModeSelectorProps> = ({
 }) => {
     const [selectedMode, setSelectedMode] = useState<"our" | "retail" | "wholesale">(currentMode);
 
-    // Sync selectedMode with currentMode when modal opens or currentMode changes
     useEffect(() => {
         if (visible) {
             setSelectedMode(currentMode);
@@ -33,81 +35,127 @@ const PriceModeSelector: React.FC<PriceModeSelectorProps> = ({
         onClose();
     };
 
+    const modes = [
+        {
+            value: "our",
+            label: "Our Price (Cost)",
+            icon: <BankOutlined className="text-purple-600 text-xl" />,
+            color: "purple",
+            description: "Internal cost-based pricing for inventory valuation and back-office calculation.",
+            badge: "O"
+        },
+        {
+            value: "retail",
+            label: "Retail Price",
+            icon: <ShoppingOutlined className="text-blue-600 text-xl" />,
+            color: "blue",
+            description: "Standard consumer selling price used for regular walk-in customers.",
+            badge: "R"
+        },
+        {
+            value: "wholesale",
+            label: "Wholesale Price",
+            icon: <GlobalOutlined className="text-green-600 text-xl" />,
+            color: "green",
+            description: "Special discounted price for bulk purchases and authorized B2B customers.",
+            badge: "W"
+        }
+    ];
+
     return (
         <Modal
-            title="Select Price Mode"
+            title={
+                <div className="flex items-center gap-2 py-1">
+                    <span className="text-lg font-extrabold text-gray-800">Select Price Mode</span>
+                </div>
+            }
             open={visible}
             onCancel={onClose}
             onOk={handleOk}
-            width={450}
-            okText="Apply"
-            cancelText="Cancel"
+            width={480}
+            okText="Apply Pricing"
+            cancelText="Keep Current"
             centered
+            className="premium-modal"
+            styles={{ body: { padding: '20px 24px' } }}
         >
-            <div className="space-y-4">
-                <Radio.Group
-                    value={selectedMode}
-                    onChange={(e) => setSelectedMode(e.target.value)}
-                    style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
-                >
-                    {/* Our Price Option */}
-                    <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition">
-                        <Radio value="our">
-                            <div>
-                                <div className="font-semibold flex items-center gap-2">
-                                    Our Price (Cost)
-                                    <Tag color="purple">O</Tag>
-                                </div>
-                                <div className="text-sm text-gray-500 ml-6 mt-1">
-                                    Internal cost price for inventory valuation
-                                </div>
+            <div className="flex flex-col gap-4">
+                <Text type="secondary" className="text-[13px] mb-2 block">
+                    Choose the applicable pricing strategy for this transaction. This will update all items currently in the cart.
+                </Text>
+
+                <div className="grid gap-3">
+                    {modes.map((mode) => (
+                        <div
+                            key={mode.value}
+                            onClick={() => setSelectedMode(mode.value as any)}
+                            className={`
+                                flex items-start gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all duration-200
+                                ${selectedMode === mode.value 
+                                    ? `bg-${mode.color}-50 border-${mode.color}-500 ring-1 ring-${mode.color}-100 shadow-sm` 
+                                    : 'bg-white border-gray-100 hover:border-gray-300 hover:shadow-md'}
+                            `}
+                        >
+                            <div className={`
+                                w-12 h-12 rounded-full flex items-center justify-center shrink-0
+                                ${selectedMode === mode.value ? `bg-${mode.color}-100` : 'bg-gray-50'}
+                            `}>
+                                {mode.icon}
                             </div>
-                        </Radio>
-                    </div>
 
-                    <Divider style={{ margin: '8px 0' }} />
-
-                    {/* Retail Price Option */}
-                    <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition">
-                        <Radio value="retail">
-                            <div>
-                                <div className="font-semibold flex items-center gap-2">
-                                    Retail Price
-                                    <Tag color="blue">R</Tag>
+                            <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span className={`text-[15px] font-bold ${selectedMode === mode.value ? 'text-gray-900' : 'text-gray-700'}`}>
+                                            {mode.label}
+                                        </span>
+                                        <Tag color={mode.color} className="font-mono px-1.5 h-[18px] leading-[18px] uppercase border-0 rounded-sm">
+                                            {mode.badge}
+                                        </Tag>
+                                    </div>
+                                    {selectedMode === mode.value && (
+                                        <CheckCircleFilled className={`text-${mode.color}-500 text-lg`} />
+                                    )}
                                 </div>
-                                <div className="text-sm text-gray-500 ml-6 mt-1">
-                                    Standard retail selling price to customers
-                                </div>
+                                <p className={`text-[12px] mt-1 leading-relaxed ${selectedMode === mode.value ? 'text-gray-600' : 'text-gray-400'}`}>
+                                    {mode.description}
+                                </p>
                             </div>
-                        </Radio>
-                    </div>
-
-                    <Divider style={{ margin: '8px 0' }} />
-
-                    {/* Wholesale Price Option */}
-                    <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition">
-                        <Radio value="wholesale">
-                            <div>
-                                <div className="font-semibold flex items-center gap-2">
-                                    Wholesale Price
-                                    <Tag color="green">W</Tag>
-                                </div>
-                                <div className="text-sm text-gray-500 ml-6 mt-1">
-                                    Bulk purchase discount price
-                                </div>
-                            </div>
-                        </Radio>
-                    </div>
-                </Radio.Group>
-
-                <div className="mt-6 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                    <div className="text-sm text-yellow-800">
-                        <strong>Note:</strong> Prices are locked when items are added to cart. Changing the price mode after adding items will not affect existing cart items.
-                    </div>
+                        </div>
+                    ))}
                 </div>
             </div>
+
+            <style>{`
+                .premium-modal .ant-modal-content {
+                    border-radius: 16px;
+                    overflow: hidden;
+                }
+                .premium-modal .ant-modal-header {
+                    border-bottom: 1px solid #f0f0f0;
+                    margin-bottom: 0;
+                    padding: 16px 24px;
+                }
+                .premium-modal .ant-btn-primary {
+                    background: #1890ff;
+                }
+                /* Utility classes since tailwind might not be fully configured for these variables */
+                .bg-purple-50 { background-color: #f9f5ff; }
+                .bg-blue-50 { background-color: #f0f7ff; }
+                .bg-green-50 { background-color: #f6ffed; }
+                .border-purple-500 { border-color: #722ed1; }
+                .border-blue-500 { border-color: #1890ff; }
+                .border-green-500 { border-color: #52c41a; }
+                .text-purple-500 { color: #722ed1; }
+                .text-blue-500 { color: #1890ff; }
+                .text-green-500 { color: #52c41a; }
+                .bg-purple-100 { background-color: #f3e8ff; }
+                .bg-blue-100 { background-color: #e6f7ff; }
+                .bg-green-100 { background-color: #f6ffed; }
+            `}</style>
         </Modal>
     );
 };
 
 export default PriceModeSelector;
+

@@ -5,7 +5,7 @@ import { axiosInstance } from "../api/axiosInstance";
 // ─────────────────────────────────────────────────────────────────────
 export interface POSSaleRequest {
     // Feature #4 – Bill Number
-    bill_number?: string;
+    invoice_number?: string;
 
     tenant_id?: string;
     customer_id?: string;
