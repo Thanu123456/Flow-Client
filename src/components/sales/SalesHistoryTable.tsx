@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-	Table, Button, Space, Modal, Input, Select,
-	DatePicker, message, Tag, Empty, Spin, Descriptions,
+	Table, Button, Modal, message, Tag, Empty, Spin, Descriptions,
 } from 'antd';
-import { EyeOutlined, ReloadOutlined } from '@ant-design/icons';
+import { EyeOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { saleService } from '../../services/transactions/saleService';
@@ -17,12 +16,21 @@ const PAYMENT_COLORS: Record<string, string> = {
 	hold: 'default',
 };
 
-const SalesHistoryTable: React.FC = () => {
+interface SalesHistoryTableProps {
+	search?: string;
+	paymentMethod?: string;
+	dateRange?: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null;
+	refresh?: boolean;
+}
+
+const SalesHistoryTable: React.FC<SalesHistoryTableProps> = ({
+	search,
+	paymentMethod,
+	dateRange,
+	refresh
+}) => {
 	const [sales, setSales] = useState<SaleListItem[]>([]);
 	const [loading, setLoading] = useState(false);
-	const [searchText, setSearchText] = useState('');
-	const [paymentFilter, setPaymentFilter] = useState<string>('');
-	const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
 	const [detailVisible, setDetailVisible] = useState(false);
 	const [detailLoading, setDetailLoading] = useState(false);
 	const [selectedSale, setSelectedSale] = useState<SaleDetailItem | null>(null);
@@ -31,8 +39,8 @@ const SalesHistoryTable: React.FC = () => {
 		setLoading(true);
 		try {
 			const data = await saleService.listSales({
-				search: searchText || undefined,
-				payment_method: paymentFilter || undefined,
+				search: search || undefined,
+				payment_method: paymentMethod || undefined,
 				date_from: dateRange?.[0]?.format('YYYY-MM-DD') ?? undefined,
 				date_to: dateRange?.[1]?.format('YYYY-MM-DD') ?? undefined,
 			});
@@ -42,9 +50,9 @@ const SalesHistoryTable: React.FC = () => {
 		} finally {
 			setLoading(false);
 		}
-	}, [searchText, paymentFilter, dateRange]);
+	}, [search, paymentMethod, dateRange]);
 
-	useEffect(() => { loadSales(); }, [loadSales]);
+	useEffect(() => { loadSales(); }, [loadSales, refresh]);
 
 	const openDetail = async (id: string) => {
 		setDetailVisible(true);
@@ -163,40 +171,6 @@ const SalesHistoryTable: React.FC = () => {
 
 	return (
 		<>
-			{/* Filters */}
-			<Space wrap style={{ marginBottom: 16 }}>
-				<Input
-					placeholder="Search bill # or customer…"
-					value={searchText}
-					onChange={(e) => setSearchText(e.target.value)}
-					style={{ width: 240 }}
-					allowClear
-				/>
-				<Select
-					placeholder="Payment Method"
-					value={paymentFilter || undefined}
-					onChange={setPaymentFilter}
-					style={{ width: 160 }}
-					allowClear
-					options={[
-						{ label: 'Cash', value: 'cash' },
-						{ label: 'Card', value: 'card' },
-						{ label: 'COD', value: 'cod' },
-						{ label: 'Credit', value: 'credit' },
-					]}
-				/>
-				<DatePicker.RangePicker
-					value={dateRange}
-					onChange={(dates) =>
-						setDateRange(dates as [dayjs.Dayjs | null, dayjs.Dayjs | null] | null)
-					}
-					format="YYYY-MM-DD"
-				/>
-				<Button icon={<ReloadOutlined />} onClick={loadSales}>
-					Refresh
-				</Button>
-			</Space>
-
 			{/* Table */}
 			<Spin spinning={loading}>
 				{sales.length === 0 && !loading ? (
