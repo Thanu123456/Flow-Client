@@ -31,12 +31,26 @@ import { useWarehouseStore } from '../../store/management/warehouseStore';
 import { useWarrantyStore } from '../../store/management/warrantyStore';
 import { useVariationStore } from '../../store/management/variationStore';
 import HeaderWithSearch from '../../components/common/Layout/HeaderWithSearch';
-import SalesPurchasesChart from '../../components/dashboard/SalesPurchasesChart';
-import SummaryCards from '../../components/dashboard/SummaryCards';
-import SalesPurchasesBarChart from '../../components/dashboard/SalesPurchasesBarChart';
-import TopProductsPieChart from '../../components/dashboard/TopProductsPieChart';
-import CreditBalancePieChart from '../../components/dashboard/CreditBalancePieChart';
-import CreditCustomersList from '../../components/dashboard/CreditCustomersList';
+import {
+    SalesPurchasesChart,
+    SummaryCards,
+    SalesPurchasesBarChart,
+    TopProductsPieChart,
+    CreditBalancePieChart,
+    CreditCustomersList,
+    StockAlertTable,
+    TopCustomersPieChart,
+    MostSellingItemsTable,
+    LeastSellingItemsTable,
+    TopExpensesCard,
+    ExpireDateAlertTable,
+    RecentSalesTable,
+    HourlySalesPeakChart,
+    PaymentMethodPieChart,
+    RevenueByCategoryChart,
+    ProfitMarginBarChart,
+    InventoryTurnoverChart
+} from '../../components/dashboard';
 
 
 const { Title, Text } = Typography;
@@ -178,27 +192,94 @@ const Dashboard: React.FC = () => {
                 <Spin spinning={loading} tip="Loading Analytics...">
                     <SummaryCards />
                     
+                    <div style={{ margin: '32px 0 16px' }}>
+                        <Title level={4}>Sales & Financial Trends</Title>
+                    </div>
+
                     <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                         <Col xs={24} lg={16}>
                             <SalesPurchasesChart />
                         </Col>
                         <Col xs={24} lg={8}>
-                            <TopProductsPieChart />
+                            <ProfitMarginBarChart />
                         </Col>
                     </Row>
                     
                     <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-                        <Col xs={24} lg={16}>
+                        <Col xs={24} lg={12}>
+                            <HourlySalesPeakChart />
+                        </Col>
+                        <Col xs={24} lg={12}>
                             <SalesPurchasesBarChart />
+                        </Col>
+                    </Row>
+
+                    <div style={{ margin: '32px 0 16px' }}>
+                        <Title level={4}>Business Performance Distribution</Title>
+                    </div>
+                    
+                    <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                        <Col xs={24} lg={8}>
+                            <TopProductsPieChart />
+                        </Col>
+                        <Col xs={24} lg={8}>
+                            <RevenueByCategoryChart />
+                        </Col>
+                        <Col xs={24} lg={8}>
+                            <PaymentMethodPieChart />
+                        </Col>
+                    </Row>
+
+                    <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                        <Col xs={24} lg={8}>
+                            <TopCustomersPieChart />
                         </Col>
                         <Col xs={24} lg={8}>
                             <CreditBalancePieChart />
                         </Col>
+                        <Col xs={24} lg={8}>
+                            <TopExpensesCard />
+                        </Col>
                     </Row>
-                    
+
+                    <div style={{ margin: '32px 0 16px' }}>
+                        <Title level={4}>Inventory Speed & Alerts</Title>
+                    </div>
+
+                    <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                        <Col xs={24} lg={12}>
+                            <InventoryTurnoverChart />
+                        </Col>
+                        <Col xs={24} lg={12}>
+                            <StockAlertTable />
+                        </Col>
+                    </Row>
+
+                    <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                        <Col xs={24} lg={12}>
+                            <MostSellingItemsTable />
+                        </Col>
+                        <Col xs={24} lg={12}>
+                            <LeastSellingItemsTable />
+                        </Col>
+                    </Row>
+
+                    <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                        <Col xs={24} lg={12}>
+                            <ExpireDateAlertTable />
+                        </Col>
+                        <Col xs={24} lg={12}>
+                            <CreditCustomersList />
+                        </Col>
+                    </Row>
+
+                    <div style={{ margin: '32px 0 16px' }}>
+                        <Title level={4}>Recent Operations</Title>
+                    </div>
+
                     <Row gutter={[16, 16]}>
                         <Col xs={24}>
-                            <CreditCustomersList />
+                            <RecentSalesTable />
                         </Col>
                     </Row>
                 </Spin>
