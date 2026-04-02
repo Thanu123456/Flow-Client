@@ -1,28 +1,29 @@
 import React from 'react';
-import { Table, Card, Typography } from 'antd';
+import { Table, Card, Typography, Skeleton, Empty } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { useDashboardStore } from '../../store/reports/dashboardStore';
 
 const { Title, Text } = Typography;
 
 interface ProductStatsItem {
     no: number;
-    product_name: string;
+    productName: string;
     quantity: number;
     revenue: number;
 }
 
 const MostSellingItemsTable: React.FC = () => {
-    const data: ProductStatsItem[] = [
-        { no: 1, product_name: 'Absorbent Cotton Gauze', quantity: 6.00, revenue: 600.00 },
-        { no: 2, product_name: 'Betadin 25ml', quantity: 6.00, revenue: 1080.00 },
-        { no: 3, product_name: 'Book', quantity: 3.00, revenue: 360.00 },
-        { no: 4, product_name: 'රජත (1kg)', quantity: 0.00, revenue: 0.00 },
-        { no: 5, product_name: 'රජනි (200g)', quantity: 0.00, revenue: 0.00 },
-        { no: 6, product_name: 'රජනි (75g)', quantity: 0.00, revenue: 0.00 },
-        { no: 7, product_name: 'ඇන්කර් (1kg)', quantity: 0.00, revenue: 0.00 },
-        { no: 8, product_name: 'ඇන්කර් (200g)', quantity: 0.00, revenue: 0.00 },
-        { no: 9, product_name: 'මලිබන් කිරි ඩේවර් (40...', quantity: 0.00, revenue: 0.00 },
-    ];
+    const { charts, chartsLoading } = useDashboardStore();
+
+    const data: ProductStatsItem[] = React.useMemo(() => {
+        if (!charts?.mostSellingItems) return [];
+        return charts.mostSellingItems.map(item => ({
+            no: item.no,
+            productName: item.productName,
+            quantity: item.quantity,
+            revenue: item.revenue
+        }));
+    }, [charts]);
 
     const columns: ColumnsType<ProductStatsItem> = [
         {
@@ -33,8 +34,8 @@ const MostSellingItemsTable: React.FC = () => {
         },
         {
             title: 'Product Name',
-            dataIndex: 'product_name',
-            key: 'product_name',
+            dataIndex: 'productName',
+            key: 'productName',
             render: (text) => <span className="font-semibold">{text}</span>
         },
         {
@@ -67,15 +68,23 @@ const MostSellingItemsTable: React.FC = () => {
                 </div>
             </div>
             
-            <Table 
-                columns={columns} 
-                dataSource={data} 
-                pagination={false} 
-                size="middle"
-                rowKey="no"
-                scroll={{ y: 300 }}
-                className="custom-table"
-            />
+            {chartsLoading ? (
+                <Skeleton active paragraph={{ rows: 8 }} />
+            ) : data.length > 0 ? (
+                <Table 
+                    columns={columns} 
+                    dataSource={data} 
+                    pagination={false} 
+                    size="middle"
+                    rowKey="no"
+                    scroll={{ y: 300 }}
+                    className="custom-table"
+                />
+            ) : (
+                <div className="flex items-center justify-center min-h-[300px]">
+                    <Empty description="No sales data available" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                </div>
+            )}
         </Card>
     );
 };

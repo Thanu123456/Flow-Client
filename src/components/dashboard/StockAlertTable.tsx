@@ -1,55 +1,50 @@
 import React from 'react';
-import { Table, Card, Typography } from 'antd';
+import { Table, Card, Typography, Skeleton, Empty } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { useDashboardStore } from '../../store/reports/dashboardStore';
 
 const { Title, Text } = Typography;
 
 interface StockAlertItem {
     id: string;
-    product_id: string;
-    product_name: string;
-    brand_name: string;
-    variation_type: string;
+    productID: string;
+    productName: string;
+    brandName: string;
+    variationType: string;
     unit: string;
     stock: number;
 }
 
 const StockAlertTable: React.FC = () => {
-    // Mock data based on image
-    const data: StockAlertItem[] = [
-        {
-            id: '1',
-            product_id: 'PRO151',
-            product_name: '230 පාන්',
-            brand_name: 'N/A',
-            variation_type: 'N/A',
-            unit: 'Pieces',
-            stock: 10,
-        }
-    ];
+    const { charts, chartsLoading } = useDashboardStore();
+
+    const data: StockAlertItem[] = React.useMemo(() => {
+        if (!charts?.stockAlerts) return [];
+        return charts.stockAlerts;
+    }, [charts]);
 
     const columns: ColumnsType<StockAlertItem> = [
         {
             title: 'PRODUCT ID',
-            dataIndex: 'product_id',
-            key: 'product_id',
+            dataIndex: 'productID',
+            key: 'productID',
             className: 'text-xs font-bold text-gray-500',
         },
         {
             title: 'PRODUCT NAME',
-            dataIndex: 'product_name',
-            key: 'product_name',
+            dataIndex: 'productName',
+            key: 'productName',
             className: 'font-semibold',
         },
         {
             title: 'BRAND NAME',
-            dataIndex: 'brand_name',
-            key: 'brand_name',
+            dataIndex: 'brandName',
+            key: 'brandName',
         },
         {
             title: 'VARIATION',
-            dataIndex: 'variation_type',
-            key: 'variation_type',
+            dataIndex: 'variationType',
+            key: 'variationType',
         },
         {
             title: 'UNIT',
@@ -81,15 +76,23 @@ const StockAlertTable: React.FC = () => {
                 </div>
             </div>
             
-            <Table 
-                columns={columns} 
-                dataSource={data} 
-                pagination={false} 
-                size="small"
-                rowKey="id"
-                scroll={{ x: true }}
-                className="custom-table"
-            />
+            {chartsLoading ? (
+                <Skeleton active paragraph={{ rows: 6 }} />
+            ) : data.length > 0 ? (
+                <Table 
+                    columns={columns} 
+                    dataSource={data} 
+                    pagination={false} 
+                    size="small"
+                    rowKey="id"
+                    scroll={{ x: true }}
+                    className="custom-table"
+                />
+            ) : (
+                <div className="flex items-center justify-center min-h-[200px]">
+                    <Empty description="All stock levels healthy" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                </div>
+            )}
         </Card>
     );
 };

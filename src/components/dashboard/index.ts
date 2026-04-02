@@ -1,4 +1,4 @@
-export { default as SummaryCards } from './SummaryCards';
+export { SummaryCards, SecondarySummaryCards } from './SummaryCards';
 export { default as SalesPurchasesChart } from './SalesPurchasesChart';
 export { default as SalesPurchasesBarChart } from './SalesPurchasesBarChart';
 export { default as TopProductsPieChart } from './TopProductsPieChart';

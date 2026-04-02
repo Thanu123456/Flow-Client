@@ -1,58 +1,64 @@
 import React from 'react';
-import { Table, Card, Typography, Tag } from 'antd';
+import { Table, Card, Typography, Tag, Skeleton, Empty } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { useDashboardStore } from '../../store/reports/dashboardStore';
 
 const { Title, Text } = Typography;
 
 interface RecentSaleItem {
     id: string;
-    reference_no: string;
+    referenceNo: string;
     customer: string;
-    user_name: string;
-    quantity_of_items: number;
-    payment_method: string;
-    total_price: number;
-    sale_date: string;
+    userName: string;
+    itemCount: number;
+    paymentMethod: string;
+    totalPrice: number;
+    saleDate: string;
 }
 
 const RecentSalesTable: React.FC = () => {
-    // Mock data based on Image 5
-    const data: RecentSaleItem[] = [
-        { id: '1', reference_no: 'OC260401222584', customer: 'My', user_name: 'Admin 12', quantity_of_items: 1, payment_method: 'Cash', total_price: 100.00, sale_date: '2026-04-01 22:25:34' },
-        { id: '2', reference_no: 'OR260401222224', customer: 'My', user_name: 'Admin 12', quantity_of_items: 1, payment_method: 'Credit', total_price: 100.00, sale_date: '2026-04-01 22:22:13' },
-        { id: '3', reference_no: 'OR260401221824', customer: 'My', user_name: 'Admin 12', quantity_of_items: 1, payment_method: 'Credit', total_price: 100.00, sale_date: '2026-04-01 22:18:28' },
-        { id: '4', reference_no: 'OR260401221647', customer: 'My', user_name: 'Admin 12', quantity_of_items: 1, payment_method: 'Credit', total_price: 100.00, sale_date: '2026-04-01 22:16:20' },
-        { id: '5', reference_no: 'OR260401202694', customer: 'My', user_name: 'Admin 12', quantity_of_items: 1, payment_method: 'Credit', total_price: 180.00, sale_date: '2026-04-01 20:26:52' },
-        { id: '6', reference_no: 'OR260401202682', customer: 'My', user_name: 'Admin 12', quantity_of_items: 3, payment_method: 'Credit', total_price: 400.00, sale_date: '2026-04-01 20:26:38' },
-        { id: '7', reference_no: 'OR260401201998', customer: 'My', user_name: 'Admin 12', quantity_of_items: 1, payment_method: 'Credit', total_price: 180.00, sale_date: '2026-04-01 20:19:03' },
-    ];
+    const { charts, chartsLoading } = useDashboardStore();
+
+    const data: RecentSaleItem[] = React.useMemo(() => {
+        if (!charts?.recentSales) return [];
+        return charts.recentSales.map(item => ({
+            id: item.id,
+            referenceNo: item.referenceNo,
+            customer: item.customer,
+            userName: item.userName,
+            itemCount: item.itemCount,
+            paymentMethod: item.paymentMethod,
+            totalPrice: item.totalPrice,
+            saleDate: item.saleDate
+        }));
+    }, [charts]);
 
     const columns: ColumnsType<RecentSaleItem> = [
         { 
             title: 'REFERENCE NO', 
-            dataIndex: 'reference_no', 
-            key: 'reference_no',
+            dataIndex: 'referenceNo', 
+            key: 'referenceNo',
             render: (text) => <span className="font-bold text-blue-600">{text}</span>
         },
         { title: 'CUSTOMER', dataIndex: 'customer', key: 'customer' },
-        { title: 'USER NAME', dataIndex: 'user_name', key: 'user_name' },
-        { title: 'ITEMS', dataIndex: 'quantity_of_items', key: 'quantity_of_items', align: 'center' },
+        { title: 'USER NAME', dataIndex: 'userName', key: 'userName' },
+        { title: 'ITEMS', dataIndex: 'itemCount', key: 'itemCount', align: 'center' },
         { 
             title: 'METHOD', 
-            dataIndex: 'payment_method', 
-            key: 'payment_method',
+            dataIndex: 'paymentMethod', 
+            key: 'paymentMethod',
             render: (text) => (
-                <Tag color={text === 'Cash' ? 'green' : 'blue'}>{text.toUpperCase()}</Tag>
+                <Tag color={text === 'Cash' || text === 'cash' ? 'green' : 'blue'}>{text.toUpperCase()}</Tag>
             )
         },
         { 
             title: 'TOTAL PRICE', 
-            dataIndex: 'total_price', 
-            key: 'total_price', 
+            dataIndex: 'totalPrice', 
+            key: 'totalPrice', 
             align: 'right', 
             render: (v) => <span className="font-extrabold">{v.toFixed(2)}</span> 
         },
-        { title: 'SALE DATE', dataIndex: 'sale_date', key: 'sale_date', className: 'text-gray-400 text-xs' },
+        { title: 'SALE DATE', dataIndex: 'saleDate', key: 'saleDate', className: 'text-gray-400 text-xs' },
     ];
 
     return (
@@ -69,15 +75,23 @@ const RecentSalesTable: React.FC = () => {
                 </div>
             </div>
             
-            <Table 
-                columns={columns} 
-                dataSource={data} 
-                pagination={false} 
-                size="middle"
-                rowKey="id"
-                scroll={{ x: true }}
-                className="custom-table"
-            />
+            {chartsLoading ? (
+                <Skeleton active paragraph={{ rows: 8 }} />
+            ) : data.length > 0 ? (
+                <Table 
+                    columns={columns} 
+                    dataSource={data} 
+                    pagination={false} 
+                    size="middle"
+                    rowKey="id"
+                    scroll={{ x: true }}
+                    className="custom-table"
+                />
+            ) : (
+                <div className="flex items-center justify-center min-h-[300px]">
+                    <Empty description="No recent sales found" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                </div>
+            )}
         </Card>
     );
 };

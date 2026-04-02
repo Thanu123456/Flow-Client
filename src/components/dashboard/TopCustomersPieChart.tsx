@@ -1,15 +1,11 @@
 import React from 'react';
-import { Card, Typography } from 'antd';
+import { Card, Typography, Skeleton, Empty } from 'antd';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { useDashboardStore } from '../../store/reports/dashboardStore';
 
 const { Title, Text } = Typography;
 
-const data = [
-  { name: 'My', value: 8500 },
-  { name: 'Walk-In Customer', value: 1500 },
-];
-
-const COLORS = ['#1890ff', '#eb2f96'];
+const COLORS = ['#1890ff', '#eb2f96', '#52c41a', '#faad14', '#13c2c2', '#722ed1', '#2f54eb'];
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
@@ -26,6 +22,16 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 const TopCustomersPieChart: React.FC = () => {
+    const { charts, chartsLoading } = useDashboardStore();
+
+    const data = React.useMemo(() => {
+        if (!charts?.topCustomers) return [];
+        return charts.topCustomers.map(p => ({
+            name: p.label,
+            value: p.value
+        }));
+    }, [charts]);
+
   return (
     <Card 
         className="shadow-sm rounded-2xl border border-gray-100 h-full"
@@ -33,7 +39,7 @@ const TopCustomersPieChart: React.FC = () => {
     >
       <div className="flex justify-between items-center mb-6">
         <div>
-          <Title level={5} style={{ margin: 0, fontWeight: 800 }}>Top 05 Customers</Title>
+          <Title level={5} style={{ margin: 0, fontWeight: 800 }}>Top Customers</Title>
           <Text type="secondary" className="text-xs uppercase tracking-wider font-semibold">
             By Purchase Value
           </Text>
@@ -41,32 +47,40 @@ const TopCustomersPieChart: React.FC = () => {
       </div>
 
       <div style={{ width: '100%', height: 300 }}>
-        <ResponsiveContainer>
-          <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="45%"
-              innerRadius={60}
-              outerRadius={90}
-              paddingAngle={5}
-              dataKey="value"
-              stroke="none"
-              cornerRadius={8}
-            >
-              {data.map((_entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip content={<CustomTooltip />} />
-            <Legend 
-              verticalAlign="bottom" 
-              height={36} 
-              iconType="circle"
-              wrapperStyle={{ fontSize: '12px', fontWeight: 500 }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
+        {chartsLoading ? (
+            <Skeleton active avatar paragraph={{ rows: 6 }} />
+        ) : data.length > 0 ? (
+          <ResponsiveContainer>
+            <PieChart>
+              <Pie
+                data={data}
+                cx="50%"
+                cy="45%"
+                innerRadius={60}
+                outerRadius={90}
+                paddingAngle={5}
+                dataKey="value"
+                stroke="none"
+                cornerRadius={8}
+              >
+                {data.map((_entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip content={<CustomTooltip />} />
+              <Legend 
+                verticalAlign="bottom" 
+                height={36} 
+                iconType="circle"
+                wrapperStyle={{ fontSize: '12px', fontWeight: 500 }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        ) : (
+            <div className="flex items-center justify-center h-full">
+                <Empty description="No customer data" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            </div>
+        )}
       </div>
     </Card>
   );

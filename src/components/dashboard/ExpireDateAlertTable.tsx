@@ -1,51 +1,54 @@
 import React from 'react';
-import { Table, Card, Typography } from 'antd';
+import { Table, Card, Typography, Skeleton, Empty } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { useDashboardStore } from '../../store/reports/dashboardStore';
 
 const { Title, Text } = Typography;
 
 interface ExpireAlertItem {
     id: string;
-    product_id: string;
-    product_name: string;
-    variation_type: string;
-    purchase_date: string;
-    expiry_date: string;
+    productID: string;
+    productName: string;
+    variationType: string;
+    purchaseDate: string;
+    expiryDate: string;
 }
 
 const ExpireDateAlertTable: React.FC = () => {
-    // Mock data
-    const data: ExpireAlertItem[] = [
-        // Empty in image
-    ];
+    const { charts, chartsLoading } = useDashboardStore();
+
+    const data: ExpireAlertItem[] = React.useMemo(() => {
+        if (!charts?.expireAlerts) return [];
+        return charts.expireAlerts;
+    }, [charts]);
 
     const columns: ColumnsType<ExpireAlertItem> = [
         {
             title: 'PRODUCT ID',
-            dataIndex: 'product_id',
-            key: 'product_id',
+            dataIndex: 'productID',
+            key: 'productID',
             className: 'text-xs font-bold text-gray-500',
         },
         {
             title: 'PRODUCT NAME',
-            dataIndex: 'product_name',
-            key: 'product_name',
+            dataIndex: 'productName',
+            key: 'productName',
             render: (text) => <span className="font-semibold">{text}</span>
         },
         {
             title: 'VARIATION',
-            dataIndex: 'variation_type',
-            key: 'variation_type',
+            dataIndex: 'variationType',
+            key: 'variationType',
         },
         {
             title: 'PURCHASED',
-            dataIndex: 'purchase_date',
-            key: 'purchase_date',
+            dataIndex: 'purchaseDate',
+            key: 'purchaseDate',
         },
         {
             title: 'EXPIRY',
-            dataIndex: 'expiry_date',
-            key: 'expiry_date',
+            dataIndex: 'expiryDate',
+            key: 'expiryDate',
             render: (text) => <span className="text-red-500 font-bold">{text}</span>
         },
     ];
@@ -64,16 +67,23 @@ const ExpireDateAlertTable: React.FC = () => {
                 </div>
             </div>
             
-            <Table 
-                columns={columns} 
-                dataSource={data} 
-                pagination={false} 
-                size="middle"
-                rowKey="id"
-                scroll={{ x: true }}
-                className="custom-table"
-                locale={{ emptyText: <div style={{ height: 100 }}>No items near expiry</div> }}
-            />
+            {chartsLoading ? (
+                <Skeleton active paragraph={{ rows: 6 }} />
+            ) : data.length > 0 ? (
+                <Table 
+                    columns={columns} 
+                    dataSource={data} 
+                    pagination={false} 
+                    size="middle"
+                    rowKey="id"
+                    scroll={{ x: true }}
+                    className="custom-table"
+                />
+            ) : (
+                <div className="flex items-center justify-center min-h-[200px]">
+                    <Empty description="No items near expiry" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                </div>
+            )}
         </Card>
     );
 };

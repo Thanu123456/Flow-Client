@@ -1,24 +1,8 @@
-import React, { useState } from 'react';
-import { Card, Typography, Segmented } from 'antd';
+import { Card, Typography, Segmented, Empty, Skeleton } from 'antd';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { useDashboardStore } from '../../store/reports/dashboardStore';
 
 const { Title, Text } = Typography;
-
-const dataWeek = [
-  { name: 'Wireless Earbuds', value: 1400 },
-  { name: 'Smartphone Case', value: 900 },
-  { name: 'Power Bank', value: 650 },
-  { name: 'Charging Cable', value: 450 },
-  { name: 'Screen Protector', value: 300 },
-];
-
-const dataMonth = [
-  { name: 'Smartphone Case', value: 4200 },
-  { name: 'Wireless Earbuds', value: 3800 },
-  { name: 'Power Bank', value: 2500 },
-  { name: 'Bluetooth Speaker', value: 1600 },
-  { name: 'Charging Cable', value: 1200 },
-];
 
 const COLORS = ['#1890ff', '#13c2c2', '#52c41a', '#faad14', '#eb2f96'];
 
@@ -37,9 +21,12 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 export const TopProductsPieChart: React.FC = () => {
-  const [period, setPeriod] = useState<'Week' | 'Month'>('Week');
+  const { charts, chartsLoading } = useDashboardStore();
   
-  const data = period === 'Week' ? dataWeek : dataMonth;
+  const data = charts?.topProducts?.map(p => ({
+    name: p.label,
+    value: p.value
+  })) || [];
 
   return (
     <Card 
@@ -55,39 +42,46 @@ export const TopProductsPieChart: React.FC = () => {
         </div>
         <Segmented
           options={['Week', 'Month']}
-          value={period}
-          onChange={(val) => setPeriod(val as 'Week' | 'Month')}
-          className="bg-gray-100 p-1 rounded-xl shadow-inner font-medium text-xs"
+          disabled
+          className="bg-gray-100 p-1 rounded-xl shadow-inner font-medium text-xs opacity-50"
         />
       </div>
 
       <div style={{ width: '100%', height: 300 }}>
-        <ResponsiveContainer>
-          <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="45%"
-              innerRadius={60}
-              outerRadius={90}
-              paddingAngle={5}
-              dataKey="value"
-              stroke="none"
-              cornerRadius={8}
-            >
-              {data.map((_entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip content={<CustomTooltip />} />
-            <Legend 
-              verticalAlign="bottom" 
-              height={36} 
-              iconType="circle"
-              wrapperStyle={{ fontSize: '12px', fontWeight: 500 }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
+        {chartsLoading ? (
+          <Skeleton active avatar paragraph={{ rows: 6 }} />
+        ) : data.length > 0 ? (
+          <ResponsiveContainer>
+            <PieChart>
+              <Pie
+                data={data}
+                cx="50%"
+                cy="45%"
+                innerRadius={60}
+                outerRadius={90}
+                paddingAngle={5}
+                dataKey="value"
+                stroke="none"
+                cornerRadius={8}
+              >
+                {data.map((_entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip content={<CustomTooltip />} />
+              <Legend 
+                verticalAlign="bottom" 
+                height={36} 
+                iconType="circle"
+                wrapperStyle={{ fontSize: '12px', fontWeight: 500 }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full">
+            <Empty description="No product sales found" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          </div>
+        )}
       </div>
     </Card>
   );
