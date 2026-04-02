@@ -22,7 +22,7 @@ const getLoginRedirectUrl = (): string => {
 };
 
 const clearAuthData = () =>
-  ['token', 'user', 'tenant', 'role', 'isKiosk', 'mustChangePassword'].forEach((k) =>
+  ['token', 'refreshToken', 'user', 'tenant', 'role', 'isKiosk', 'mustChangePassword'].forEach((k) =>
     localStorage.removeItem(k)
   );
 
@@ -67,10 +67,13 @@ api.interceptors.response.use(
     if (status === 401 && !req._authRetried && !isAuthEndpoint) {
       req._authRetried = true;
       try {
-        const res    = await api.post('/auth/refresh-token');
-        const { token } = res.data.data;
-        localStorage.setItem('token', token);
-        req.headers['Authorization'] = `Bearer ${token}`;
+        const refreshToken = localStorage.getItem('refreshToken') || '';
+        const res = await api.post('/auth/refresh-token', { refresh_token: refreshToken });
+        const newToken = res.data.data.access_token;
+        const newRefreshToken = res.data.data.refresh_token;
+        localStorage.setItem('token', newToken);
+        if (newRefreshToken) localStorage.setItem('refreshToken', newRefreshToken);
+        req.headers['Authorization'] = `Bearer ${newToken}`;
         return api(req);
       } catch {
         clearAuthData();

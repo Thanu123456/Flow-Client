@@ -134,6 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearAuthState = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     localStorage.removeItem('tenant');
     localStorage.removeItem('isKiosk');
@@ -319,6 +320,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Store in localStorage
     localStorage.setItem('token', response.access_token);
+    localStorage.setItem('refreshToken', response.refresh_token);
     localStorage.setItem('user', JSON.stringify(response.user));
     localStorage.setItem('role', role);
     localStorage.setItem('mustChangePassword', String(response.must_change_password));
@@ -341,6 +343,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const handleSuperAdminLoginSuccess = (response: SuperAdminLoginResponse) => {
       localStorage.setItem('token', response.access_token);
+      localStorage.setItem('refreshToken', response.refresh_token);
       localStorage.setItem('user', JSON.stringify(response.user));
       localStorage.setItem('role', 'super_admin');
       localStorage.setItem('mustChangePassword', String(response.must_change_password));

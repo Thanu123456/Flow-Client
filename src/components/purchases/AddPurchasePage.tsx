@@ -132,6 +132,7 @@ const AddPurchasePage: React.FC = () => {
   const [productSearch, setProductSearch] = useState('');
   const [productOptions, setProductOptions] = useState<ProductSearchResult[]>([]);
   const [searchingProducts, setSearchingProducts] = useState(false);
+  const searchRequestRef = useRef(0);
   const [selectedProduct, setSelectedProduct] = useState<ProductSearchResult | null>(null);
   const [selectedVariation, setSelectedVariation] = useState<ProductVariationOption | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
@@ -227,26 +228,31 @@ const AddPurchasePage: React.FC = () => {
         setProductOptions([]);
         return;
       }
+      // Increment request counter so stale in-flight responses are ignored
+      const requestId = ++searchRequestRef.current;
       setSearchingProducts(true);
       try {
         const results = await purchaseService.searchProducts(query, warehouseId || undefined);
+        if (requestId !== searchRequestRef.current) return; // stale response
         setProductOptions(results);
       } catch {
+        if (requestId !== searchRequestRef.current) return;
         setProductOptions([]);
       } finally {
-        setSearchingProducts(false);
+        if (requestId === searchRequestRef.current) setSearchingProducts(false);
       }
     },
     [warehouseId]
   );
 
-  // Debounced product search
+  // Debounced product search — depends on handleProductSearch so it re-fires
+  // automatically when the warehouse changes (which recreates handleProductSearch)
   useEffect(() => {
     const timer = setTimeout(() => {
       if (productSearch) handleProductSearch(productSearch);
     }, 300);
     return () => clearTimeout(timer);
-  }, [productSearch]);
+  }, [productSearch, handleProductSearch]);
 
   const handleSelectProduct = (product: ProductSearchResult) => {
     setSelectedProduct(product);
