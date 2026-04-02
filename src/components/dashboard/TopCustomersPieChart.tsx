@@ -1,10 +1,11 @@
-import { Card, Typography, Segmented, Empty, Skeleton } from 'antd';
+import React from 'react';
+import { Card, Typography, Skeleton, Empty } from 'antd';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useDashboardStore } from '../../store/reports/dashboardStore';
 
 const { Title, Text } = Typography;
 
-const COLORS = ['#1890ff', '#13c2c2', '#52c41a', '#faad14', '#eb2f96'];
+const COLORS = ['#1890ff', '#eb2f96', '#52c41a', '#faad14', '#13c2c2', '#722ed1', '#2f54eb'];
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
@@ -12,7 +13,7 @@ const CustomTooltip = ({ active, payload }: any) => {
       <div className="bg-white p-3 border border-gray-100 shadow-lg rounded-xl">
         <p className="font-bold text-gray-800 mb-1">{payload[0].name}</p>
         <p className="text-sm font-semibold text-gray-600">
-          Units Sold: <span style={{ color: payload[0].payload.fill }}>{payload[0].value}</span>
+          Revenue: <span style={{ color: payload[0].payload.fill }}>LKR {payload[0].value.toLocaleString()}</span>
         </p>
       </div>
     );
@@ -20,36 +21,34 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
-export const TopProductsPieChart: React.FC = () => {
-  const { charts, chartsLoading } = useDashboardStore();
-  
-  const data = charts?.topProducts?.map(p => ({
-    name: p.label,
-    value: p.value
-  })) || [];
+const TopCustomersPieChart: React.FC = () => {
+    const { charts, chartsLoading } = useDashboardStore();
+
+    const data = React.useMemo(() => {
+        if (!charts?.topCustomers) return [];
+        return charts.topCustomers.map(p => ({
+            name: p.label,
+            value: p.value
+        }));
+    }, [charts]);
 
   return (
     <Card 
-      className="shadow-sm rounded-2xl border border-gray-100 h-full"
-      styles={{ body: { padding: '24px', height: '100%' } }}
+        className="shadow-sm rounded-2xl border border-gray-100 h-full"
+        styles={{ body: { padding: '24px', height: '100%' } }}
     >
       <div className="flex justify-between items-center mb-6">
         <div>
-          <Title level={5} style={{ margin: 0, fontWeight: 800 }}>Top Selling Products</Title>
+          <Title level={5} style={{ margin: 0, fontWeight: 800 }}>Top Customers</Title>
           <Text type="secondary" className="text-xs uppercase tracking-wider font-semibold">
-            By Units Sold
+            By Purchase Value
           </Text>
         </div>
-        <Segmented
-          options={['Week', 'Month']}
-          disabled
-          className="bg-gray-100 p-1 rounded-xl shadow-inner font-medium text-xs opacity-50"
-        />
       </div>
 
       <div style={{ width: '100%', height: 300 }}>
         {chartsLoading ? (
-          <Skeleton active avatar paragraph={{ rows: 6 }} />
+            <Skeleton active avatar paragraph={{ rows: 6 }} />
         ) : data.length > 0 ? (
           <ResponsiveContainer>
             <PieChart>
@@ -78,13 +77,13 @@ export const TopProductsPieChart: React.FC = () => {
             </PieChart>
           </ResponsiveContainer>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full">
-            <Empty description="No product sales found" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-          </div>
+            <div className="flex items-center justify-center h-full">
+                <Empty description="No customer data" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            </div>
         )}
       </div>
     </Card>
   );
 };
 
-export default TopProductsPieChart;
+export default TopCustomersPieChart;

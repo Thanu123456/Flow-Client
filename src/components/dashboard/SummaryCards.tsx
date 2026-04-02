@@ -1,13 +1,17 @@
 import React from 'react';
-import { Card, Row, Col, Typography, Avatar } from 'antd';
-import { 
-  DollarOutlined, 
-  ShoppingCartOutlined, 
-  UndoOutlined, 
-  BankOutlined, 
-  FallOutlined,
-  RiseOutlined
-} from '@ant-design/icons';
+import { Card, Row, Col, Typography, Tag } from 'antd';
+import {
+  Wallet,
+  ShoppingCart,
+  RotateCcw,
+  TrendingUp,
+  Banknote,
+  ArrowDownIcon,
+  ArrowUpIcon
+} from 'lucide-react';
+
+import { useDashboardStore } from '../../store/reports/dashboardStore';
+import { Skeleton } from 'antd';
 
 const { Title, Text } = Typography;
 
@@ -16,101 +20,183 @@ const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('en-LK', {
     style: 'currency',
     currency: 'LKR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(value);
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value).replace('LKR', 'LKR:');
 };
 
 export const SummaryCards: React.FC = () => {
-  // Static mock data for demonstration
+  const { data, loading } = useDashboardStore();
+
+  const sales = data?.summary?.sales;
+  const purchases = data?.summary?.purchases;
+  const salesReturn = data?.summary?.salesReturn;
+  const purchasesReturn = data?.summary?.purchasesReturn;
+  const expenses = data?.summary?.expenses;
+  const profit = data?.summary?.profit;
+
   const stats = [
     {
-      title: 'Total Sales',
-      amount: 4520000,
-      icon: <ShoppingCartOutlined />,
-      color: '#1890ff',
-      bgColor: '#e6f7ff',
-      trend: '+12.5%',
-      isPositive: true
+      title: 'SALES',
+      amount: sales?.amount || 0.00,
+      icon: <Wallet size={48} className="text-indigo-600" />,
+      trend: sales?.trend || '-100.00%',
+      isPositive: sales?.isPositive || false
     },
     {
-      title: 'Sales Return',
-      amount: 125000,
-      icon: <UndoOutlined />,
-      color: '#ff4d4f',
-      bgColor: '#fff1f0',
-      trend: '-2.4%',
-      isPositive: true // less returns is good
+      title: 'PURCHASES',
+      amount: purchases?.amount || 0.00,
+      icon: <div className="relative">
+        <ShoppingCart size={48} className="text-indigo-600" />
+        <ArrowDownIcon size={20} className="absolute -bottom-1 -right-1 text-indigo-800" />
+      </div>,
+      trend: purchases?.trend || '-100.00%',
+      isPositive: purchases?.isPositive || false
     },
     {
-      title: 'Purchases (GRN)',
-      amount: 2850000,
-      icon: <BankOutlined />,
-      color: '#faad14',
-      bgColor: '#fffbe6',
-      trend: '+5.2%',
-      isPositive: false
+      title: 'SALES RETURN',
+      amount: salesReturn?.amount || 0.00,
+      icon: <RotateCcw size={48} className="text-indigo-600" />,
+      trend: salesReturn?.trend || '0.00%',
+      isPositive: salesReturn?.isPositive || true
     },
     {
-      title: 'Net Sales',
-      amount: 4395000,
-      icon: <RiseOutlined />,
-      color: '#52c41a',
-      bgColor: '#f6ffed',
-      trend: '+15.3%',
-      isPositive: true
+      title: 'PURCHASES RETURN',
+      amount: purchasesReturn?.amount || 0.00,
+      icon: <div className="relative">
+        <ShoppingCart size={48} className="text-indigo-600" />
+        <ArrowUpIcon size={20} className="absolute -bottom-1 -right-1 text-indigo-800" />
+      </div>,
+      trend: purchasesReturn?.trend || '0.00%',
+      isPositive: purchasesReturn?.isPositive || true
     },
     {
-      title: 'Expenses',
-      amount: 420000,
-      icon: <FallOutlined />,
-      color: '#cf1322',
-      bgColor: '#fff1f0',
-      trend: '+1.2%',
-      isPositive: false
+      title: 'EXPENSES',
+      amount: expenses?.amount || 0.00,
+      icon: <Banknote size={48} className="text-indigo-600" />,
+      trend: expenses?.trend || '0.00%',
+      isPositive: expenses?.isPositive || true
     },
     {
-      title: 'Net Profit',
-      amount: 1125000,
-      icon: <DollarOutlined />,
-      color: '#722ed1',
-      bgColor: '#f9f0ff',
-      trend: '+18.7%',
-      isPositive: true
+      title: 'PROFIT',
+      amount: profit?.amount || 0.00,
+      icon: <div className="relative">
+        <TrendingUp size={48} className="text-indigo-600" />
+        <span className="absolute -top-1 -right-1 text-indigo-600 font-bold">$</span>
+      </div>,
+      trend: profit?.trend || '-100.00%',
+      isPositive: profit?.isPositive || false,
+      amountColor: '#22c55e'
+    },
+  ];
+
+  return (
+    <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+      {stats.map((stat, index) => (
+        <Col xs={24} md={12} key={index}>
+          <Card
+            bordered={false}
+            className="shadow-sm rounded-xl border border-gray-100"
+            styles={{ body: { padding: '16px 24px' } }}
+          >
+            {loading ? (
+              <Skeleton active paragraph={{ rows: 2 }} />
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-6">
+                  <div className="flex-shrink-0">
+                    {stat.icon}
+                  </div>
+                  <div>
+                    <Text className="text-indigo-500 font-bold text-lg mb-0 block">
+                      {stat.title}
+                    </Text>
+                    <div className="flex items-baseline gap-2">
+                      <Title level={3} style={{ margin: 0, fontWeight: 800, color: stat.amountColor || 'inherit' }}>
+                        {formatCurrency(stat.amount)}
+                      </Title>
+                    </div>
+                  </div>
+                </div>
+                <Tag
+                  className={`m-0 font-bold px-2 py-1 rounded ${stat.isPositive ? 'border-green-200 bg-green-50 text-green-500' : 'border-orange-200 bg-orange-50 text-orange-500'
+                    }`}
+                  style={{ fontSize: '14px' }}
+                >
+                  {stat.trend}
+                </Tag>
+              </div>
+            )}
+          </Card>
+        </Col>
+      ))}
+    </Row>
+  );
+};
+
+export const SecondarySummaryCards: React.FC = () => {
+  const { data, loading } = useDashboardStore();
+
+  const stats = [
+    {
+      title: 'STOCK VALUE',
+      amount: data?.secondarySummary?.stockValue || 0.00,
+      color: 'blue'
+    },
+    {
+      title: 'COD RETURNS',
+      subtitle: '0 Orders Returned',
+      amount: data?.secondarySummary?.codReturns || 0.00,
+      color: 'red'
+    },
+    {
+      title: 'COD PENDING',
+      subtitle: '0 Pending Orders',
+      amount: data?.secondarySummary?.codPending || 0.00,
+      color: 'orange'
+    },
+    {
+      title: 'COD DELIVERED',
+      subtitle: '0 Delivered Orders',
+      amount: data?.secondarySummary?.codDelivered || 0.00,
+      color: 'green'
+    },
+    {
+      title: 'ESTIMATED PROFIT',
+      amount: data?.secondarySummary?.estimatedProfit || 0.00,
+      color: 'blue'
     }
   ];
 
   return (
-    <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+    <Row gutter={[12, 12]} style={{ marginBottom: 24 }}>
       {stats.map((stat, index) => (
-        <Col xs={24} sm={12} md={8} lg={4} key={index}>
-          <Card 
-            bordered={false} 
-            className="shadow-sm rounded-2xl border border-gray-100 h-full"
-            styles={{ body: { padding: '20px' } }}
+        <Col key={index} style={{ flex: 1, minWidth: '200px' }}>
+          <Card
+            bordered={false}
+            className="shadow-sm rounded-xl border border-gray-100 h-full"
+            styles={{ body: { padding: '12px 16px' } }}
           >
-            <div className="flex justify-between items-start mb-4">
-              <Avatar 
-                size={40} 
-                icon={stat.icon} 
-                style={{ backgroundColor: stat.bgColor, color: stat.color, fontSize: '18px' }} 
-              />
-              <div 
-                className={`text-xs font-bold px-2 py-1 rounded-full ${
-                  stat.isPositive ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
-                }`}
-              >
-                {stat.trend}
-              </div>
-            </div>
-            <div>
-              <Text type="secondary" className="text-xs uppercase tracking-wider font-semibold mb-1 block">
-                {stat.title}
-              </Text>
-              <Title level={4} style={{ margin: 0, fontWeight: 800 }}>
-                {formatCurrency(stat.amount)}
-              </Title>
-            </div>
+            {loading ? (
+              <Skeleton active paragraph={{ rows: 1 }} />
+            ) : (
+              <>
+                <Text type="secondary" className="text-[10px] font-bold uppercase tracking-wider block" style={{ color: stat.color !== 'blue' ? stat.color : '#4338ca' }}>
+                  {stat.title}
+                </Text>
+                {stat.subtitle && (
+                  <Text className="text-[10px] block font-bold" style={{ color: stat.color }}>
+                    {stat.subtitle}
+                  </Text>
+                )}
+                <div className="mt-2 flex items-center gap-1">
+                  <Text strong className="text-xs">LKR:</Text>
+                  <Title level={4} style={{ margin: 0, fontWeight: 800, fontSize: '18px' }}>
+                    {stat.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </Title>
+                </div>
+              </>
+            )}
           </Card>
         </Col>
       ))}

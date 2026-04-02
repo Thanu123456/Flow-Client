@@ -1,13 +1,9 @@
 import React from 'react';
-import { Card, Typography } from 'antd';
+import { Card, Typography, Skeleton, Empty } from 'antd';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { useDashboardStore } from '../../store/reports/dashboardStore';
 
 const { Title, Text } = Typography;
-
-const creditData = [
-  { name: 'Collected', value: 3500000 },
-  { name: 'Outstanding', value: 1200000 },
-];
 
 const COLORS = ['#52c41a', '#ff4d4f'];
 
@@ -35,6 +31,21 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 export const CreditBalancePieChart: React.FC = () => {
+    const { charts, chartsLoading } = useDashboardStore();
+
+    const creditData = React.useMemo(() => {
+        if (!charts) return [];
+        return [
+            { name: 'Collected', value: charts.creditCollected || 0 },
+            { name: 'Outstanding', value: charts.creditOutstanding || 0 },
+        ].filter(item => item.value > 0);
+    }, [charts]);
+
+    const totalCredit = React.useMemo(() => {
+        if (!charts) return 0;
+        return (charts.creditCollected || 0) + (charts.creditOutstanding || 0);
+    }, [charts]);
+
   return (
     <Card 
       className="shadow-sm rounded-2xl border border-gray-100 h-full"
@@ -48,40 +59,48 @@ export const CreditBalancePieChart: React.FC = () => {
       </div>
 
       <div style={{ width: '100%', height: 300 }}>
-        <ResponsiveContainer>
-          <PieChart>
-            <Pie
-              data={creditData}
-              cx="50%"
-              cy="45%"
-              innerRadius={65}
-              outerRadius={95}
-              paddingAngle={2}
-              dataKey="value"
-              stroke="none"
-              cornerRadius={5}
-            >
-              {creditData.map((_entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip content={<CustomTooltip />} />
-            <Legend 
-              verticalAlign="bottom" 
-              height={36} 
-              iconType="circle"
-              wrapperStyle={{ fontSize: '13px', fontWeight: 600 }}
-              formatter={(value) => <span style={{ color: '#4b5563' }}>{value}</span>}
-            />
-            {/* Center Text */}
-            <text x="50%" y="40%" textAnchor="middle" dominantBaseline="middle" className="text-sm font-bold fill-gray-500">
-              Total Credit
-            </text>
-            <text x="50%" y="52%" textAnchor="middle" dominantBaseline="middle" className="text-lg font-extrabold fill-gray-800">
-              {formatCurrency(4700000)}
-            </text>
-          </PieChart>
-        </ResponsiveContainer>
+        {chartsLoading ? (
+            <Skeleton active avatar paragraph={{ rows: 6 }} />
+        ) : creditData.length > 0 ? (
+          <ResponsiveContainer>
+            <PieChart>
+              <Pie
+                data={creditData}
+                cx="50%"
+                cy="45%"
+                innerRadius={65}
+                outerRadius={95}
+                paddingAngle={2}
+                dataKey="value"
+                stroke="none"
+                cornerRadius={5}
+              >
+                {creditData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.name === 'Collected' ? COLORS[0] : COLORS[1]} />
+                ))}
+              </Pie>
+              <Tooltip content={<CustomTooltip />} />
+              <Legend 
+                verticalAlign="bottom" 
+                height={36} 
+                iconType="circle"
+                wrapperStyle={{ fontSize: '13px', fontWeight: 600 }}
+                formatter={(value) => <span style={{ color: '#4b5563' }}>{value}</span>}
+              />
+              {/* Center Text */}
+              <text x="50%" y="40%" textAnchor="middle" dominantBaseline="middle" className="text-sm font-bold fill-gray-500">
+                Total Credit
+              </text>
+              <text x="50%" y="52%" textAnchor="middle" dominantBaseline="middle" className="text-lg font-extrabold fill-gray-800">
+                {formatCurrency(totalCredit)}
+              </text>
+            </PieChart>
+          </ResponsiveContainer>
+        ) : (
+            <div className="flex items-center justify-center h-full">
+                <Empty description="No credit data available" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            </div>
+        )}
       </div>
     </Card>
   );

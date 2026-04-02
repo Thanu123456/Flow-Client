@@ -9,7 +9,8 @@ import {
     Avatar,
     Modal,
     Row,
-    Col
+    Col,
+    notification
 } from 'antd';
 import {
     LogoutOutlined,
@@ -30,13 +31,29 @@ import { useUnitStore } from '../../store/management/unitStore';
 import { useWarehouseStore } from '../../store/management/warehouseStore';
 import { useWarrantyStore } from '../../store/management/warrantyStore';
 import { useVariationStore } from '../../store/management/variationStore';
+import { useDashboardStore } from '../../store/reports/dashboardStore';
 import HeaderWithSearch from '../../components/common/Layout/HeaderWithSearch';
-import SalesPurchasesChart from '../../components/dashboard/SalesPurchasesChart';
-import SummaryCards from '../../components/dashboard/SummaryCards';
-import SalesPurchasesBarChart from '../../components/dashboard/SalesPurchasesBarChart';
-import TopProductsPieChart from '../../components/dashboard/TopProductsPieChart';
-import CreditBalancePieChart from '../../components/dashboard/CreditBalancePieChart';
-import CreditCustomersList from '../../components/dashboard/CreditCustomersList';
+import {
+    SalesPurchasesChart,
+    SummaryCards,
+    SecondarySummaryCards,
+    SalesPurchasesBarChart,
+    TopProductsPieChart,
+    CreditBalancePieChart,
+    CreditCustomersList,
+    StockAlertTable,
+    TopCustomersPieChart,
+    MostSellingItemsTable,
+    LeastSellingItemsTable,
+    TopExpensesCard,
+    ExpireDateAlertTable,
+    RecentSalesTable,
+    HourlySalesPeakChart,
+    PaymentMethodPieChart,
+    RevenueByCategoryChart,
+    ProfitMarginBarChart,
+    InventoryTurnoverChart
+} from '../../components/dashboard';
 
 
 const { Title, Text } = Typography;
@@ -47,6 +64,38 @@ const Dashboard: React.FC = () => {
     const navigate = useNavigate();
 
     const [loading, setLoading] = useState(true);
+    const [period, setPeriod] = useState('today');
+    const [showAlert, setShowAlert] = useState(true);
+
+    const { fetchDashboardData: fetchAnalytics, fetchDashboardCharts, charts } = useDashboardStore();
+
+    const showInsightNotification = () => {
+        notification.destroy(); // Clear existing to prevent stacking
+        notification.warning({
+            message: <span className="font-bold text-amber-900 tracking-tight">Business Insight</span>,
+            description: <span className="text-amber-800 font-medium">Review your business activity logs.</span>,
+            placement: 'bottomRight',
+            duration: 5,
+            icon: <ReloadOutlined style={{ color: '#d46b08' }} />,
+            style: { 
+                backgroundColor: '#fffbe6',
+                borderRadius: '12px',
+                border: '1px solid #ffe7ba',
+                boxShadow: '0 10px 15px -3px rgba(180, 83, 9, 0.1), 0 4px 6px -2px rgba(180, 83, 9, 0.05)'
+            }
+        });
+    };
+
+    useEffect(() => {
+        // Initial load insight
+        showInsightNotification();
+
+        const insightInterval = setInterval(() => {
+            showInsightNotification();
+        }, 300000); // Every 5 minutes
+
+        return () => clearInterval(insightInterval);
+    }, []);
 
     const { getProducts } = useProductStore();
     const { getCategories } = useCategoryStore();
@@ -57,8 +106,10 @@ const Dashboard: React.FC = () => {
     const { getWarranties } = useWarrantyStore();
     const { getVariations } = useVariationStore();
 
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = async (selectedPeriod = period) => {
         setLoading(true);
+        // Show insight when syncing data manually
+        showInsightNotification();
         try {
             const params = { page: 1, limit: 1 };
             await Promise.allSettled([
@@ -69,7 +120,9 @@ const Dashboard: React.FC = () => {
                 getUnits(params),
                 getWarehouses(params),
                 getWarranties(params),
-                getVariations(params)
+                getVariations(params),
+                fetchAnalytics(selectedPeriod),
+                fetchDashboardCharts(selectedPeriod)
             ]);
         } catch (error) {
             console.error("Failed to load dashboard statistics:", error);
@@ -129,8 +182,35 @@ const Dashboard: React.FC = () => {
         <div style={{ background: token.colorBgLayout, minHeight: '100vh' }}>
             <HeaderWithSearch />
             <div style={{ padding: 24 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, position: 'relative' }}>
                     <Title level={2} style={{ margin: 0 }}>Admin Dashboard</Title>
+
+                    {charts?.stockAlerts && charts.stockAlerts.length > 0 && showAlert && (
+                        <div
+                            className="bg-amber-500 text-white px-8 py-3 rounded-2xl flex items-center gap-4 shadow-2xl animate-bounce border-2 border-white/30 backdrop-blur-md"
+                            style={{
+                                position: 'absolute',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                zIndex: 10,
+                                minWidth: '420px',
+                                justifyContent: 'space-between',
+                                top: '8px' // Slightly lowered within the title row
+                            }}
+                        >
+                            <span className="font-extrabold flex items-center gap-3 text-sm uppercase tracking-widest italic">
+                                <span className="w-3 h-3 bg-white rounded-full animate-ping"></span>
+                                ATTENTION: STOCK IS LOW! CHECK ALERT TABLE
+                            </span>
+                            <button
+                                className="text-white hover:bg-white/20 transition-all bg-white/10 rounded-xl w-8 h-8 flex items-center justify-center font-black text-lg border border-white/20"
+                                onClick={() => setShowAlert(false)}
+                            >
+                                ×
+                            </button>
+                        </div>
+                    )}
+
                     <Dropdown menu={{ items: userMenuItems }} trigger={['click']} placement="bottomRight">
                         <Button
                             style={{ height: 'auto', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 8 }}
@@ -162,7 +242,7 @@ const Dashboard: React.FC = () => {
                     <Title level={4} style={{ margin: 0 }}>Business Overview</Title>
                     <Button
                         icon={<ReloadOutlined style={{ color: "blue" }} />}
-                        onClick={fetchDashboardData}
+                        onClick={() => fetchDashboardData(period)}
                         loading={loading}
                         style={{
                             backgroundColor: token.colorPrimaryBg,
@@ -175,30 +255,131 @@ const Dashboard: React.FC = () => {
                     </Button>
                 </div>
 
+                <div className="flex justify-between items-start mb-6">
+                    <div className="flex gap-2">
+                        <Button
+                            type={period === 'today' ? 'primary' : 'default'}
+                            onClick={() => { setPeriod('today'); fetchDashboardData('today'); }}
+                            className={`${period === 'today' ? 'bg-indigo-900 border-indigo-900' : 'border-gray-200'} rounded-md px-6 font-bold h-10`}
+                        >
+                            TODAY
+                        </Button>
+                        <Button
+                            type={period === 'week' ? 'primary' : 'default'}
+                            onClick={() => { setPeriod('week'); fetchDashboardData('week'); }}
+                            className={`${period === 'week' ? 'bg-indigo-900 border-indigo-900' : 'border-gray-200'} rounded-md px-4 font-bold h-10`}
+                        >
+                            THIS WEEK
+                        </Button>
+                        <Button
+                            type={period === 'month' ? 'primary' : 'default'}
+                            onClick={() => { setPeriod('month'); fetchDashboardData('month'); }}
+                            className={`${period === 'month' ? 'bg-indigo-900 border-indigo-900' : 'border-gray-200'} rounded-md px-4 font-bold h-10`}
+                        >
+                            THIS MONTH
+                        </Button>
+                        <Button
+                            type={period === 'year' ? 'primary' : 'default'}
+                            onClick={() => { setPeriod('year'); fetchDashboardData('year'); }}
+                            className={`${period === 'year' ? 'bg-indigo-900 border-indigo-900' : 'border-gray-200'} rounded-md px-4 font-bold h-10`}
+                        >
+                            THIS YEAR
+                        </Button>
+                    </div>
+                </div>
+
                 <Spin spinning={loading} tip="Loading Analytics...">
                     <SummaryCards />
-                    
+                    <SecondarySummaryCards />
+
+                    <div style={{ margin: '32px 0 16px' }}>
+                        <Title level={4}>Sales & Financial Trends</Title>
+                    </div>
+
                     <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                         <Col xs={24} lg={16}>
                             <SalesPurchasesChart />
                         </Col>
                         <Col xs={24} lg={8}>
-                            <TopProductsPieChart />
+                            <ProfitMarginBarChart />
                         </Col>
                     </Row>
-                    
+
                     <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-                        <Col xs={24} lg={16}>
+                        <Col xs={24} lg={12}>
+                            <HourlySalesPeakChart />
+                        </Col>
+                        <Col xs={24} lg={12}>
                             <SalesPurchasesBarChart />
+                        </Col>
+                    </Row>
+
+                    <div style={{ margin: '32px 0 16px' }}>
+                        <Title level={4}>Business Performance Distribution</Title>
+                    </div>
+
+                    <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                        <Col xs={24} lg={8}>
+                            <TopProductsPieChart />
+                        </Col>
+                        <Col xs={24} lg={8}>
+                            <RevenueByCategoryChart />
+                        </Col>
+                        <Col xs={24} lg={8}>
+                            <PaymentMethodPieChart />
+                        </Col>
+                    </Row>
+
+                    <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                        <Col xs={24} lg={8}>
+                            <TopCustomersPieChart />
                         </Col>
                         <Col xs={24} lg={8}>
                             <CreditBalancePieChart />
                         </Col>
+                        <Col xs={24} lg={8}>
+                            <TopExpensesCard />
+                        </Col>
                     </Row>
-                    
+
+                    <div style={{ margin: '32px 0 16px' }}>
+                        <Title level={4}>Inventory Speed & Alerts</Title>
+                    </div>
+
+                    <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                        <Col xs={24} lg={12}>
+                            <InventoryTurnoverChart />
+                        </Col>
+                        <Col xs={24} lg={12}>
+                            <StockAlertTable />
+                        </Col>
+                    </Row>
+
+                    <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                        <Col xs={24} lg={12}>
+                            <MostSellingItemsTable />
+                        </Col>
+                        <Col xs={24} lg={12}>
+                            <LeastSellingItemsTable />
+                        </Col>
+                    </Row>
+
+                    <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                        <Col xs={24} lg={12}>
+                            <ExpireDateAlertTable />
+                        </Col>
+                        <Col xs={24} lg={12}>
+                            <CreditCustomersList />
+                        </Col>
+                    </Row>
+
+                    <div style={{ margin: '32px 0 16px' }}>
+                        <Title level={4}>Recent Operations</Title>
+                    </div>
+
                     <Row gutter={[16, 16]}>
                         <Col xs={24}>
-                            <CreditCustomersList />
+                            <RecentSalesTable />
                         </Col>
                     </Row>
                 </Spin>
