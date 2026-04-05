@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Input, Select, Modal, Radio, Checkbox, Typography, Row, Col, Spin, Empty, message, AutoComplete, Avatar, Dropdown, Tooltip, InputNumber } from 'antd';
+import { Button, Input, Select, Modal, Radio, Checkbox, Typography, Spin, Empty, message, AutoComplete, Avatar, Dropdown, Tooltip, InputNumber } from 'antd';
 import type { MenuProps } from 'antd';
 import { SearchOutlined, UserOutlined, SettingOutlined, DeleteOutlined, CloseOutlined, PlusOutlined, MinusOutlined, ShoppingOutlined, DashboardOutlined, KeyOutlined, LogoutOutlined, BarcodeOutlined } from '@ant-design/icons';
 import { FaCcVisa, FaCcMastercard, FaCcDiscover } from 'react-icons/fa';
@@ -621,73 +621,92 @@ const POS: React.FC = () => {
                         </Select>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                    <div className="flex-1 overflow-y-auto p-0 bg-white custom-scrollbar">
                         {productsLoading ? (
                             <div className="flex items-center justify-center h-full"><Spin size="large" /></div>
                         ) : posItems.length === 0 ? (
                             <div className="flex items-center justify-center h-full"><Empty description="No products found" /></div>
                         ) : (
-                            <Row gutter={[16, 16]}>
-                                {posItems.map((item) => {
-                                    const badge = stockBadge(item);
-                                    const isOutOfStock = item.stock <= 0;
-                                    const disabled = isOutOfStock && !allowNoStockBills;
-                                    return (
-                                        <Col span={6} key={item.cardId}>
+                                <div className="grid grid-cols-4 border-t border-l border-gray-200">
+                                    {posItems.map((item) => {
+                                        const badge = stockBadge(item);
+                                        const isOutOfStock = item.stock <= 0;
+                                        const disabled = isOutOfStock && !allowNoStockBills;
+                                        return (
                                             <div
-                                                className={`bg-white rounded-2xl border overflow-hidden flex flex-col h-full group relative transition-all duration-300 ${disabled ? 'opacity-50 cursor-not-allowed border-gray-200' : 'cursor-pointer hover:shadow-xl hover:-translate-y-1 hover:border-indigo-400 border-gray-200/60'}`}
+                                                key={item.cardId}
+                                                style={{ height: '320px' }}
+                                                className={`bg-white border-r border-b border-gray-200 flex flex-col group relative transition-all duration-200 overflow-hidden ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-100' : 'cursor-pointer hover:bg-blue-50/40'}`}
                                                 onClick={() => !disabled && handleAddToCart(item)}
                                             >
-                                                <div className="h-52 bg-slate-50 flex items-center justify-center relative p-4 overflow-hidden">
-                                                    <div className={`absolute top-3 right-3 z-10 text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest border shadow-sm whitespace-nowrap ${badge.bg} text-white`}>
-                                                        {badge.text}
+                                                {/* ── Zone 1: Image (160px fixed) ── */}
+                                                <div style={{ height: '160px', minHeight: '160px' }} className="bg-slate-50 flex items-center justify-center relative overflow-hidden shrink-0 border-b border-gray-100">
+                                                    {/* Stock badge – top right */}
+                                                    <div className={`absolute top-2 right-2 z-10 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide whitespace-nowrap ${badge.bg} text-white shadow-sm`}>
+                                                        {item.stock > 0
+                                                            ? `${isWeightBasedProduct(item.product.unitName || item.product.unitShortName) ? item.stock.toFixed(2) : item.stock}`
+                                                            : badge.text}
                                                     </div>
-                                                    {/* Feature #7 – Weight indicator */}
+                                                    {/* Weight badge – top left */}
                                                     {isWeightBasedProduct(item.product.unitName || item.product.unitShortName) && (
-                                                        <div className="absolute top-3 left-3 z-10 text-[8px] font-black px-1.5 py-0.5 rounded-full bg-blue-500 text-white border border-blue-400">
-                                                            ⚖ WEIGHT
+                                                        <div className="absolute top-2 left-2 z-10 text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-600 text-white shadow-sm">
+                                                            ⚖ WT
                                                         </div>
                                                     )}
                                                     {item.imageUrl ? (
-                                                        <img src={item.imageUrl} alt={item.displayName} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500 p-2" />
+                                                        <img
+                                                            src={item.imageUrl}
+                                                            alt={item.displayName}
+                                                            style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '12px' }}
+                                                        />
                                                     ) : (
-                                                        <div className="w-24 h-24 bg-gradient-to-br from-indigo-50 to-slate-100 rounded-3xl shadow-inner flex items-center justify-center border border-white group-hover:scale-110 transition-transform duration-500">
-                                                            <span className="text-4xl text-indigo-400 font-black italic select-none">{item.displayName.charAt(0)}</span>
+                                                        <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center border border-slate-200 shadow-sm">
+                                                            <span className="text-4xl text-slate-300 font-black">{item.displayName.charAt(0)}</span>
                                                         </div>
                                                     )}
                                                 </div>
 
-                                                <div className="p-4 flex-1 flex flex-col bg-white">
-                                                    <div className="mb-2">
-                                                        <div className="text-sm font-bold text-slate-800 leading-snug line-clamp-2 min-h-[40px] group-hover:text-indigo-600 transition-colors">
-                                                            {item.displayName}
-                                                        </div>
-                                                    </div>
-                                                    <div className="mb-4">
-                                                        <div className={`inline-flex flex-col py-1 px-2.5 rounded-lg border ${item.variation ? 'bg-indigo-50 border-indigo-100 text-indigo-600' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
-                                                            <span className="text-[7px] font-black uppercase tracking-widest leading-none mb-1 opacity-60">{item.variation ? 'Variation' : 'Type'}</span>
-                                                            <span className="text-[10px] font-bold truncate uppercase tracking-tight">{item.variation ? item.variationLabel : item.typeName}</span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="mt-auto pt-3 border-t border-slate-100 flex items-end justify-between">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
-                                                                {priceModeLabel[priceMode]} Price
+                                                {/* ── Zone 2: Product Name (52px fixed) ── */}
+                                                <div style={{ height: '52px', minHeight: '52px' }} className="px-3 pt-3 shrink-0 overflow-hidden">
+                                                    <p className="text-[13px] font-bold text-slate-800 leading-tight uppercase line-clamp-2 group-hover:text-indigo-700 transition-colors m-0">
+                                                        {item.displayName}
+                                                    </p>
+                                                </div>
+
+                                                {/* ── Zone 3: Variation / Type tag (32px fixed) ── */}
+                                                <div style={{ height: '32px', minHeight: '32px' }} className="px-3 pb-1 shrink-0 flex items-center overflow-hidden">
+                                                    <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded border truncate max-w-full ${item.variation ? 'bg-indigo-50 border-indigo-100 text-indigo-600' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
+                                                        {item.variation ? item.variationLabel : item.typeName}
+                                                    </span>
+                                                </div>
+
+                                                {/* ── Zone 4: Price + Add button (60px fixed) ── */}
+                                                <div style={{ height: '60px', minHeight: '60px' }} className="px-3 py-2 shrink-0 border-t border-slate-100 flex items-center justify-between bg-white">
+                                                    <div className="flex flex-col min-w-0 overflow-hidden">
+                                                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none mb-1">
+                                                            {priceModeLabel[priceMode]}
+                                                        </span>
+                                                        <div className="flex items-baseline gap-1 flex-nowrap overflow-hidden">
+                                                            <span className="text-[11px] font-bold text-indigo-400 shrink-0">LKR</span>
+                                                            <span className="text-lg font-black text-indigo-700 tracking-tighter truncate">
+                                                                {item.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                             </span>
-                                                            <div className="flex items-baseline gap-1">
-                                                                <span className="text-[10px] font-bold text-indigo-400 uppercase">LKR</span>
-                                                                <span className="text-xl font-black text-indigo-600 tracking-tighter">
-                                                                    {item.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                                </span>
-                                                            </div>
                                                         </div>
                                                     </div>
+                                                    {!disabled ? (
+                                                        <div className="w-8 h-8 shrink-0 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-500 group-hover:bg-indigo-100 transition-colors ml-2">
+                                                            <PlusOutlined style={{ fontSize: '12px' }} />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="w-8 h-8 shrink-0 rounded-lg bg-rose-100 flex items-center justify-center text-rose-400 ml-2">
+                                                            <CloseOutlined style={{ fontSize: '11px' }} />
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
-                                        </Col>
-                                    );
-                                })}
-                            </Row>
+                                        );
+                                    })}
+                                </div>
                         )}
                     </div>
                 </div>
