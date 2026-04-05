@@ -11,9 +11,11 @@ const ProfitMarginBarChart: React.FC = () => {
     
     // We can use SalesPurchases data for ProfitMargin as well
     const data = React.useMemo(() => {
-        if (!charts?.salesPurchases) return [];
-        return charts.salesPurchases.map(p => ({
-            month: dayjs(p.label).format('MMM DD'),
+        const raw = charts?.salesPurchases ?? [];
+        console.log('[ProfitMarginBarChart] raw salesPurchases:', raw.length, 'points');
+        if (!raw.length) return [];
+        return raw.map(p => ({
+            month: dayjs(p.label).isValid() ? dayjs(p.label).format('MMM DD') : p.label,
             revenue: p.values.sales || 0,
             profit: (p.values.sales || 0) - (p.values.purchases || 0)
         }));

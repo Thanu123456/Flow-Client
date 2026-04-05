@@ -35,6 +35,7 @@ export const CreditBalancePieChart: React.FC = () => {
 
     const creditData = React.useMemo(() => {
         if (!charts) return [];
+        console.log('[CreditBalancePieChart] creditCollected:', charts.creditCollected, 'creditOutstanding:', charts.creditOutstanding);
         return [
             { name: 'Collected', value: charts.creditCollected || 0 },
             { name: 'Outstanding', value: charts.creditOutstanding || 0 },

@@ -19,8 +19,9 @@ const StockAlertTable: React.FC = () => {
     const { charts, chartsLoading } = useDashboardStore();
 
     const data: StockAlertItem[] = React.useMemo(() => {
-        if (!charts?.stockAlerts) return [];
-        return charts.stockAlerts;
+        const raw = charts?.stockAlerts ?? [];
+        console.log('[StockAlertTable] raw stockAlerts:', raw.length, 'items', raw);
+        return raw;
     }, [charts]);
 
     const columns: ColumnsType<StockAlertItem> = [

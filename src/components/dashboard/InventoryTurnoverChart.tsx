@@ -15,11 +15,9 @@ const InventoryTurnoverChart: React.FC = () => {
     const { charts, chartsLoading } = useDashboardStore();
 
     const data = React.useMemo(() => {
-        if (!charts?.inventoryTurnover) return [];
-        return charts.inventoryTurnover.map(p => ({
-            item: p.item,
-            days: p.days
-        }));
+        const raw = charts?.inventoryTurnover ?? [];
+        console.log('[InventoryTurnoverChart] raw inventoryTurnover:', raw.length, 'items', raw);
+        return raw.map(p => ({ item: p.item, days: p.days }));
     }, [charts]);
 
   return (

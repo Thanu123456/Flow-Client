@@ -18,8 +18,9 @@ export const CreditCustomersList: React.FC = () => {
     const { charts, chartsLoading } = useDashboardStore();
 
     const data = React.useMemo(() => {
-        if (!charts?.creditCustomers) return [];
-        return charts.creditCustomers;
+        const raw = charts?.creditCustomers ?? [];
+        console.log('[CreditCustomersList] raw creditCustomers:', raw.length, 'items', raw);
+        return raw;
     }, [charts]);
 
     const totalOutstanding = React.useMemo(() => {

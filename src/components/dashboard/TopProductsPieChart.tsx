@@ -1,3 +1,4 @@
+import React from 'react';
 import { Card, Typography, Segmented, Empty, Skeleton } from 'antd';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useDashboardStore } from '../../store/reports/dashboardStore';
@@ -23,10 +24,11 @@ const CustomTooltip = ({ active, payload }: any) => {
 export const TopProductsPieChart: React.FC = () => {
   const { charts, chartsLoading } = useDashboardStore();
   
-  const data = charts?.topProducts?.map(p => ({
-    name: p.label,
-    value: p.value
-  })) || [];
+  const data = React.useMemo(() => {
+    const raw = charts?.topProducts ?? [];
+    console.log('[TopProductsPieChart] raw topProducts:', raw.length, 'items', raw);
+    return raw.map(p => ({ name: p.label, value: p.value }));
+  }, [charts]);
 
   return (
     <Card 

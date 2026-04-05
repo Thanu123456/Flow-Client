@@ -27,6 +27,7 @@ const formatCurrency = (value: number) => {
 
 export const SummaryCards: React.FC = () => {
   const { data, loading } = useDashboardStore();
+  console.log('[SummaryCards] data:', data?.summary);
 
   const sales = data?.summary?.sales;
   const purchases = data?.summary?.purchases;
@@ -136,6 +137,7 @@ export const SummaryCards: React.FC = () => {
 
 export const SecondarySummaryCards: React.FC = () => {
   const { data, loading } = useDashboardStore();
+  console.log('[SecondarySummaryCards] data:', data?.secondarySummary);
 
   const stats = [
     {

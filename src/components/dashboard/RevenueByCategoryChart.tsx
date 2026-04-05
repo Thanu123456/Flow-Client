@@ -24,10 +24,11 @@ const CustomTooltip = ({ active, payload }: any) => {
 const RevenueByCategoryChart: React.FC = () => {
     const { charts, chartsLoading } = useDashboardStore();
     
-    const data = charts?.revenueByCategory?.map(p => ({
-        name: p.label,
-        value: p.value
-    })) || [];
+    const data = React.useMemo(() => {
+        const raw = charts?.revenueByCategory ?? [];
+        console.log('[RevenueByCategoryChart] raw revenueByCategory:', raw.length, 'items', raw);
+        return raw.map(p => ({ name: p.label, value: p.value }));
+    }, [charts]);
 
   return (
     <Card 

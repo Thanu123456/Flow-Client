@@ -9,8 +9,10 @@ const HourlySalesPeakChart: React.FC = () => {
   const { charts, chartsLoading } = useDashboardStore();
 
   const data = React.useMemo(() => {
-    if (!charts?.hourlySales) return [];
-    return charts.hourlySales.map(p => ({
+    const raw = charts?.hourlySales ?? [];
+    console.log('[HourlySalesPeakChart] raw hourlySales:', raw.length, 'points', raw);
+    if (!raw.length) return [];
+    return raw.map(p => ({
         hour: p.label,
         sales: p.value
     }));

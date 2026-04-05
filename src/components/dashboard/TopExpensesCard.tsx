@@ -8,8 +8,9 @@ const TopExpensesCard: React.FC = () => {
     const { charts, chartsLoading } = useDashboardStore();
 
     const data = React.useMemo(() => {
-        if (!charts?.topExpenses) return [];
-        return charts.topExpenses;
+        const raw = charts?.topExpenses ?? [];
+        console.log('[TopExpensesCard] raw topExpenses:', raw.length, 'items', raw);
+        return raw;
     }, [charts]);
 
     const maxAmount = React.useMemo(() => {

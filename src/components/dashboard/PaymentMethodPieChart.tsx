@@ -31,11 +31,15 @@ const CustomTooltip = ({ active, payload }: any) => {
 const PaymentMethodPieChart: React.FC = () => {
     const { charts, chartsLoading } = useDashboardStore();
     
-    const data = charts?.paymentMethod?.map(p => ({
-        name: p.label,
-        value: p.value,
-        color: COLORS[p.label] || DEFAULT_COLORS[Math.floor(Math.random() * DEFAULT_COLORS.length)]
-    })) || [];
+    const data = React.useMemo(() => {
+        const raw = charts?.paymentMethod ?? [];
+        console.log('[PaymentMethodPieChart] raw paymentMethod:', raw.length, 'items', raw);
+        return raw.map(p => ({
+            name: p.label,
+            value: p.value,
+            color: COLORS[p.label] || DEFAULT_COLORS[0]
+        }));
+    }, [charts]);
 
   return (
     <Card 

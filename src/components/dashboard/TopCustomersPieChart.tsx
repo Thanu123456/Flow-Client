@@ -25,11 +25,9 @@ const TopCustomersPieChart: React.FC = () => {
     const { charts, chartsLoading } = useDashboardStore();
 
     const data = React.useMemo(() => {
-        if (!charts?.topCustomers) return [];
-        return charts.topCustomers.map(p => ({
-            name: p.label,
-            value: p.value
-        }));
+        const raw = charts?.topCustomers ?? [];
+        console.log('[TopCustomersPieChart] raw topCustomers:', raw.length, 'items', raw);
+        return raw.map(p => ({ name: p.label, value: p.value }));
     }, [charts]);
 
   return (

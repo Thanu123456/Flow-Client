@@ -20,8 +20,9 @@ const RecentSalesTable: React.FC = () => {
     const { charts, chartsLoading } = useDashboardStore();
 
     const data: RecentSaleItem[] = React.useMemo(() => {
-        if (!charts?.recentSales) return [];
-        return charts.recentSales.map(item => ({
+        const raw = charts?.recentSales ?? [];
+        console.log('[RecentSalesTable] raw recentSales:', raw.length, 'items', raw);
+        return raw.map(item => ({
             id: item.id,
             referenceNo: item.referenceNo,
             customer: item.customer,

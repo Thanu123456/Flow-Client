@@ -15,7 +15,6 @@ import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 
-// Formatter for currency
 const formatCurrency = (value: number) => {
   if (value >= 1000000) return `Rs ${(value / 1000000).toFixed(1)}M`;
   if (value >= 1000) return `Rs ${(value / 1000).toFixed(1)}k`;
@@ -43,18 +42,20 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export const SalesPurchasesChart: React.FC = () => {
   const { charts, chartsLoading } = useDashboardStore();
-  
+
   const chartData = useMemo(() => {
-    if (!charts?.salesPurchases) return [];
-    return charts.salesPurchases.map(point => ({
-      name: dayjs(point.label).format('MMM DD'),
+    const raw = charts?.salesPurchases ?? [];
+    console.log('[SalesPurchasesChart] raw salesPurchases:', raw.length, 'points', raw);
+    if (!raw.length) return [];
+    return raw.map(point => ({
+      name: dayjs(point.label).isValid() ? dayjs(point.label).format('MMM DD') : point.label,
       sales: point.values.sales || 0,
       grn: point.values.purchases || 0,
     }));
   }, [charts]);
 
   return (
-    <Card 
+    <Card
       className="shadow-sm rounded-2xl border border-gray-100"
       styles={{ body: { padding: '24px' } }}
     >
@@ -92,14 +93,14 @@ export const SalesPurchasesChart: React.FC = () => {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-              <XAxis 
-                dataKey="name" 
+              <XAxis
+                dataKey="name"
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: '#8c8c8c', fontSize: 12, fontWeight: 500 }}
                 dy={10}
               />
-              <YAxis 
+              <YAxis
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: '#8c8c8c', fontSize: 12, fontWeight: 500 }}
@@ -107,31 +108,31 @@ export const SalesPurchasesChart: React.FC = () => {
                 dx={-10}
               />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc', opacity: 0.6 }} />
-              <Legend 
-                verticalAlign="top" 
+              <Legend
+                verticalAlign="top"
                 height={36}
                 iconType="circle"
                 wrapperStyle={{ fontSize: '13px', fontWeight: 600, color: '#4b5563' }}
               />
-              
-              <Area 
-                type="monotone" 
-                dataKey="sales" 
-                name="Total Sales" 
-                stroke="#2ea2f8" 
+
+              <Area
+                type="monotone"
+                dataKey="sales"
+                name="Total Sales"
+                stroke="#2ea2f8"
                 strokeWidth={3}
-                fillOpacity={1} 
-                fill="url(#colorSales)" 
+                fillOpacity={1}
+                fill="url(#colorSales)"
                 activeDot={{ r: 6, strokeWidth: 0, fill: '#2ea2f8' }}
               />
-              <Area 
-                type="monotone" 
-                dataKey="grn" 
-                name="Purchases (GRN)" 
-                stroke="#f43f5e" 
+              <Area
+                type="monotone"
+                dataKey="grn"
+                name="Purchases (GRN)"
+                stroke="#f43f5e"
                 strokeWidth={3}
-                fillOpacity={1} 
-                fill="url(#colorGrn)" 
+                fillOpacity={1}
+                fill="url(#colorGrn)"
                 activeDot={{ r: 6, strokeWidth: 0, fill: '#f43f5e' }}
               />
             </ComposedChart>
