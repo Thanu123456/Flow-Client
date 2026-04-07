@@ -111,24 +111,30 @@ const Dashboard: React.FC = () => {
         // Show insight when syncing data manually
         showInsightNotification();
         try {
-            const params = { page: 1, limit: 1 };
+            // Fetch dashboard analytics first — these are the only requests that
+            // gate the loading spinner. Running them alone avoids competing with
+            // 8 background store requests for DB connections on cold start.
             await Promise.allSettled([
-                getProducts(params),
-                getCategories(params),
-                getSubcategories(params),
-                getBrands(params),
-                getUnits(params),
-                getWarehouses(params),
-                getWarranties(params),
-                getVariations(params),
                 fetchAnalytics(selectedPeriod),
                 fetchDashboardCharts(selectedPeriod)
             ]);
-        } catch (error) {
-            console.error("Failed to load dashboard statistics:", error);
         } finally {
             setLoading(false);
         }
+
+        // Pre-warm supporting stores in the background after the dashboard is
+        // already visible. Intentionally not awaited — failures are harmless.
+        const params = { page: 1, limit: 1 };
+        Promise.allSettled([
+            getProducts(params),
+            getCategories(params),
+            getSubcategories(params),
+            getBrands(params),
+            getUnits(params),
+            getWarehouses(params),
+            getWarranties(params),
+            getVariations(params),
+        ]);
     };
 
     useEffect(() => {
