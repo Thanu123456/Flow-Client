@@ -123,18 +123,25 @@ const Dashboard: React.FC = () => {
         }
 
         // Pre-warm supporting stores in the background after the dashboard is
-        // already visible. Intentionally not awaited — failures are harmless.
+        // already visible. Staggered to avoid exhausting the DB connection pool
+        // when all requests hit simultaneously on cold start.
         const params = { page: 1, limit: 1 };
-        Promise.allSettled([
-            getProducts(params),
-            getCategories(params),
-            getSubcategories(params),
-            getBrands(params),
-            getUnits(params),
-            getWarehouses(params),
-            getWarranties(params),
-            getVariations(params),
-        ]);
+        const prewarmFns = [
+            () => getProducts(params),
+            () => getCategories(params),
+            () => getSubcategories(params),
+            () => getBrands(params),
+            () => getUnits(params),
+            () => getWarehouses(params),
+            () => getWarranties(params),
+            () => getVariations(params),
+        ];
+        (async () => {
+            for (const fn of prewarmFns) {
+                fn().catch(() => {});
+                await new Promise(r => setTimeout(r, 300));
+            }
+        })();
     };
 
     useEffect(() => {

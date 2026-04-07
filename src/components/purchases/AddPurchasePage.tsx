@@ -108,8 +108,9 @@ const AddPurchasePage: React.FC = () => {
   const { id: editId } = useParams<{ id: string }>();
   const isEdit = Boolean(editId);
 
-  const { createGRN, updateGRN, removeItem, completeGRN, getGRN, submitting } =
+  const { createGRN, updateGRN, removeItem, completeGRN, getGRN } =
     usePurchaseStore();
+  const [saving, setSaving] = useState(false);
   const { getAllWarehouses } = useWarehouseStore();
   const { searchSuppliers } = useSupplierStore();
 
@@ -456,6 +457,7 @@ const AddPurchasePage: React.FC = () => {
     const err = validate(doComplete);
     if (err) { message.error(err); return; }
 
+    setSaving(true);
     try {
       let grnId: string;
 
@@ -554,6 +556,8 @@ const AddPurchasePage: React.FC = () => {
       const errData = error.response?.data;
       const errMsg = errData?.error?.details || errData?.error?.message || errData?.message || 'An error occurred. Please try again.';
       message.error(errMsg);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -926,7 +930,7 @@ const AddPurchasePage: React.FC = () => {
         <Button onClick={() => navigate('/purchases')}>Cancel</Button>
         <Button
           icon={<SaveOutlined />}
-          loading={submitting}
+          loading={saving}
           onClick={() => handleSubmit(false)}
           disabled={activeItems.length === 0}
         >
@@ -935,7 +939,7 @@ const AddPurchasePage: React.FC = () => {
         <Button
           type="primary"
           icon={<CheckCircleOutlined />}
-          loading={submitting}
+          loading={saving}
           onClick={() => handleSubmit(true)}
           disabled={activeItems.length === 0}
         >
