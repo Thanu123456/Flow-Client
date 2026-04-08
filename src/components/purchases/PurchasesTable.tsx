@@ -138,6 +138,9 @@ const PurchasesTable: React.FC<Props> = ({
       }}
       onPageChange={onPageChange}
       scroll={{ x: 1000 }}
+      rowClassName={(record: GRNListItem) =>
+        record.status === 'draft' ? 'opacity-60' : ''
+      }
     />
   );
 };

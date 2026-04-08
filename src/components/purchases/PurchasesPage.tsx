@@ -27,7 +27,7 @@ const PurchasesPage: React.FC = () => {
   const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([]);
   const [searchText, setSearchText] = useState('');
   const [paymentFilter, setPaymentFilter] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('completed');
   const [warehouseFilter, setWarehouseFilter] = useState<string>('');
   const [dateRange, setDateRange] = useState<[string, string] | null>(null);
   const [viewModalVisible, setViewModalVisible] = useState(false);

@@ -458,6 +458,10 @@ const AddPurchasePage: React.FC = () => {
     if (err) { message.error(err); return; }
 
     setSaving(true);
+    // Track a newly created draft so we can delete it if completion fails,
+    // preventing orphaned draft GRNs from appearing in the list.
+    let newlyCreatedGrnId: string | null = null;
+
     try {
       let grnId: string;
 
@@ -502,7 +506,7 @@ const AddPurchasePage: React.FC = () => {
           }
         }
       } else {
-        // Create new GRN
+        // Create new GRN draft
         const grn = await createGRN({
           warehouseId,
           supplierId,
@@ -511,6 +515,7 @@ const AddPurchasePage: React.FC = () => {
           grnDate,
         });
         grnId = grn.id;
+        if (doComplete) newlyCreatedGrnId = grnId; // remember for rollback
 
         // Add all items
         for (const item of activeItems) {
@@ -538,15 +543,37 @@ const AddPurchasePage: React.FC = () => {
       }
 
       if (doComplete) {
-        const completed = await completeGRN(grnId, {
-          discountAmount: discountAmount || 0,
-          paidAmount,
-          chequeNumber: chequeNumber || undefined,
-          chequeDate: chequeDate || undefined,
-          chequeNote: chequeNote || undefined,
-          debitBalanceUsed: debitBalanceUsed || 0,
-        });
-        message.success(`GRN ${completed.grnNumber} completed successfully!`);
+        try {
+          const completed = await completeGRN(grnId, {
+            discountAmount: discountAmount || 0,
+            paidAmount,
+            chequeNumber: chequeNumber || undefined,
+            chequeDate: chequeDate || undefined,
+            chequeNote: chequeNote || undefined,
+            debitBalanceUsed: debitBalanceUsed || 0,
+          });
+          // Completion succeeded — no need to rollback
+          newlyCreatedGrnId = null;
+          message.success(`GRN ${completed.grnNumber} completed successfully!`);
+        } catch (completeError: any) {
+          // If the server returned 400 it means the GRN was already completed
+          // (a previous attempt succeeded but the response was lost).  Navigate
+          // to the list; do NOT delete the (already-completed) GRN.
+          const status = (completeError as any).response?.status;
+          if (status === 400) {
+            newlyCreatedGrnId = null;
+            message.success('GRN completed successfully!');
+            navigate('/purchases');
+            return;
+          }
+          // Any other error: delete the orphaned draft so the user can retry
+          // from a clean state.
+          if (newlyCreatedGrnId) {
+            await purchaseService.deleteGRN(newlyCreatedGrnId).catch(() => {});
+            newlyCreatedGrnId = null;
+          }
+          throw completeError;
+        }
       } else {
         message.success('Draft saved successfully');
       }
