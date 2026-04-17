@@ -44,6 +44,7 @@ const SerialNumberModal: React.FC<SerialModalProps> = ({
 }) => {
   const [serials, setSerials] = useState<string[]>(existing);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [messageApi, contextHolder] = message.useMessage();
 
   useEffect(() => {
     if (open) {
@@ -65,12 +66,12 @@ const SerialNumberModal: React.FC<SerialModalProps> = ({
   const handleSave = () => {
     const filled = serials.filter((s) => s.trim());
     if (filled.length < quantity) {
-      message.warning(`Please enter all ${quantity} serial numbers`);
+      messageApi.warning(`Please enter all ${quantity} serial numbers`);
       return;
     }
     const unique = new Set(serials.map((s) => s.trim()));
     if (unique.size < quantity) {
-      message.error('Duplicate serial numbers detected');
+      messageApi.error('Duplicate serial numbers detected');
       return;
     }
     onSave(serials.map((s) => s.trim()));
@@ -85,6 +86,7 @@ const SerialNumberModal: React.FC<SerialModalProps> = ({
       okText="Save Serial Numbers"
       width={480}
     >
+      {contextHolder}
       <Text type="secondary">Required: {quantity} serial number(s)</Text>
       <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
         {Array.from({ length: quantity }).map((_, idx) => (
@@ -107,6 +109,7 @@ const AddPurchasePage: React.FC = () => {
   const navigate = useNavigate();
   const { id: editId } = useParams<{ id: string }>();
   const isEdit = Boolean(editId);
+  const [messageApi, contextHolder] = message.useMessage();
 
   const { createGRN, updateGRN, removeItem, completeGRN, getGRN } =
     usePurchaseStore();
@@ -216,7 +219,7 @@ const AddPurchasePage: React.FC = () => {
           }))
         );
       }).catch(() => {
-        message.error('Failed to load GRN for editing');
+        messageApi.error('Failed to load GRN for editing');
         navigate('/purchases');
       });
     }
@@ -309,7 +312,7 @@ const AddPurchasePage: React.FC = () => {
 
   const handleClearSupplier = () => {
     if (supplierLocked) {
-      message.warning('Cannot change supplier after items have been added');
+      messageApi.warning('Cannot change supplier after items have been added');
       return;
     }
     setSupplierId(undefined);
@@ -320,15 +323,15 @@ const AddPurchasePage: React.FC = () => {
   // ── Add item to list ─────────────────────────────────────
   const handleAddItem = () => {
     if (!selectedProduct) {
-      message.warning('Please select a product first');
+      messageApi.warning('Please select a product first');
       return;
     }
     if (selectedProduct.productType === 'variable' && !selectedVariation) {
-      message.warning('Please select a variation');
+      messageApi.warning('Please select a variation');
       return;
     }
     if (!quantity || quantity <= 0) {
-      message.warning('Quantity must be greater than 0');
+      messageApi.warning('Quantity must be greater than 0');
       return;
     }
 
@@ -455,7 +458,7 @@ const AddPurchasePage: React.FC = () => {
   // ── Submit ─────────────────────────────────────────────────
   const handleSubmit = async (doComplete: boolean) => {
     const err = validate(doComplete);
-    if (err) { message.error(err); return; }
+    if (err) { messageApi.error(err); return; }
 
     setSaving(true);
     // Track a newly created draft so we can delete it if completion fails,
@@ -554,7 +557,7 @@ const AddPurchasePage: React.FC = () => {
           });
           // Completion succeeded — no need to rollback
           newlyCreatedGrnId = null;
-          message.success(`GRN ${completed.grnNumber} completed successfully!`);
+          messageApi.success(`GRN ${completed.grnNumber} completed successfully!`);
         } catch (completeError: any) {
           // If the server returned 400 it means the GRN was already completed
           // (a previous attempt succeeded but the response was lost).  Navigate
@@ -562,7 +565,7 @@ const AddPurchasePage: React.FC = () => {
           const status = (completeError as any).response?.status;
           if (status === 400) {
             newlyCreatedGrnId = null;
-            message.success('GRN completed successfully!');
+            messageApi.success('GRN completed successfully!');
             navigate('/purchases');
             return;
           }
@@ -575,14 +578,14 @@ const AddPurchasePage: React.FC = () => {
           throw completeError;
         }
       } else {
-        message.success('Draft saved successfully');
+        messageApi.success('Draft saved successfully');
       }
 
       navigate('/purchases');
     } catch (error: any) {
       const errData = error.response?.data;
       const errMsg = errData?.error?.details || errData?.error?.message || errData?.message || 'An error occurred. Please try again.';
-      message.error(errMsg);
+      messageApi.error(errMsg);
     } finally {
       setSaving(false);
     }
@@ -627,6 +630,7 @@ const AddPurchasePage: React.FC = () => {
   // ────────────────────────────────────────────────────────
   return (
     <div style={{ padding: '24px' }}>
+      {contextHolder}
       {/* Page Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0 }}>

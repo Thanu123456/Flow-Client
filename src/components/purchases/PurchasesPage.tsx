@@ -21,13 +21,14 @@ const { RangePicker } = DatePicker;
 
 const PurchasesPage: React.FC = () => {
   const navigate = useNavigate();
+  const [messageApi, contextHolder] = message.useMessage();
   const { grns, loading, error, pagination, listGRNs, getGRN } = usePurchaseStore();
   const { getAllWarehouses } = useWarehouseStore();
 
   const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([]);
   const [searchText, setSearchText] = useState('');
   const [paymentFilter, setPaymentFilter] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<string>('completed');
+  const [statusFilter, setStatusFilter] = useState<string>('');
   const [warehouseFilter, setWarehouseFilter] = useState<string>('');
   const [dateRange, setDateRange] = useState<[string, string] | null>(null);
   const [viewModalVisible, setViewModalVisible] = useState(false);
@@ -60,7 +61,7 @@ const PurchasesPage: React.FC = () => {
 
   useEffect(() => {
     if (error) {
-      message.error(error);
+      messageApi.error(error);
     }
   }, [error]);
 
@@ -73,7 +74,7 @@ const PurchasesPage: React.FC = () => {
       if (data) setSelectedGRN(data);
       setViewModalVisible(true);
     } catch {
-      message.error('Failed to load GRN details');
+      messageApi.error('Failed to load GRN details');
     } finally {
       setLoadingDetail(false);
     }
@@ -100,7 +101,7 @@ const PurchasesPage: React.FC = () => {
       a.click();
       window.URL.revokeObjectURL(url);
     } catch {
-      message.error('Failed to export PDF');
+      messageApi.error('Failed to export PDF');
     }
   };
 
@@ -114,11 +115,13 @@ const PurchasesPage: React.FC = () => {
       a.click();
       window.URL.revokeObjectURL(url);
     } catch {
-      message.error('Failed to export Excel');
+      messageApi.error('Failed to export Excel');
     }
   };
 
   return (
+    <>
+    {contextHolder}
     <PageLayout
       title="Purchases (GRN)"
       actions={
@@ -217,6 +220,7 @@ const PurchasesPage: React.FC = () => {
         }}
       />
     </PageLayout>
+    </>
   );
 };
 
