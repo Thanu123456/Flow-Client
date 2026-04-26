@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-	Table, Button, Modal, message, Tag, Empty, Spin, Descriptions,
+	Table, Button, Modal, message, Tag, Empty, Spin, Descriptions, Space,
 } from 'antd';
-import { EyeOutlined } from '@ant-design/icons';
+import { EyeOutlined, RollbackOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { saleService } from '../../services/transactions/saleService';
@@ -29,6 +30,7 @@ const SalesHistoryTable: React.FC<SalesHistoryTableProps> = ({
 	dateRange,
 	refresh
 }) => {
+	const navigate = useNavigate();
 	const [sales, setSales] = useState<SaleListItem[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [detailVisible, setDetailVisible] = useState(false);
@@ -139,16 +141,27 @@ const SalesHistoryTable: React.FC<SalesHistoryTableProps> = ({
 		{
 			title: 'Actions',
 			key: 'actions',
-			width: 90,
+			width: 160,
 			render: (_, record) => (
-				<Button
-					type="primary"
-					size="small"
-					icon={<EyeOutlined />}
-					onClick={() => openDetail(record.id)}
-				>
-					View
-				</Button>
+				<Space size="small">
+					<Button
+						type="primary"
+						size="small"
+						icon={<EyeOutlined />}
+						onClick={() => openDetail(record.id)}
+					>
+						View
+					</Button>
+					<Button
+						size="small"
+						danger
+						icon={<RollbackOutlined />}
+						onClick={() => navigate(`/sales-returns/new/${record.id}`)}
+						disabled={record.status === 'refunded'}
+					>
+						Return
+					</Button>
+				</Space>
 			),
 		},
 	];

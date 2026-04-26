@@ -5,19 +5,16 @@ import {
     Card,
     theme,
     Spin,
-    Dropdown,
-    Avatar,
     Modal,
+    Avatar,
     Row,
     Col,
     notification
 } from 'antd';
 import {
-    LogoutOutlined,
     ReloadOutlined,
     UserOutlined,
     DashboardOutlined,
-    DownOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -151,64 +148,20 @@ const Dashboard: React.FC = () => {
 
 
 
-    const handleLogoutConfirm = () => {
-        Modal.confirm({
-            title: 'Confirm Logout',
-            content: 'Are you sure you want to log out of the system?',
-            okText: 'Logout',
-            okType: 'danger',
-            cancelText: 'Stay',
-            onOk: async () => {
-                await logout();
-                navigate('/login');
-            },
-            centered: true
-        });
-    };
-
-    const userMenuItems = [
-        {
-            key: 'dashboard',
-            label: 'Dashboard',
-            icon: <DashboardOutlined />,
-            onClick: () => navigate('/dashboard')
-        },
-        {
-            key: 'profile',
-            label: 'My Profile',
-            icon: <UserOutlined />,
-            onClick: () => navigate('/profile')
-        },
-        {
-            type: 'divider' as const,
-        },
-        {
-            key: 'logout',
-            label: 'Logout',
-            icon: <LogoutOutlined />,
-            danger: true,
-            onClick: handleLogoutConfirm
-        }
-    ];
 
     return (
         <div style={{ background: token.colorBgLayout, minHeight: '100vh' }}>
             <HeaderWithSearch />
-            <div style={{ padding: 24 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, position: 'relative' }}>
-                    <Title level={2} style={{ margin: 0 }}>Admin Dashboard</Title>
-
+            <div style={{ padding: '12px 24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 12, position: 'relative' }}>
                     {charts?.stockAlerts && charts.stockAlerts.length > 0 && showAlert && (
                         <div
                             className="bg-amber-500 text-white px-8 py-3 rounded-2xl flex items-center gap-4 shadow-2xl animate-bounce border-2 border-white/30 backdrop-blur-md"
                             style={{
-                                position: 'absolute',
-                                left: '50%',
-                                transform: 'translateX(-50%)',
+                                position: 'relative',
                                 zIndex: 10,
                                 minWidth: '420px',
                                 justifyContent: 'space-between',
-                                top: '8px' // Slightly lowered within the title row
                             }}
                         >
                             <span className="font-extrabold flex items-center gap-3 text-sm uppercase tracking-widest italic">
@@ -223,52 +176,54 @@ const Dashboard: React.FC = () => {
                             </button>
                         </div>
                     )}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <Title level={4} style={{ margin: 0, fontWeight: 700, letterSpacing: '-0.02em' }}>
+                        Business Overview
+                    </Title>
+                    
+                    <div className="flex items-center gap-3">
+                        {user && (
+                            <div className="hidden lg:flex items-center gap-2 bg-slate-100/50 border border-slate-200/60 px-3 py-1 rounded-full transition-all hover:bg-slate-100">
+                                <Avatar 
+                                    size={22} 
+                                    style={{ backgroundColor: token.colorPrimary, display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                                    icon={<UserOutlined style={{ fontSize: 11 }} />} 
+                                />
+                                <div className="flex items-center gap-2 whitespace-nowrap">
+                                    <Text className="text-[11px] text-slate-600 font-medium">
+                                        Hi, <span className="text-slate-900">{user.full_name.split(' ')[0]}</span>
+                                    </Text>
+                                    <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                                    <Text className="text-[10px] text-slate-500 font-medium uppercase tracking-tight">
+                                        {tenant?.shop_name}
+                                    </Text>
+                                </div>
+                            </div>
+                        )}
 
-                    <Dropdown menu={{ items: userMenuItems }} trigger={['click']} placement="bottomRight">
                         <Button
-                            style={{ height: 'auto', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 8 }}
+                            icon={<ReloadOutlined style={{ color: "blue" }} />}
+                            onClick={() => fetchDashboardData(period)}
+                            loading={loading}
+                            style={{
+                                backgroundColor: token.colorPrimaryBg,
+                                color: token.colorPrimary,
+                                borderColor: token.colorPrimaryBorder,
+                                borderRadius: '8px',
+                                height: '32px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                fontSize: '13px',
+                                fontWeight: 500
+                            }}
                         >
-                            <Avatar
-                                size="small"
-                                style={{ backgroundColor: token.colorPrimary }}
-                                icon={<UserOutlined />}
-                            />
-                            <Text strong>{user?.full_name}</Text>
-                            <DownOutlined style={{ fontSize: 12, color: token.colorTextSecondary }} />
+                            Sync Data
                         </Button>
-                    </Dropdown>
+                    </div>
                 </div>
 
-                <Card style={{ marginBottom: 24 }}>
-                    <Text>
-                        Welcome back, <strong>{user?.full_name}</strong>!
-                    </Text>
-                    <br />
-                    {tenant && (
-                        <Text type="secondary">
-                            Managing: {tenant.shop_name} ({tenant.business_type})
-                        </Text>
-                    )}
-                </Card>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 }}>
-                    <Title level={4} style={{ margin: 0 }}>Business Overview</Title>
-                    <Button
-                        icon={<ReloadOutlined style={{ color: "blue" }} />}
-                        onClick={() => fetchDashboardData(period)}
-                        loading={loading}
-                        style={{
-                            backgroundColor: token.colorPrimaryBg,
-                            color: token.colorPrimary,
-                            borderColor: token.colorPrimaryBorder,
-                            borderRadius: token.borderRadius
-                        }}
-                    >
-                        Sync Data
-                    </Button>
-                </div>
-
-                <div className="flex justify-between items-start mb-6">
+                <div className="flex justify-between items-start mb-4">
                     <div className="flex gap-2">
                         <Button
                             type={period === 'today' ? 'primary' : 'default'}

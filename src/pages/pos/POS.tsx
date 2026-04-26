@@ -15,6 +15,7 @@ import AddCustomerModal from '../../components/customers/AddCustomerModal';
 import WeightEntryModal from '../../components/pos/WeightEntryModal';
 import PriceModeSelector from '../../components/pos/PriceModeSelector';
 import HeldBillsModal from '../../components/pos/HeldBillsModal';
+import POSRefundModal from '../../components/pos/POSRefundModal';
 import { isWeightBasedProduct, formatQuantity } from '../../utils/posHelpers';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import { axiosInstance } from '../../services/api/axiosInstance';
@@ -73,6 +74,9 @@ const POS: React.FC = () => {
     // ── Feature #8: No-Stock Setting ──────────────────────────────────
     const [allowNoStockBills, setAllowNoStockBills] = useState<boolean>(false);
     const [settingsLoaded, setSettingsLoaded] = useState(false);
+
+    // ── POS Refund Modal ───────────────────────────────────────────────
+    const [refundModalVisible, setRefundModalVisible] = useState(false);
 
     // ── Customer state ─────────────────────────────────────────────────
     const [customerOptions, setCustomerOptions] = useState<{ value: string; label: string }[]>([]);
@@ -146,7 +150,11 @@ const POS: React.FC = () => {
     //  Format: {MODE_PREFIX}{PAY_CODE}{YYMMDDHHMMSS}{3 random alphanum}
     //  MODE_PREFIX : O=Our/Cost  R=Retail  W=Wholesale
     //  PAY_CODE    : C=Cash  D=Card  R=Credit  O=COD
-    const generateBillNumber = useCallback((mode: string, method: string): string => {
+    const generateBillNumber = useCallback((mode: string, method: string, isRefund: boolean): string => {
+        if (isRefund) {
+            return `REF-${Math.floor(Date.now() / 1000)}`;
+        }
+
         const modeMap: Record<string, string> = { our: 'O', cost: 'O', retail: 'R', wholesale: 'W' };
         const payMap: Record<string, string> = { Cash: 'C', Card: 'D', Credit: 'R', COD: 'O' };
 
@@ -170,15 +178,15 @@ const POS: React.FC = () => {
         return `${modePrefix}${payCode}${ts}${rand}`;
     }, []);
 
-    // Regenerate whenever modal opens or payment method changes
+    // Regenerate whenever modal opens, payment method changes, or refund mode changes
     useEffect(() => {
         if (isPaymentModalOpen) {
             setBillNumberLoading(true);
-            const num = generateBillNumber(priceMode, paymentMethod);
+            const num = generateBillNumber(priceMode, paymentMethod, isRefundMode);
             setBillNumber(num);
             setBillNumberLoading(false);
         }
-    }, [isPaymentModalOpen, paymentMethod, priceMode, generateBillNumber]);
+    }, [isPaymentModalOpen, paymentMethod, priceMode, isRefundMode, generateBillNumber]);
 
 
     // ─── Feature #5 – Calculate total weight ─────────────────────────
@@ -462,7 +470,7 @@ const POS: React.FC = () => {
             setCardBank(''); setCardFirstDigit(''); setCardLastFour(''); setCardType('');
             setCustomerNameDisplay('Walk-In Customer');
             // Generate fresh bill number for the next transaction
-            setBillNumber(generateBillNumber(priceMode, paymentMethod));
+            setBillNumber(generateBillNumber(priceMode, paymentMethod, isRefundMode));
             getProducts({ page: 1, limit: 1000, categoryId: selectedCategory === 'All Categories' ? undefined : selectedCategory, status: 'active' });
         } catch (error) {
             message.error('Failed to complete checkout.');
@@ -582,7 +590,7 @@ const POS: React.FC = () => {
                     >
                         HOLD BILL
                     </Button>
-                    <Button onClick={() => { setRefundMode(!isRefundMode); message.success(isRefundMode ? 'Refund Mode Disabled' : 'Refund Mode Enabled'); }} size="middle" style={{ backgroundColor: isRefundMode ? '#2f3542' : '#fa5f55', color: 'white', border: 'none' }} className="hover:opacity-90 text-xs rounded-lg shadow-sm font-semibold">{isRefundMode ? 'CANCEL REFUND' : 'REFUND'}</Button>
+                    <Button onClick={() => setRefundModalVisible(true)} size="middle" style={{ backgroundColor: '#fa5f55', color: 'white', border: 'none' }} className="hover:opacity-90 text-xs rounded-lg shadow-sm font-semibold">REFUND</Button>
 
                     <Dropdown menu={{ items: userMenuItems }} trigger={['click']} placement="bottomRight">
                         <div className="cursor-pointer ml-2">
@@ -889,7 +897,7 @@ const POS: React.FC = () => {
 
                             {/* Bill No + Weight inline */}
                             <div className="flex items-center gap-4 text-[12px] text-gray-500">
-                                <span className="font-semibold">Bill No:</span>
+                                <span className="font-semibold">{isRefundMode ? 'Refund No:' : 'Bill No:'}</span>
                                 {billNumberLoading
                                     ? <Spin size="small" />
                                     : <span className="font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded">{billNumber || '—'}</span>
@@ -1149,6 +1157,12 @@ const POS: React.FC = () => {
                 visible={isAddCustomerModalVisible}
                 onCancel={() => setIsAddCustomerModalVisible(false)}
                 onSuccess={() => setIsAddCustomerModalVisible(false)}
+            />
+
+            {/* ── POS Refund Modal ───────────────────────────────────────── */}
+            <POSRefundModal
+                visible={refundModalVisible}
+                onClose={() => setRefundModalVisible(false)}
             />
 
             {/* ── Feature #10 – Held Bills Modal ─────────────────────────── */}
