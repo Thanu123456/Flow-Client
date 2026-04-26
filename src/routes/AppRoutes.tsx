@@ -44,6 +44,8 @@ import EditProduct from "../pages/management/EditProduct";
 import Purchases from "../pages/transactions/Purchases";
 import AddPurchase from "../pages/transactions/AddPurchase";
 import Sales from "../pages/transactions/Sales";
+import SalesReturns from "../pages/transactions/SalesReturns";
+import ProcessRefund from "../pages/transactions/ProcessRefund";
 
 import POS from "../pages/pos/POS";
 
@@ -179,6 +181,17 @@ const AppRoutes: React.FC = () => {
           }
         >
           <Route path="/sales" element={<Sales />} />
+        </Route>
+
+        {/* Sale Returns / Refund Routes */}
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.SALES_REFUNDS} />
+          }
+        >
+          <Route path="/sales-returns" element={<SalesReturns />} />
+          <Route path="/sales-returns/new" element={<ProcessRefund />} />
+          <Route path="/sales-returns/new/:saleId" element={<ProcessRefund />} />
         </Route>
       </Route>
 

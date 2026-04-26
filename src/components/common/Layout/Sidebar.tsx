@@ -21,6 +21,7 @@ import {
   MenuUnfoldOutlined,
   SafetyCertificateOutlined,
   RightOutlined,
+  RollbackOutlined,
 } from "@ant-design/icons";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -297,6 +298,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     if (p.startsWith("/warehouses")) return "warehouses";
     if (p.startsWith("/variations")) return "variations";
     if (p.startsWith("/warranties")) return "warranties";
+    if (p.startsWith("/sales-returns")) return "sales-returns";
     if (p.startsWith("/sales")) return "sales";
     if (p.startsWith("/pos")) return "pos";
     if (p.startsWith("/purchases")) return "purchases";
@@ -314,7 +316,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     const p = location.pathname;
     const next = new Set<string>();
     if (["/brands", "/categories", "/subcategories", "/units", "/products", "/inventory", "/warehouses", "/variations", "/warranties"].some((s) => p.startsWith(s))) next.add("inventory");
-    if (["/sales", "/pos", "/purchases"].some((s) => p.startsWith(s))) next.add("transactions");
+    if (["/sales", "/pos", "/purchases", "/sales-returns"].some((s) => p.startsWith(s))) next.add("transactions");
     if (["/customers", "/suppliers"].some((s) => p.startsWith(s))) next.add("contacts");
     if (["/users", "/roles"].some((s) => p.startsWith(s))) next.add("team");
     setExpandedKeys(next);
@@ -383,6 +385,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       txItems.push({ key: "pos", label: "POS Terminal", icon: <ShoppingCartOutlined />, path: "/pos" });
     if (isOwner || hasPermission(PERMISSIONS.SALES_VIEW))
       txItems.push({ key: "sales", label: "Sales", icon: <DollarOutlined />, path: "/sales" });
+    if (isOwner || hasPermission(PERMISSIONS.SALES_REFUNDS))
+      txItems.push({ key: "sales-returns", label: "Sale Returns", icon: <RollbackOutlined />, path: "/sales-returns" });
     if (isOwner || hasPermission(PERMISSIONS.PURCHASES_VIEW))
       txItems.push({ key: "purchases", label: "GRN", icon: <FileTextOutlined />, path: "/purchases" });
     if (txItems.length > 0) {
