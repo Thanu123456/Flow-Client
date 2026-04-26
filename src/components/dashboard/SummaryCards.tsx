@@ -59,7 +59,7 @@ export const SummaryCards: React.FC = () => {
       amount: salesReturn?.amount || 0.00,
       icon: <RotateCcw size={48} className="text-indigo-600" />,
       trend: salesReturn?.trend || '0.00%',
-      isPositive: salesReturn?.isPositive || true
+      isPositive: salesReturn?.isPositive ?? true
     },
     {
       title: 'PURCHASES RETURN',
@@ -69,14 +69,14 @@ export const SummaryCards: React.FC = () => {
         <ArrowUpIcon size={20} className="absolute -bottom-1 -right-1 text-indigo-800" />
       </div>,
       trend: purchasesReturn?.trend || '0.00%',
-      isPositive: purchasesReturn?.isPositive || true
+      isPositive: purchasesReturn?.isPositive ?? true
     },
     {
       title: 'EXPENSES',
       amount: expenses?.amount || 0.00,
       icon: <Banknote size={48} className="text-indigo-600" />,
       trend: expenses?.trend || '0.00%',
-      isPositive: expenses?.isPositive || true
+      isPositive: expenses?.isPositive ?? true
     },
     {
       title: 'PROFIT',
