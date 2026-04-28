@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { posService } from "../../services/transactions/posService";
 import type { POSSaleRequest } from "../../services/transactions/posService";
+import { holdService } from "../../services/transactions/holdService";
+import type { HeldBill } from "../../types/entities/holdBill.types";
 import { isWeightBasedProduct } from "../../utils/posHelpers";
 
 // ─────────────────────────────────────────────────────────────────────
@@ -68,8 +70,8 @@ interface POSState {
     updateCartItemPrices: (itemsWithNewPrices: { id: string; price: number }[]) => void;
 
     // Feature #10 – Hold Bills
-    holdBill: () => Promise<void>;
-    resumeHoldBill: (billData: any) => void;
+    holdBill: (notes?: string) => Promise<void>;
+    resumeHoldBill: (bill: HeldBill) => void;
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -261,7 +263,7 @@ export const usePOSStore = create<POSState>()(
             },
 
             // ── holdBill (Feature #10) ────────────────────────────────
-            holdBill: async () => {
+            holdBill: async (notes?: string) => {
                 const {
                     cart, customerId, discountType, discountValue,
                     deliveryCharge, clearCart,
@@ -285,7 +287,8 @@ export const usePOSStore = create<POSState>()(
 
                     const totalAmount = subtotal - discountAmount + deliveryCharge;
 
-                    const payload = {
+                    await holdService.saveHold({
+                        notes: notes || undefined,
                         customer_id: customerId || undefined,
                         items: cart.map((item) => ({
                             id: item.id,
@@ -303,23 +306,13 @@ export const usePOSStore = create<POSState>()(
                         discount_amount: discountAmount,
                         delivery_charge: deliveryCharge,
                         total_amount: totalAmount,
-                    };
-
-                    const response = await fetch('/api/admin/pos/hold', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload),
                     });
 
-                    if (response.ok) {
-                        clearCart();
-                        set({ loading: false });
-                    } else {
-                        throw new Error('Failed to hold bill');
-                    }
+                    clearCart();
+                    set({ loading: false });
                 } catch (error: any) {
                     set({
-                        error: error.message || "Failed to hold bill",
+                        error: error.response?.data?.message || error.message || "Failed to hold bill",
                         loading: false,
                     });
                     throw error;
@@ -327,24 +320,24 @@ export const usePOSStore = create<POSState>()(
             },
 
             // ── resumeHoldBill (Feature #10) ──────────────────────────
-            resumeHoldBill: (billData) => {
-                const cartItems: CartItem[] = billData.items.map((item: any) => ({
+            resumeHoldBill: (bill: HeldBill) => {
+                const cartItems: CartItem[] = bill.items.map((item) => ({
                     id: item.id,
-                    productId: item.product_id,
-                    variationId: item.variation_id,
+                    productId: item.productId,
+                    variationId: item.variationId,
                     name: item.name,
                     unit: item.unit,
                     quantity: item.quantity,
                     price: item.price,
-                    maxStock: item.max_stock,
+                    maxStock: item.maxStock,
                 }));
 
                 set({
                     cart: cartItems,
-                    customerId: billData.customer_id || null,
-                    discountType: billData.discount_type,
-                    discountValue: billData.discount_value,
-                    deliveryCharge: billData.delivery_charge,
+                    customerId: bill.customerId || null,
+                    discountType: bill.discountType as "fixed" | "percent",
+                    discountValue: bill.discountValue,
+                    deliveryCharge: bill.deliveryCharge,
                 });
             },
 
