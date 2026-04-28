@@ -20,8 +20,8 @@ const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white p-3 border border-gray-100 shadow-lg rounded-xl">
-        <p className="font-bold text-gray-800 mb-1">{payload[0].name} Credit</p>
-        <p className="text-sm font-semibold text-gray-600">
+        <p className="font-normal text-gray-800 mb-1">{payload[0].name} Credit</p>
+        <p className="text-sm font-normal text-gray-600">
           Amount: <span style={{ color: payload[0].payload.fill }}>{formatCurrency(payload[0].value)}</span>
         </p>
       </div>
@@ -53,8 +53,8 @@ export const CreditBalancePieChart: React.FC = () => {
       styles={{ body: { padding: '24px', height: '100%' } }}
     >
       <div className="mb-6">
-        <Title level={5} style={{ margin: 0, fontWeight: 800 }}>Credit Balance Overview</Title>
-        <Text type="secondary" className="text-xs uppercase tracking-wider font-semibold">
+        <Title level={5} style={{ margin: 0, fontWeight: 400 }}>Credit Balance Overview</Title>
+        <Text type="secondary" className="text-xs uppercase tracking-wider font-normal">
           Collected vs Outstanding
         </Text>
       </div>
@@ -85,14 +85,14 @@ export const CreditBalancePieChart: React.FC = () => {
                 verticalAlign="bottom" 
                 height={36} 
                 iconType="circle"
-                wrapperStyle={{ fontSize: '13px', fontWeight: 600 }}
+                wrapperStyle={{ fontSize: '13px', fontWeight: 400 }}
                 formatter={(value) => <span style={{ color: '#4b5563' }}>{value}</span>}
               />
               {/* Center Text */}
-              <text x="50%" y="40%" textAnchor="middle" dominantBaseline="middle" className="text-sm font-bold fill-gray-500">
+              <text x="50%" y="40%" textAnchor="middle" dominantBaseline="middle" className="text-sm font-normal fill-gray-500">
                 Total Credit
               </text>
-              <text x="50%" y="52%" textAnchor="middle" dominantBaseline="middle" className="text-lg font-extrabold fill-gray-800">
+              <text x="50%" y="52%" textAnchor="middle" dominantBaseline="middle" className="text-lg font-normal fill-gray-800">
                 {formatCurrency(totalCredit)}
               </text>
             </PieChart>

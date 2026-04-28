@@ -18,8 +18,8 @@ const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white p-3 border border-gray-100 shadow-lg rounded-xl">
-        <p className="font-bold text-gray-800 mb-1">{payload[0].name}</p>
-        <p className="text-sm font-semibold text-gray-600">
+        <p className="font-normal text-gray-800 mb-1">{payload[0].name}</p>
+        <p className="text-sm font-normal text-gray-600">
           Transactions: <span style={{ color: payload[0].payload.fill }}>{payload[0].value.toLocaleString()}</span>
         </p>
       </div>
@@ -48,8 +48,8 @@ const PaymentMethodPieChart: React.FC = () => {
     >
       <div className="flex justify-between items-center mb-6">
         <div>
-          <Title level={5} style={{ margin: 0, fontWeight: 800 }}>Payment Distribution</Title>
-          <Text type="secondary" className="text-xs uppercase tracking-wider font-semibold">
+          <Title level={5} style={{ margin: 0, fontWeight: 400 }}>Payment Distribution</Title>
+          <Text type="secondary" className="text-xs uppercase tracking-wider font-normal">
             Transaction Split By Method
           </Text>
         </div>

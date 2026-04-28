@@ -29,13 +29,13 @@ const StockAlertTable: React.FC = () => {
             title: 'PRODUCT ID',
             dataIndex: 'productID',
             key: 'productID',
-            className: 'text-xs font-bold text-gray-500',
+            className: 'text-xs font-normal text-gray-500',
         },
         {
             title: 'PRODUCT NAME',
             dataIndex: 'productName',
             key: 'productName',
-            className: 'font-semibold',
+            className: 'font-normal',
         },
         {
             title: 'BRAND NAME',
@@ -58,7 +58,7 @@ const StockAlertTable: React.FC = () => {
             key: 'stock',
             align: 'right',
             render: (stock: number) => (
-                <Text type="danger" style={{ fontWeight: 800 }}>{stock}</Text>
+                <Text type="danger" style={{ fontWeight: 400 }}>{stock}</Text>
             ),
         },
     ];
@@ -70,8 +70,8 @@ const StockAlertTable: React.FC = () => {
         >
             <div className="flex justify-between items-center mb-6">
                 <div>
-                    <Title level={5} style={{ margin: 0, fontWeight: 800 }}>Stock Alert</Title>
-                    <Text type="secondary" className="text-xs uppercase tracking-wider font-semibold">
+                    <Title level={5} style={{ margin: 0, fontWeight: 400 }}>Stock Alert</Title>
+                    <Text type="secondary" className="text-xs uppercase tracking-wider font-normal">
                         Low Inventory Warning
                     </Text>
                 </div>

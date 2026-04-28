@@ -25,11 +25,11 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white p-3 border border-gray-100 shadow-lg rounded-xl min-w-[160px]">
-        <p className="font-bold text-gray-800 mb-2">{label}</p>
+        <p className="font-normal text-gray-800 mb-2">{label}</p>
         {payload.map((entry: any, index: number) => (
           <div key={index} className="flex justify-between items-center mb-1 text-sm">
-            <span style={{ color: entry.color }} className="font-semibold">{entry.name}:</span>
-            <span className="font-bold text-gray-700 ml-4">
+            <span style={{ color: entry.color }} className="font-normal">{entry.name}:</span>
+            <span className="font-normal text-gray-700 ml-4">
               Rs {entry.value.toLocaleString()}
             </span>
           </div>
@@ -61,7 +61,7 @@ export const SalesPurchasesChart: React.FC = () => {
     >
       <div className="flex justify-between items-center mb-6">
         <div>
-          <Title level={4} style={{ margin: 0, color: '#1a1a2e', fontWeight: 800 }}>Sales vs Purchases (GRN)</Title>
+          <Title level={4} style={{ margin: 0, color: '#1a1a2e', fontWeight: 400 }}>Sales vs Purchases (GRN)</Title>
           <Text type="secondary" className="text-xs font-medium uppercase tracking-wider">
             Revenue and Expense trends
           </Text>
@@ -112,7 +112,7 @@ export const SalesPurchasesChart: React.FC = () => {
                 verticalAlign="top"
                 height={36}
                 iconType="circle"
-                wrapperStyle={{ fontSize: '13px', fontWeight: 600, color: '#4b5563' }}
+                wrapperStyle={{ fontSize: '13px', fontWeight: 400, color: '#4b5563' }}
               />
 
               <Area

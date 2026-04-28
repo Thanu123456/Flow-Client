@@ -27,8 +27,8 @@ const InventoryTurnoverChart: React.FC = () => {
     >
       <div className="flex justify-between items-center mb-6">
         <div>
-          <Title level={5} style={{ margin: 0, fontWeight: 800 }}>Inventory Turnover</Title>
-          <Text type="secondary" className="text-xs uppercase tracking-wider font-semibold">
+          <Title level={5} style={{ margin: 0, fontWeight: 400 }}>Inventory Turnover</Title>
+          <Text type="secondary" className="text-xs uppercase tracking-wider font-normal">
             Average Days On Hand
           </Text>
         </div>

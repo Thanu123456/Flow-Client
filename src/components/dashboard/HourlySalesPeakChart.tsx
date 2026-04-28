@@ -25,8 +25,8 @@ const HourlySalesPeakChart: React.FC = () => {
     >
       <div className="flex justify-between items-center mb-6">
         <div>
-          <Title level={5} style={{ margin: 0, fontWeight: 800 }}>Hourly Sales Peak</Title>
-          <Text type="secondary" className="text-xs uppercase tracking-wider font-semibold">
+          <Title level={5} style={{ margin: 0, fontWeight: 400 }}>Hourly Sales Peak</Title>
+          <Text type="secondary" className="text-xs uppercase tracking-wider font-normal">
             Today's Transaction Volume
           </Text>
         </div>

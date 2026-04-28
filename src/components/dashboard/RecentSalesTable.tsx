@@ -39,7 +39,7 @@ const RecentSalesTable: React.FC = () => {
             title: 'REFERENCE NO', 
             dataIndex: 'referenceNo', 
             key: 'referenceNo',
-            render: (text) => <span className="font-bold text-blue-600">{text}</span>
+            render: (text) => <span className="font-normal text-blue-600">{text}</span>
         },
         { title: 'CUSTOMER', dataIndex: 'customer', key: 'customer' },
         { title: 'USER NAME', dataIndex: 'userName', key: 'userName' },
@@ -57,7 +57,7 @@ const RecentSalesTable: React.FC = () => {
             dataIndex: 'totalPrice', 
             key: 'totalPrice', 
             align: 'right', 
-            render: (v) => <span className="font-extrabold">{v.toFixed(2)}</span> 
+            render: (v) => <span className="font-normal">{v.toFixed(2)}</span> 
         },
         { title: 'SALE DATE', dataIndex: 'saleDate', key: 'saleDate', className: 'text-gray-400 text-xs' },
     ];
@@ -69,8 +69,8 @@ const RecentSalesTable: React.FC = () => {
         >
             <div className="flex justify-between items-center mb-6">
                 <div>
-                    <Title level={5} style={{ margin: 0, fontWeight: 800 }}>Recent Sales</Title>
-                    <Text type="secondary" className="text-xs uppercase tracking-wider font-semibold">
+                    <Title level={5} style={{ margin: 0, fontWeight: 400 }}>Recent Sales</Title>
+                    <Text type="secondary" className="text-xs uppercase tracking-wider font-normal">
                         Latest Live Transactions
                     </Text>
                 </div>

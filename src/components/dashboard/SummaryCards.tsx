@@ -83,7 +83,7 @@ export const SummaryCards: React.FC = () => {
       amount: profit?.amount || 0.00,
       icon: <div className="relative">
         <TrendingUp size={48} className="text-indigo-600" />
-        <span className="absolute -top-1 -right-1 text-indigo-600 font-bold">$</span>
+        <span className="absolute -top-1 -right-1 text-indigo-600 font-normal">$</span>
       </div>,
       trend: profit?.trend || '-100.00%',
       isPositive: profit?.isPositive || false,
@@ -109,18 +109,18 @@ export const SummaryCards: React.FC = () => {
                     {stat.icon}
                   </div>
                   <div>
-                    <Text className="text-indigo-500 font-bold text-lg mb-0 block">
+                    <Text className="text-indigo-500 font-normal text-lg mb-0 block">
                       {stat.title}
                     </Text>
                     <div className="flex items-baseline gap-2">
-                      <Title level={3} style={{ margin: 0, fontWeight: 800, color: stat.amountColor || 'inherit' }}>
+                      <Title level={3} style={{ margin: 0, fontWeight: 400, color: stat.amountColor || 'inherit' }}>
                         {formatCurrency(stat.amount)}
                       </Title>
                     </div>
                   </div>
                 </div>
                 <Tag
-                  className={`m-0 font-bold px-2 py-1 rounded ${stat.isPositive ? 'border-green-200 bg-green-50 text-green-500' : 'border-orange-200 bg-orange-50 text-orange-500'
+                  className={`m-0 font-normal px-2 py-1 rounded ${stat.isPositive ? 'border-green-200 bg-green-50 text-green-500' : 'border-orange-200 bg-orange-50 text-orange-500'
                     }`}
                   style={{ fontSize: '14px' }}
                 >
@@ -183,17 +183,17 @@ export const SecondarySummaryCards: React.FC = () => {
               <Skeleton active paragraph={{ rows: 1 }} />
             ) : (
               <>
-                <Text type="secondary" className="text-[10px] font-bold uppercase tracking-wider block" style={{ color: stat.color !== 'blue' ? stat.color : '#4338ca' }}>
+                <Text type="secondary" className="text-[10px] font-normal uppercase tracking-wider block" style={{ color: stat.color !== 'blue' ? stat.color : '#4338ca' }}>
                   {stat.title}
                 </Text>
                 {stat.subtitle && (
-                  <Text className="text-[10px] block font-bold" style={{ color: stat.color }}>
+                  <Text className="text-[10px] block font-normal" style={{ color: stat.color }}>
                     {stat.subtitle}
                   </Text>
                 )}
                 <div className="mt-2 flex items-center gap-1">
-                  <Text strong className="text-xs">LKR:</Text>
-                  <Title level={4} style={{ margin: 0, fontWeight: 800, fontSize: '18px' }}>
+                  <Text  className="text-xs">LKR:</Text>
+                  <Title level={4} style={{ margin: 0, fontWeight: 400, fontSize: '18px' }}>
                     {stat.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </Title>
                 </div>

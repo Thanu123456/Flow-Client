@@ -28,8 +28,8 @@ const ProfitMarginBarChart: React.FC = () => {
     >
       <div className="flex justify-between items-center mb-6">
         <div>
-          <Title level={5} style={{ margin: 0, fontWeight: 800 }}>Profit Analytics</Title>
-          <Text type="secondary" className="text-xs uppercase tracking-wider font-semibold">
+          <Title level={5} style={{ margin: 0, fontWeight: 400 }}>Profit Analytics</Title>
+          <Text type="secondary" className="text-xs uppercase tracking-wider font-normal">
             Revenue vs Net Profit
           </Text>
         </div>

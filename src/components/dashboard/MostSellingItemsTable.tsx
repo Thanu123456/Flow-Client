@@ -37,21 +37,21 @@ const MostSellingItemsTable: React.FC = () => {
             title: 'Product Name',
             dataIndex: 'productName',
             key: 'productName',
-            render: (text) => <span className="font-semibold">{text}</span>
+            render: (text) => <span className="font-normal">{text}</span>
         },
         {
             title: 'Quantity',
             dataIndex: 'quantity',
             key: 'quantity',
             align: 'right',
-            render: (v: number) => <Text style={{ color: v > 0 ? '#52c41a' : 'inherit', fontWeight: 700 }}>{v.toFixed(2)}</Text>,
+            render: (v: number) => <Text style={{ color: v > 0 ? '#52c41a' : 'inherit', fontWeight: 400 }}>{v.toFixed(2)}</Text>,
         },
         {
             title: 'Revenue',
             dataIndex: 'revenue',
             key: 'revenue',
             align: 'right',
-            render: (v: number) => <span className="font-bold">{v.toFixed(2)}</span>,
+            render: (v: number) => <span className="font-normal">{v.toFixed(2)}</span>,
         },
     ];
 
@@ -62,8 +62,8 @@ const MostSellingItemsTable: React.FC = () => {
         >
             <div className="flex justify-between items-center mb-6">
                 <div>
-                    <Title level={5} style={{ margin: 0, fontWeight: 800 }}>Most Selling Items</Title>
-                    <Text type="secondary" className="text-xs uppercase tracking-wider font-semibold">
+                    <Title level={5} style={{ margin: 0, fontWeight: 400 }}>Most Selling Items</Title>
+                    <Text type="secondary" className="text-xs uppercase tracking-wider font-normal">
                         Top Revenue Generators
                     </Text>
                 </div>
