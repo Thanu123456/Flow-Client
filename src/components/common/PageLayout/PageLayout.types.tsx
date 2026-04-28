@@ -25,6 +25,7 @@ export interface PageLayoutProps {
   actions?: ReactNode;
   searchConfig?: SearchConfig;
   filterConfig?: FilterConfig[];
+  extra?: ReactNode;
   collapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
   showCollapseButton?: boolean;

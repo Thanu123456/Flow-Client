@@ -8,13 +8,11 @@ import {
   InputNumber,
   Row,
   Col,
-  Typography,
   App,
 } from 'antd';
 import { useWarrantyStore } from '../../store/management/warrantyStore';
 import type { WarrantyFormData } from '../../types/entities/warranty.types';
 
-const { Text } = Typography;
 const { TextArea } = Input;
 
 interface AddWarrantyModalProps {

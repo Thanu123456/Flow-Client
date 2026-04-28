@@ -16,6 +16,7 @@ import type { CreateProductRequest } from "../../types/entities/product.types";
 const AddProductPage: React.FC = () => {
     const navigate = useNavigate();
     const [form] = Form.useForm();
+    const [messageApi, contextHolder] = message.useMessage();
     const { createProduct, loading } = useProductStore();
     const [productType, setProductType] = useState<"single" | "variable">("single");
 
@@ -73,7 +74,7 @@ const AddProductPage: React.FC = () => {
             console.log("Sanitized values:", JSON.stringify(sanitizedValues, null, 2));
 
             await createProduct(sanitizedValues);
-            message.success("Product created successfully");
+            messageApi.success("Product created successfully");
             navigate("/products");
         } catch (error: any) {
             console.error("Create product failed:", error);
@@ -81,27 +82,31 @@ const AddProductPage: React.FC = () => {
             // If there are detailed validation errors
             if (error.response?.data?.error) {
                 if (typeof error.response.data.error === 'string') {
-                    message.error(error.response.data.error);
+                    messageApi.error(error.response.data.error);
                 } else {
-                    message.error(`${error.response.data.error.message}: ${error.response.data.error.details}`);
+                    messageApi.error(`${error.response.data.error.message}: ${error.response.data.error.details}`);
                 }
             } else {
-                message.error(errorMsg);
+                messageApi.error(errorMsg);
             }
         }
     };
 
     return (
         <div className="bg-slate-50 min-h-screen pb-12">
+            {contextHolder}
             {/* Sticky Header */}
             <div className="sticky top-0 z-10 bg-white border-b border-slate-200 px-6 py-4 shadow-sm mb-6">
                 <div className="max-w-7xl mx-auto flex justify-between items-center">
                     <div>
-                        <Breadcrumb className="mb-2">
-                            <Breadcrumb.Item onClick={() => navigate("/")} className="cursor-pointer">Home</Breadcrumb.Item>
-                            <Breadcrumb.Item onClick={() => navigate("/products")} className="cursor-pointer">Products</Breadcrumb.Item>
-                            <Breadcrumb.Item>Add New Product</Breadcrumb.Item>
-                        </Breadcrumb>
+                        <Breadcrumb
+                          className="mb-2"
+                          items={[
+                            { title: 'Home', onClick: () => navigate('/'), className: 'cursor-pointer' },
+                            { title: 'Products', onClick: () => navigate('/products'), className: 'cursor-pointer' },
+                            { title: 'Add New Product' },
+                          ]}
+                        />
                         <h1 className="text-2xl font-normal text-slate-800 flex items-center gap-2 m-0">
                             <ShoppingOutlined className="text-blue-600" />
                             Add New Product

@@ -22,7 +22,7 @@ const getLoginRedirectUrl = (): string => {
 };
 
 const clearAuthData = () =>
-  ['token', 'user', 'tenant', 'role', 'isKiosk', 'mustChangePassword'].forEach((k) =>
+  ['token', 'refreshToken', 'user', 'tenant', 'role', 'isKiosk', 'mustChangePassword'].forEach((k) =>
     localStorage.removeItem(k)
   );
 
@@ -67,10 +67,13 @@ api.interceptors.response.use(
     if (status === 401 && !req._authRetried && !isAuthEndpoint) {
       req._authRetried = true;
       try {
-        const res    = await api.post('/auth/refresh-token');
-        const { token } = res.data.data;
-        localStorage.setItem('token', token);
-        req.headers['Authorization'] = `Bearer ${token}`;
+        const refreshToken = localStorage.getItem('refreshToken') || '';
+        const res = await api.post('/auth/refresh-token', { refresh_token: refreshToken });
+        const newToken = res.data.data.access_token;
+        const newRefreshToken = res.data.data.refresh_token;
+        localStorage.setItem('token', newToken);
+        if (newRefreshToken) localStorage.setItem('refreshToken', newRefreshToken);
+        req.headers['Authorization'] = `Bearer ${newToken}`;
         return api(req);
       } catch {
         clearAuthData();
@@ -103,10 +106,20 @@ api.interceptors.response.use(
 
     // ── 5xx or network error: retry with exponential back-off ──────────────
     // Covers Neon serverless cold-starts (DB wakes slowly → 503/502/ETIMEDOUT)
+    // IMPORTANT: Only retry safe (idempotent) methods to prevent duplicate
+    // mutations. POST/PUT/DELETE on 5xx means the server processed the request
+    // and returning 500 — retrying creates duplicate records (e.g. duplicate GRNs).
     const isServerError  = status !== undefined && status >= 500;
     const isNetworkError = !error.response; // includes Axios timeout (ECONNABORTED)
+    const method         = req.method?.toUpperCase() ?? 'GET';
+    const isSafeMethod   = method === 'GET' || method === 'HEAD' || method === 'OPTIONS';
 
-    if ((isServerError || isNetworkError) && !isAuthEndpoint) {
+    // Retry strategy:
+    // - Network errors (request never reached server): retry all methods
+    // - Server errors (5xx, server processed but failed): only retry GET/HEAD
+    const shouldRetry = isNetworkError || (isServerError && isSafeMethod);
+
+    if (shouldRetry && !isAuthEndpoint) {
       req._serverRetries = (req._serverRetries ?? 0) + 1;
 
       if (req._serverRetries <= 4) {

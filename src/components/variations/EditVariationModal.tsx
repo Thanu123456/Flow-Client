@@ -85,7 +85,7 @@ const EditVariationModal: React.FC<EditVariationModalProps> = ({
       submitButtonText="Update Variation"
       width={600}
     >
-      {(form: FormInstance, data: Variation | null) => (
+      {(_form: FormInstance, _data: Variation | null) => (
         <>
           <Form.Item
             label="Variation Name"

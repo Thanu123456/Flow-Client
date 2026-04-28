@@ -59,13 +59,22 @@ export const authService = {
 
   // Refresh Token
   async refreshToken(): Promise<{ token: string }> {
-    const response = await api.post<{ data: { token: string } }>('/auth/refresh-token');
-    return response.data.data;
+    const refreshToken = localStorage.getItem('refreshToken') || '';
+    const response = await api.post<{ data: { access_token: string; refresh_token?: string } }>(
+      '/auth/refresh-token',
+      { refresh_token: refreshToken }
+    );
+    // Store rotated refresh token if backend returns a new one
+    if (response.data.data.refresh_token) {
+      localStorage.setItem('refreshToken', response.data.data.refresh_token);
+    }
+    return { token: response.data.data.access_token };
   },
 
   // Logout
   async logout(): Promise<void> {
-    await api.post('/auth/logout');
+    const refreshToken = localStorage.getItem('refreshToken') || '';
+    await api.post('/auth/logout', { refresh_token: refreshToken });
   },
 
   // Google OAuth (Optional/Future)

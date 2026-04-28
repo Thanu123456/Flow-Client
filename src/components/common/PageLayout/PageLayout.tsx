@@ -14,6 +14,7 @@ function PageLayout({
   actions,
   searchConfig,
   filterConfig,
+  extra,
   collapsed: externalCollapsed,
   onCollapsedChange,
   showCollapseButton = true,
@@ -89,6 +90,12 @@ function PageLayout({
                 </Select>
               </Col>
             ))}
+
+            {extra && (
+              <Col xs={24} sm={24} md={8}>
+                {extra}
+              </Col>
+            )}
           </Row>
         )}
         {children}

@@ -78,16 +78,16 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
         </Descriptions.Item>
         <Descriptions.Item label="Status">
           <span
-            className={`px-3 py-1 rounded-lg text-sm border ${getStatusStyle(user.status)}`}
+            className={`px-3 py-1 rounded-lg text-sm border ${getStatusStyle(user.status || '')}`}
           >
-            {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+            {(user.status || '').charAt(0).toUpperCase() + (user.status || '').slice(1)}
           </span>
         </Descriptions.Item>
         <Descriptions.Item label="User Type">
           <span
-            className={`px-3 py-1 rounded-lg text-sm border ${getUserTypeStyle(user.userType)}`}
+            className={`px-3 py-1 rounded-lg text-sm border ${getUserTypeStyle(user.userType || '')}`}
           >
-            {user.userType.replace('_', ' ').charAt(0).toUpperCase() + user.userType.replace('_', ' ').slice(1)}
+            {(user.userType || '').replace(/_/g, ' ').charAt(0).toUpperCase() + (user.userType || '').replace(/_/g, ' ').slice(1)}
           </span>
         </Descriptions.Item>
         <Descriptions.Item label="Email Verified">

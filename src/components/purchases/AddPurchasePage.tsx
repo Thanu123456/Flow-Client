@@ -44,6 +44,7 @@ const SerialNumberModal: React.FC<SerialModalProps> = ({
 }) => {
   const [serials, setSerials] = useState<string[]>(existing);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [messageApi, contextHolder] = message.useMessage();
 
   useEffect(() => {
     if (open) {
@@ -65,12 +66,12 @@ const SerialNumberModal: React.FC<SerialModalProps> = ({
   const handleSave = () => {
     const filled = serials.filter((s) => s.trim());
     if (filled.length < quantity) {
-      message.warning(`Please enter all ${quantity} serial numbers`);
+      messageApi.warning(`Please enter all ${quantity} serial numbers`);
       return;
     }
     const unique = new Set(serials.map((s) => s.trim()));
     if (unique.size < quantity) {
-      message.error('Duplicate serial numbers detected');
+      messageApi.error('Duplicate serial numbers detected');
       return;
     }
     onSave(serials.map((s) => s.trim()));
@@ -85,6 +86,7 @@ const SerialNumberModal: React.FC<SerialModalProps> = ({
       okText="Save Serial Numbers"
       width={480}
     >
+      {contextHolder}
       <Text type="secondary">Required: {quantity} serial number(s)</Text>
       <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
         {Array.from({ length: quantity }).map((_, idx) => (
@@ -107,16 +109,18 @@ const AddPurchasePage: React.FC = () => {
   const navigate = useNavigate();
   const { id: editId } = useParams<{ id: string }>();
   const isEdit = Boolean(editId);
+  const [messageApi, contextHolder] = message.useMessage();
 
-  const { createGRN, updateGRN, removeItem, completeGRN, getGRN, submitting } =
+  const { createGRN, updateGRN, removeItem, completeGRN, getGRN } =
     usePurchaseStore();
+  const [saving, setSaving] = useState(false);
   const { getAllWarehouses } = useWarehouseStore();
   const { searchSuppliers } = useSupplierStore();
 
   // ── Header state ────────────────────────────────────────
   const [warehouseId, setWarehouseId] = useState('');
   const [supplierId, setSupplierId] = useState<string | undefined>();
-  const [supplierName, setSupplierName] = useState('');
+  const [_supplierName, setSupplierName] = useState('');
   const [supplierBalance, setSupplierBalance] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [grnDate, setGrnDate] = useState(dayjs().format('YYYY-MM-DD'));
@@ -126,12 +130,13 @@ const AddPurchasePage: React.FC = () => {
   // ── Data lists ───────────────────────────────────────────
   const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([]);
   const [supplierOptions, setSupplierOptions] = useState<{ value: string; label: string }[]>([]);
-  const [searchingSuppliers, setSearchingSuppliers] = useState(false);
+  const [_searchingSuppliers, setSearchingSuppliers] = useState(false);
 
   // ── Product selection state ──────────────────────────────
   const [productSearch, setProductSearch] = useState('');
   const [productOptions, setProductOptions] = useState<ProductSearchResult[]>([]);
   const [searchingProducts, setSearchingProducts] = useState(false);
+  const searchRequestRef = useRef(0);
   const [selectedProduct, setSelectedProduct] = useState<ProductSearchResult | null>(null);
   const [selectedVariation, setSelectedVariation] = useState<ProductVariationOption | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
@@ -214,7 +219,7 @@ const AddPurchasePage: React.FC = () => {
           }))
         );
       }).catch(() => {
-        message.error('Failed to load GRN for editing');
+        messageApi.error('Failed to load GRN for editing');
         navigate('/purchases');
       });
     }
@@ -227,26 +232,31 @@ const AddPurchasePage: React.FC = () => {
         setProductOptions([]);
         return;
       }
+      // Increment request counter so stale in-flight responses are ignored
+      const requestId = ++searchRequestRef.current;
       setSearchingProducts(true);
       try {
         const results = await purchaseService.searchProducts(query, warehouseId || undefined);
+        if (requestId !== searchRequestRef.current) return; // stale response
         setProductOptions(results);
       } catch {
+        if (requestId !== searchRequestRef.current) return;
         setProductOptions([]);
       } finally {
-        setSearchingProducts(false);
+        if (requestId === searchRequestRef.current) setSearchingProducts(false);
       }
     },
     [warehouseId]
   );
 
-  // Debounced product search
+  // Debounced product search — depends on handleProductSearch so it re-fires
+  // automatically when the warehouse changes (which recreates handleProductSearch)
   useEffect(() => {
     const timer = setTimeout(() => {
       if (productSearch) handleProductSearch(productSearch);
     }, 300);
     return () => clearTimeout(timer);
-  }, [productSearch]);
+  }, [productSearch, handleProductSearch]);
 
   const handleSelectProduct = (product: ProductSearchResult) => {
     setSelectedProduct(product);
@@ -302,7 +312,7 @@ const AddPurchasePage: React.FC = () => {
 
   const handleClearSupplier = () => {
     if (supplierLocked) {
-      message.warning('Cannot change supplier after items have been added');
+      messageApi.warning('Cannot change supplier after items have been added');
       return;
     }
     setSupplierId(undefined);
@@ -313,15 +323,15 @@ const AddPurchasePage: React.FC = () => {
   // ── Add item to list ─────────────────────────────────────
   const handleAddItem = () => {
     if (!selectedProduct) {
-      message.warning('Please select a product first');
+      messageApi.warning('Please select a product first');
       return;
     }
     if (selectedProduct.productType === 'variable' && !selectedVariation) {
-      message.warning('Please select a variation');
+      messageApi.warning('Please select a variation');
       return;
     }
     if (!quantity || quantity <= 0) {
-      message.warning('Quantity must be greater than 0');
+      messageApi.warning('Quantity must be greater than 0');
       return;
     }
 
@@ -448,7 +458,12 @@ const AddPurchasePage: React.FC = () => {
   // ── Submit ─────────────────────────────────────────────────
   const handleSubmit = async (doComplete: boolean) => {
     const err = validate(doComplete);
-    if (err) { message.error(err); return; }
+    if (err) { messageApi.error(err); return; }
+
+    setSaving(true);
+    // Track a newly created draft so we can delete it if completion fails,
+    // preventing orphaned draft GRNs from appearing in the list.
+    let newlyCreatedGrnId: string | null = null;
 
     try {
       let grnId: string;
@@ -494,7 +509,7 @@ const AddPurchasePage: React.FC = () => {
           }
         }
       } else {
-        // Create new GRN
+        // Create new GRN draft
         const grn = await createGRN({
           warehouseId,
           supplierId,
@@ -503,6 +518,7 @@ const AddPurchasePage: React.FC = () => {
           grnDate,
         });
         grnId = grn.id;
+        if (doComplete) newlyCreatedGrnId = grnId; // remember for rollback
 
         // Add all items
         for (const item of activeItems) {
@@ -530,24 +546,48 @@ const AddPurchasePage: React.FC = () => {
       }
 
       if (doComplete) {
-        const completed = await completeGRN(grnId, {
-          discountAmount: discountAmount || 0,
-          paidAmount,
-          chequeNumber: chequeNumber || undefined,
-          chequeDate: chequeDate || undefined,
-          chequeNote: chequeNote || undefined,
-          debitBalanceUsed: debitBalanceUsed || 0,
-        });
-        message.success(`GRN ${completed.grnNumber} completed successfully!`);
+        try {
+          const completed = await completeGRN(grnId, {
+            discountAmount: discountAmount || 0,
+            paidAmount,
+            chequeNumber: chequeNumber || undefined,
+            chequeDate: chequeDate || undefined,
+            chequeNote: chequeNote || undefined,
+            debitBalanceUsed: debitBalanceUsed || 0,
+          });
+          // Completion succeeded — no need to rollback
+          newlyCreatedGrnId = null;
+          messageApi.success(`GRN ${completed.grnNumber} completed successfully!`);
+        } catch (completeError: any) {
+          // If the server returned 400 it means the GRN was already completed
+          // (a previous attempt succeeded but the response was lost).  Navigate
+          // to the list; do NOT delete the (already-completed) GRN.
+          const status = (completeError as any).response?.status;
+          if (status === 400) {
+            newlyCreatedGrnId = null;
+            messageApi.success('GRN completed successfully!');
+            navigate('/purchases');
+            return;
+          }
+          // Any other error: delete the orphaned draft so the user can retry
+          // from a clean state.
+          if (newlyCreatedGrnId) {
+            await purchaseService.deleteGRN(newlyCreatedGrnId).catch(() => {});
+            newlyCreatedGrnId = null;
+          }
+          throw completeError;
+        }
       } else {
-        message.success('Draft saved successfully');
+        messageApi.success('Draft saved successfully');
       }
 
       navigate('/purchases');
     } catch (error: any) {
       const errData = error.response?.data;
       const errMsg = errData?.error?.details || errData?.error?.message || errData?.message || 'An error occurred. Please try again.';
-      message.error(errMsg);
+      messageApi.error(errMsg);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -590,6 +630,7 @@ const AddPurchasePage: React.FC = () => {
   // ────────────────────────────────────────────────────────
   return (
     <div style={{ padding: '24px' }}>
+      {contextHolder}
       {/* Page Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0 }}>
@@ -920,7 +961,7 @@ const AddPurchasePage: React.FC = () => {
         <Button onClick={() => navigate('/purchases')}>Cancel</Button>
         <Button
           icon={<SaveOutlined />}
-          loading={submitting}
+          loading={saving}
           onClick={() => handleSubmit(false)}
           disabled={activeItems.length === 0}
         >
@@ -929,7 +970,7 @@ const AddPurchasePage: React.FC = () => {
         <Button
           type="primary"
           icon={<CheckCircleOutlined />}
-          loading={submitting}
+          loading={saving}
           onClick={() => handleSubmit(true)}
           disabled={activeItems.length === 0}
         >

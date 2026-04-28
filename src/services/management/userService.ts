@@ -112,7 +112,7 @@ export const userService = {
     if (data.email !== undefined) payload.email = data.email;
     if (data.phone !== undefined) payload.phone = data.phone;
     if (data.profileImageUrl !== undefined) payload.profile_image_url = data.profileImageUrl;
-    if (data.roleId !== undefined) payload.role_id = data.roleId;
+    if (data.roleId !== undefined && data.roleId !== '') payload.role_id = data.roleId;
     if (data.warehouseId !== undefined) payload.warehouse_id = data.warehouseId;
     if (data.kioskEnabled !== undefined) payload.kiosk_enabled = data.kioskEnabled;
     if (data.maxDiscountPercent !== undefined) payload.max_discount_percent = data.maxDiscountPercent;
