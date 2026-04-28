@@ -15,6 +15,7 @@ import AddCustomerModal from '../../components/customers/AddCustomerModal';
 import WeightEntryModal from '../../components/pos/WeightEntryModal';
 import PriceModeSelector from '../../components/pos/PriceModeSelector';
 import HeldBillsModal from '../../components/pos/HeldBillsModal';
+import HoldNoteModal from '../../components/pos/HoldNoteModal';
 import POSRefundModal from '../../components/pos/POSRefundModal';
 import { isWeightBasedProduct, formatQuantity } from '../../utils/posHelpers';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
@@ -52,6 +53,7 @@ const POS: React.FC = () => {
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [isAddCustomerModalVisible, setIsAddCustomerModalVisible] = useState(false);
     const [heldBillsModalVisible, setHeldBillsModalVisible] = useState(false);
+    const [holdNoteModalOpen, setHoldNoteModalOpen] = useState(false);
     const [currentTime, setCurrentTime] = useState(dayjs());
     const [paidAmount, setPaidAmount] = useState<number>(0);
     const [searchTerm, setSearchTerm] = useState('');
@@ -94,7 +96,7 @@ const POS: React.FC = () => {
         discountType, discountValue, deliveryCharge,
         cardBank, cardFirstDigit, cardLastFour, cardType, priceMode,
         addToCart, updateQuantity, removeItem, clearCart,
-        setCustomer, setPaymentMethod, setRefundMode,
+        setCustomer, setPaymentMethod,
         setDiscount, setDeliveryCharge,
         setCardBank, setCardFirstDigit, setCardLastFour, setCardType, setPriceMode,
         updateCartItemPrices,
@@ -416,12 +418,12 @@ const POS: React.FC = () => {
                 if (e.key === 'F1') { e.preventDefault(); setIsAddCustomerModalVisible(true); return; }
                 if (e.key === 'F2') { e.preventDefault(); setPaymentMethod('Credit'); message.success('Payment method set to Credit'); return; }
                 if (e.key === 'F3') { e.preventDefault(); setIsPriceModeVisible(true); return; }
-                if (e.key === 'F4') { e.preventDefault(); setPaymentMethod('HOLD'); message.success('Cart On Hold'); return; }
+                if (e.key === 'F4') { e.preventDefault(); if (cart.length > 0) setHoldNoteModalOpen(true); return; }
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isPaymentModalOpen, discountValue, clearCart, setPaymentMethod, setDiscount]);
+    }, [isPaymentModalOpen, discountValue, cart, clearCart, setPaymentMethod, setDiscount]);
 
     // ─── Checkout ─────────────────────────────────────────────────────
     const handleCheckout = async () => {
@@ -571,19 +573,7 @@ const POS: React.FC = () => {
                     </Tooltip>
                     <Button onClick={() => { setPaymentMethod('COD'); message.success('Payment method set to COD'); }} size="middle" style={{ backgroundColor: '#5c8aff', color: 'white', border: 'none' }} className="hover:opacity-90 text-xs rounded-lg shadow-sm font-semibold">COD</Button>
                     <Button
-                        onClick={async () => {
-                            if (cart.length === 0) {
-                                message.warning('Cart is empty');
-                                return;
-                            }
-                            try {
-                                await holdBill();
-                                message.success('Bill held successfully');
-                                setHeldBillsModalVisible(true);
-                            } catch (error) {
-                                message.error('Failed to hold bill');
-                            }
-                        }}
+                        onClick={() => setHeldBillsModalVisible(true)}
                         size="middle"
                         style={{ backgroundColor: '#ffaf40', color: 'white', border: 'none' }}
                         className="hover:opacity-90 text-xs rounded-lg shadow-sm font-semibold"
@@ -817,7 +807,7 @@ const POS: React.FC = () => {
 
                         <div className="flex gap-3 h-[120px]">
                             <div className="flex flex-col gap-3 w-1/2 h-full">
-                                <Button onClick={() => { setPaymentMethod('HOLD'); message.success('Cart On Hold'); }} style={{ backgroundColor: '#ffaf40', color: 'white', border: 'none', height: '100%' }} className="hover:opacity-90 font-bold flex-1 w-full rounded-xl shadow-sm text-base tracking-wide">HOLD (F4)</Button>
+                                <Button onClick={() => { if (cart.length === 0) { message.warning('Cart is empty'); return; } setHoldNoteModalOpen(true); }} style={{ backgroundColor: '#ffaf40', color: 'white', border: 'none', height: '100%' }} className="hover:opacity-90 font-bold flex-1 w-full rounded-xl shadow-sm text-base tracking-wide">HOLD (F4)</Button>
                                 <Button style={{ backgroundColor: '#ff5252', color: 'white', border: 'none', height: '100%' }} className="hover:opacity-90 font-bold flex-1 w-full rounded-xl shadow-sm text-base tracking-wide" onClick={clearCart}>RESET (DEL)</Button>
                             </div>
                             <Button
@@ -1169,12 +1159,27 @@ const POS: React.FC = () => {
             <HeldBillsModal
                 visible={heldBillsModalVisible}
                 onClose={() => setHeldBillsModalVisible(false)}
-                onResume={(billData) => {
-                    resumeHoldBill(billData);
+                onResume={(bill) => {
+                    resumeHoldBill(bill);
                     setHeldBillsModalVisible(false);
                     message.success('Bill resumed to cart');
                 }}
-                loading={posLoading}
+            />
+
+            {/* ── HoldNoteModal – enter label before holding ──────────────── */}
+            <HoldNoteModal
+                open={holdNoteModalOpen}
+                submitting={posLoading}
+                onCancel={() => setHoldNoteModalOpen(false)}
+                onConfirm={async (notes) => {
+                    try {
+                        await holdBill(notes);
+                        setHoldNoteModalOpen(false);
+                        message.success('Bill held successfully');
+                    } catch {
+                        // error message shown inside posStore
+                    }
+                }}
             />
         </div>
     );
