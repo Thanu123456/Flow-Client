@@ -73,7 +73,7 @@ export const SalesPurchasesChart: React.FC = () => {
         />
       </div>
 
-      <div style={{ width: '100%', height: 380 }}>
+      <div style={{ width: '100%', height: 380, minWidth: 0 }}>
         {chartsLoading ? (
           <Skeleton active paragraph={{ rows: 8 }} />
         ) : chartData.length > 0 ? (

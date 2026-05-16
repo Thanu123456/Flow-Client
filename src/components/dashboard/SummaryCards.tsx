@@ -96,7 +96,7 @@ export const SummaryCards: React.FC = () => {
       {stats.map((stat, index) => (
         <Col xs={24} md={12} key={index}>
           <Card
-            bordered={false}
+            variant="borderless"
             className="shadow-sm rounded-xl border border-gray-100"
             styles={{ body: { padding: '16px 24px' } }}
           >
@@ -175,7 +175,7 @@ export const SecondarySummaryCards: React.FC = () => {
       {stats.map((stat, index) => (
         <Col key={index} style={{ flex: 1, minWidth: '200px' }}>
           <Card
-            bordered={false}
+            variant="borderless"
             className="shadow-sm rounded-xl border border-gray-100 h-full"
             styles={{ body: { padding: '12px 16px' } }}
           >

@@ -9,7 +9,7 @@ import {
     Avatar,
     Row,
     Col,
-    notification
+    App
 } from 'antd';
 import {
     ReloadOutlined,
@@ -59,6 +59,7 @@ const Dashboard: React.FC = () => {
     const { logout, user, tenant } = useAuth();
     const { token } = theme.useToken();
     const navigate = useNavigate();
+    const { notification } = App.useApp();
 
     const [loading, setLoading] = useState(true);
     const [period, setPeriod] = useState('today');

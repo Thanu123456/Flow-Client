@@ -32,7 +32,7 @@ const HourlySalesPeakChart: React.FC = () => {
         </div>
       </div>
 
-      <div style={{ width: '100%', height: 300 }}>
+      <div style={{ width: '100%', height: 300, minWidth: 0 }}>
         {chartsLoading ? (
             <Skeleton active paragraph={{ rows: 6 }} />
         ) : data.length > 0 ? (
