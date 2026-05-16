@@ -48,7 +48,7 @@ const ViewBrandModal: React.FC<ViewBrandModalProps> = ({
             column={1}
             bordered
             size="middle"
-            labelStyle={{ fontWeight: 600 }}
+            styles={{ label: { fontWeight: 600 } }}
           >
             <Descriptions.Item label="Brand Name">
               {brandData?.name ?? "N/A"}

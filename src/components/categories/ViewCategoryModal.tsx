@@ -26,7 +26,7 @@ const ViewCategoryModal: React.FC<ViewCategoryModalProps> = ({
         column={1}
         bordered
         size="middle"
-        labelStyle={{ fontWeight: 600, width: "40%" }}
+        styles={{ label: { fontWeight: 600, width: "40%" } }}
       >
         <Descriptions.Item label="Category Name">
           {category?.name || "N/A"}
