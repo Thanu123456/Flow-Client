@@ -63,7 +63,7 @@ export const CreditBalancePieChart: React.FC = () => {
         {chartsLoading ? (
             <Skeleton active avatar paragraph={{ rows: 6 }} />
         ) : creditData.length > 0 ? (
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <PieChart>
               <Pie
                 data={creditData}

@@ -1,7 +1,6 @@
 import React from "react";
 import { Modal, Descriptions, Badge } from "antd";
 import type { Unit } from "../../types/entities/unit.types";
-import dayjs from "dayjs";
 
 
 interface ViewUnitModalProps {
@@ -49,9 +48,6 @@ const ViewUnitModal: React.FC<ViewUnitModalProps> = ({
                 backgroundColor: (unit.productCount || 0) > 0 ? "#1890ff" : "#d9d9d9",
               }}
             />
-          </Descriptions.Item>
-          <Descriptions.Item label="Created At">
-            {dayjs(unit.createdAt).format("YYYY-MM-DD HH:mm:ss")}
           </Descriptions.Item>
         </Descriptions>
       )}

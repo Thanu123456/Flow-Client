@@ -9,37 +9,42 @@ const { Title, Text } = Typography;
 const ProfitMarginBarChart: React.FC = () => {
     const { charts, chartsLoading } = useDashboardStore();
     
-    // We can use SalesPurchases data for ProfitMargin as well
-    const data = React.useMemo(() => {
-        const raw = charts?.salesPurchases ?? [];
-        console.log('[ProfitMarginBarChart] raw salesPurchases:', raw.length, 'points');
-        if (!raw.length) return [];
-        return raw.map(p => ({
-            month: dayjs(p.label).isValid() ? dayjs(p.label).format('MMM DD') : p.label,
-            revenue: p.values.sales || 0,
-            profit: (p.values.sales || 0) - (p.values.purchases || 0)
-        }));
-    }, [charts]);
+  const [isMounted, setIsMounted] = React.useState(false);
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
-  return (
-    <Card 
-      className="shadow-sm rounded-2xl border border-gray-100 h-full"
-      styles={{ body: { padding: '24px' } }}
-    >
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <Title level={5} style={{ margin: 0, fontWeight: 400 }}>Profit Analytics</Title>
-          <Text type="secondary" className="text-xs uppercase tracking-wider font-normal">
-            Revenue vs Net Profit
-          </Text>
-        </div>
+  // We can use SalesPurchases data for ProfitMargin as well
+  const data = React.useMemo(() => {
+      const raw = charts?.salesPurchases ?? [];
+      console.log('[ProfitMarginBarChart] raw salesPurchases:', raw.length, 'points');
+      if (!raw.length) return [];
+      return raw.map(p => ({
+          month: dayjs(p.label).isValid() ? dayjs(p.label).format('MMM DD') : p.label,
+          revenue: p.values.sales || 0,
+          profit: (p.values.sales || 0) - (p.values.purchases || 0)
+      }));
+  }, [charts]);
+
+return (
+  <Card 
+    className="shadow-sm rounded-2xl border border-gray-100 h-full"
+    styles={{ body: { padding: '24px' } }}
+  >
+    <div className="flex justify-between items-center mb-6">
+      <div>
+        <Title level={5} style={{ margin: 0, fontWeight: 400 }}>Profit Analytics</Title>
+        <Text type="secondary" className="text-xs uppercase tracking-wider font-normal">
+          Revenue vs Net Profit
+        </Text>
       </div>
+    </div>
 
-      <div style={{ width: '100%', height: 300, minWidth: 0 }}>
-        {chartsLoading ? (
-          <Skeleton active paragraph={{ rows: 6 }} />
-        ) : data.length > 0 ? (
-          <ResponsiveContainer>
+    <div style={{ width: '100%', height: 300, minWidth: 0 }}>
+      {chartsLoading || !isMounted ? (
+        <Skeleton active paragraph={{ rows: 6 }} />
+      ) : data.length > 0 ? (
+        <ResponsiveContainer width="100%" height={300}>
             <BarChart data={data}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
               <XAxis 

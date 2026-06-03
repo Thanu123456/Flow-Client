@@ -81,8 +81,6 @@ const POS: React.FC = () => {
     const [refundModalVisible, setRefundModalVisible] = useState(false);
 
     // ── Customer state ─────────────────────────────────────────────────
-    const [customerOptions, setCustomerOptions] = useState<{ value: string; label: string }[]>([]);
-    const [customerNameDisplay, setCustomerNameDisplay] = useState('Walk-In Customer');
 
     // ── Print Bill checkbox ────────────────────────────────────────────
     const [printBill, setPrintBill] = useState(true);
@@ -96,7 +94,7 @@ const POS: React.FC = () => {
         discountType, discountValue, deliveryCharge,
         cardBank, cardFirstDigit, cardLastFour, cardType, priceMode,
         addToCart, updateQuantity, removeItem, clearCart,
-        setCustomer, setPaymentMethod,
+        customerId, setCustomer, setPaymentMethod,
         setDiscount, setDeliveryCharge,
         setCardBank, setCardFirstDigit, setCardLastFour, setCardType, setPriceMode,
         updateCartItemPrices,
@@ -104,7 +102,13 @@ const POS: React.FC = () => {
         checkout,
         holdBill, resumeHoldBill,
     } = usePOSStore();
-    const { searchCustomers } = useCustomerStore();
+    const { searchCustomers, allCustomers, getAllCustomers } = useCustomerStore();
+
+    // ── Customer Display Name (Derived dynamically) ────────────────────
+    const selectedCustomer = allCustomers.find(c => c.id === customerId);
+    const customerNameDisplay = selectedCustomer
+        ? `${selectedCustomer.fullName} - ${selectedCustomer.phone}`
+        : 'Walk-In Customer';
 
     // Static user (will be from auth context in production)
     const user = { name: "John Doe", email: "john@example.com", avatar: null as string | null, role: "Admin" };
@@ -115,8 +119,8 @@ const POS: React.FC = () => {
         return () => clearInterval(timer);
     }, []);
 
-    // ─── Load categories & products ──────────────────────────────────
-    useEffect(() => { getAllCategories(); }, [getAllCategories]);
+    // ─── Load categories, products & customers ───────────────────────
+    useEffect(() => { getAllCategories(); getAllCustomers(); }, [getAllCategories, getAllCustomers]);
 
     useEffect(() => {
         getProducts({
@@ -450,7 +454,7 @@ const POS: React.FC = () => {
         }
 
         if (paymentMethod === 'Credit') {
-            if (customerNameDisplay === 'Walk-In Customer') {
+            if (!customerId) {
                 message.error('A customer must be selected for credit sales.');
                 return;
             }
@@ -470,7 +474,6 @@ const POS: React.FC = () => {
             setDeliveryCharge(0);
             setDiscount('fixed', 0);
             setCardBank(''); setCardFirstDigit(''); setCardLastFour(''); setCardType('');
-            setCustomerNameDisplay('Walk-In Customer');
             // Generate fresh bill number for the next transaction
             setBillNumber(generateBillNumber(priceMode, paymentMethod, isRefundMode));
             getProducts({ page: 1, limit: 1000, categoryId: selectedCategory === 'All Categories' ? undefined : selectedCategory, status: 'active' });
@@ -479,20 +482,7 @@ const POS: React.FC = () => {
         }
     };
 
-    // ─── Customer search ──────────────────────────────────────────────
-    const handleCustomerSearch = async (value: string) => {
-        if (value.length > 2) {
-            const results = await searchCustomers(value);
-            setCustomerOptions(results.map(c => ({ value: c.id, label: `${c.fullName} - ${c.phone}` })));
-        } else {
-            setCustomerOptions([]);
-        }
-    };
 
-    const handleCustomerSelect = (value: string, option: any) => {
-        setCustomer(value);
-        setCustomerNameDisplay(option.label);
-    };
 
     // ─── User menu ────────────────────────────────────────────────────
     const userMenuItems: MenuProps['items'] = [
@@ -870,18 +860,26 @@ const POS: React.FC = () => {
                                     CUSTOMER <span className="text-gray-400 font-normal">[F5]</span>
                                     {paymentMethod === 'Credit' && <span className="text-red-500 ml-1">*required</span>}
                                 </div>
-                                <AutoComplete
-                                    onSearch={handleCustomerSearch}
-                                    onSelect={handleCustomerSelect}
-                                    options={customerOptions}
+                                <Select
+                                    showSearch
+                                    placeholder="Search customer name / phone..."
                                     className="w-full"
+                                    style={{ height: 34 }}
+                                    optionFilterProp="children"
+                                    value={customerId || undefined}
+                                    onChange={(val) => setCustomer(val || null)}
+                                    allowClear
+                                    onClear={() => setCustomer(null)}
+                                    filterOption={(input, option) =>
+                                        (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                                    }
                                 >
-                                    <Input
-                                        placeholder="Search customer name / phone..."
-                                        className="rounded-md border-gray-300"
-                                        style={{ height: 34 }}
-                                    />
-                                </AutoComplete>
+                                    {allCustomers.map(c => (
+                                        <Option key={c.id} value={c.id} label={`${c.fullName} - ${c.phone}`}>
+                                            {c.fullName} - {c.phone}
+                                        </Option>
+                                    ))}
+                                </Select>
                                 <div className="mt-1 text-[12px] font-semibold text-blue-600">{customerNameDisplay}</div>
                             </div>
 

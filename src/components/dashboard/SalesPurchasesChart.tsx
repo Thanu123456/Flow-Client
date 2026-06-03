@@ -43,6 +43,11 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export const SalesPurchasesChart: React.FC = () => {
   const { charts, chartsLoading } = useDashboardStore();
 
+  const [isMounted, setIsMounted] = React.useState(false);
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const chartData = useMemo(() => {
     const raw = charts?.salesPurchases ?? [];
     console.log('[SalesPurchasesChart] raw salesPurchases:', raw.length, 'points', raw);
@@ -74,10 +79,10 @@ export const SalesPurchasesChart: React.FC = () => {
       </div>
 
       <div style={{ width: '100%', height: 380, minWidth: 0 }}>
-        {chartsLoading ? (
+        {chartsLoading || !isMounted ? (
           <Skeleton active paragraph={{ rows: 8 }} />
         ) : chartData.length > 0 ? (
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height={380}>
             <ComposedChart
               data={chartData}
               margin={{ top: 20, right: 20, left: 10, bottom: 0 }}

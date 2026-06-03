@@ -59,7 +59,7 @@ const PaymentMethodPieChart: React.FC = () => {
         {chartsLoading ? (
           <Skeleton active avatar paragraph={{ rows: 6 }} />
         ) : data.length > 0 ? (
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <PieChart>
               <Pie
                 data={data}

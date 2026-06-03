@@ -1,11 +1,8 @@
 import React, { useState } from "react";
 import { Space, Tooltip, Badge } from "antd";
-import { EditOutlined, EyeOutlined, DeleteOutlined, WarningOutlined } from "@ant-design/icons";
-import { Modal, message } from "antd";
-import { useTableSelection } from "../../hooks/useTableSelection";
+import { EditOutlined, EyeOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { SortOrder } from "antd/es/table/interface";
 import type { Unit } from "../../types/entities/unit.types";
-import dayjs from "dayjs";
 import { CommonTable } from "../common/Table";
 import type { TableColumn } from "../common/Table/Table.types";
 
@@ -18,50 +15,26 @@ interface UnitsTableProps {
     limit: number;
     totalPages: number;
   };
-  onPageChange: (page: number, pageSize: number) => void;
   onEdit: (unit: Unit) => void;
   onView: (unit: Unit) => void;
   onDelete: (unit: Unit) => void;
   onProductCountClick: (unitId: string) => void;
 }
 
+const HARDCODED_UNITS = ["Box", "Kilogram", "Liter", "Meter"];
+
+const isHardcodedUnit = (name: string) =>
+  HARDCODED_UNITS.some((u) => u.toLowerCase() === name.toLowerCase());
+
 const UnitsTable: React.FC<UnitsTableProps> = ({
   units,
   loading,
   pagination,
-  onPageChange,
   onEdit,
   onView,
   onDelete,
   onProductCountClick,
 }) => {
-  const { selectedRowKeys, rowSelection, clearSelection } = useTableSelection<Unit>();
-  const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
-
-  const handleDateChange = (date: dayjs.Dayjs | null) => {
-    setSelectedDate(date);
-  };
-
-  const handleBulkDelete = () => {
-    Modal.confirm({
-      title: "Delete Multiple Units",
-      icon: <WarningOutlined style={{ color: "red" }} />,
-      content: `Are you sure you want to delete ${selectedRowKeys.length} selected units? This action cannot be undone.`,
-      okText: "Delete",
-      okType: "danger",
-      cancelText: "Cancel",
-      onOk: async () => {
-        try {
-          message.success(`Successfully deleted ${selectedRowKeys.length} units`);
-          clearSelection();
-          // refreshData logic if available or passed down
-        } catch (error) {
-          message.error("Failed to delete units");
-        }
-      },
-    });
-  };
-
   const columns: TableColumn<Unit>[] = [
     {
       title: <div className="text-center w-full">Unit Name</div>,
@@ -96,14 +69,6 @@ const UnitsTable: React.FC<UnitsTableProps> = ({
       ),
     },
     {
-      title: <div className="text-center w-full">Created At</div>,
-      dataIndex: "createdAt",
-      key: "createdAt",
-      align: "center" as const,
-      showDateFilter: true,
-      render: (date: string) => dayjs(date).format("YYYY/MM/DD"),
-    },
-    {
       title: <div className="text-center w-full">Status</div>,
       dataIndex: "status",
       key: "status",
@@ -123,41 +88,48 @@ const UnitsTable: React.FC<UnitsTableProps> = ({
       title: <div className="text-center w-full">Actions</div>,
       key: "actions",
       align: "center" as const,
-      render: (_: React.ReactNode, record: Unit) => (
-        <Space>
-          <div
-            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
-            onClick={() => onView(record)}
-          >
-            <Tooltip title="View">
-              <EyeOutlined style={{ color: "black" }} />
-            </Tooltip>
-          </div>
-          <div
-            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
-            onClick={() => onEdit(record)}
-          >
-            <Tooltip title="Edit">
-              <EditOutlined style={{ color: "#1890ff" }} />
-            </Tooltip>
-          </div>
-          <div
-            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
-            onClick={() => onDelete(record)} // Added for Delete action
-            style={{ opacity: (record.productCount ?? 0) > 0 ? 0.5 : 1 }}
-          >
-            <Tooltip
-              title={
-                (record.productCount ?? 0) > 0
-                  ? "Cannot delete unit with associated products"
-                  : "Delete"
-              }
+      render: (_: React.ReactNode, record: Unit) => {
+        const isHardcoded = isHardcodedUnit(record.name);
+        return (
+          <Space>
+            <div
+              className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
+              onClick={() => onView(record)}
             >
-              <DeleteOutlined style={{ color: "red" }} />
-            </Tooltip>
-          </div>
-        </Space>
-      ),
+              <Tooltip title="View">
+                <EyeOutlined style={{ color: "black" }} />
+              </Tooltip>
+            </div>
+            {!isHardcoded && (
+              <>
+                <div
+                  className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
+                  onClick={() => onEdit(record)}
+                >
+                  <Tooltip title="Edit">
+                    <EditOutlined style={{ color: "#1890ff" }} />
+                  </Tooltip>
+                </div>
+                <div
+                  className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
+                  onClick={() => (record.productCount ?? 0) === 0 && onDelete(record)}
+                  style={{ opacity: (record.productCount ?? 0) > 0 ? 0.5 : 1 }}
+                >
+                  <Tooltip
+                    title={
+                      (record.productCount ?? 0) > 0
+                        ? "Cannot delete unit with associated products"
+                        : "Delete"
+                    }
+                  >
+                    <DeleteOutlined style={{ color: "red" }} />
+                  </Tooltip>
+                </div>
+              </>
+            )}
+          </Space>
+        );
+      },
     },
   ];
 
@@ -166,13 +138,19 @@ const UnitsTable: React.FC<UnitsTableProps> = ({
       columns={columns}
       dataSource={units}
       loading={loading}
-      pagination={pagination}
-      onPageChange={onPageChange}
-      selectedDate={selectedDate}
-      onDateFilterChange={handleDateChange}
-      rowSelection={rowSelection}
-      onBulkDelete={handleBulkDelete}
-      bulkDeleteText={`Delete (${selectedRowKeys.length})`}
+      simplePagination={true}
+      pagination={{
+        ...pagination,
+        total: units.length,
+        page: 1,
+        limit: units.length,
+        totalPages: 1
+      }}
+      footer={() => (
+        <div style={{ textAlign: 'center', color: '#8c8c8c', padding: '12px', fontSize: '13px', fontWeight: 500 }}>
+          — End of Results —
+        </div>
+      )}
     />
   );
 };

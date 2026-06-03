@@ -169,13 +169,6 @@ const UnitsPage: React.FC<UnitsPageProps> = ({
         actions={
           <Space>
             <CommonButton
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={handleAddUnit}
-            >
-              Add Unit
-            </CommonButton>
-            <CommonButton
               icon={<FilePdfOutlined style={{ color: "#FF0000" }} />}
               onClick={handleExportPDF}
               tooltip="Download PDF"
@@ -199,10 +192,9 @@ const UnitsPage: React.FC<UnitsPageProps> = ({
         }
       >
         <UnitsTable
-          units={units}
+          units={units.filter(u => ["box", "kilogram", "liter", "meter"].includes(u.name.toLowerCase()))}
           loading={loading}
           pagination={pagination}
-          onPageChange={handlePageChange}
           onEdit={handleEditUnit}
           onView={handleViewUnit} // Pass view handler
           onDelete={handleDeleteUnit} // Pass delete handler

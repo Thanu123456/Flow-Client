@@ -43,7 +43,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ visible, product, o
             open={visible}
             onCancel={onClose}
             onOk={handleSubmit}
-            destroyOnClose
+            destroyOnHidden
         >
             <Form form={form} layout="vertical">
                 <Form.Item name="name" label="Product Name" rules={[{ required: true }]}>

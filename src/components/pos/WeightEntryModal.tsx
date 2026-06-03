@@ -90,7 +90,7 @@ const WeightEntryModal: React.FC<WeightEntryModalProps> = ({
             footer={null}
             width={420}
             centered
-            destroyOnClose
+            destroyOnHidden
         >
             {/* Product info card */}
             <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">

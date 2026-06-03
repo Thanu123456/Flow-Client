@@ -43,6 +43,11 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export const SalesPurchasesBarChart: React.FC = () => {
   const { charts, chartsLoading } = useDashboardStore();
 
+  const [isMounted, setIsMounted] = React.useState(false);
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const chartData = useMemo(() => {
     const raw = charts?.salesPurchases ?? [];
     console.log('[SalesPurchasesBarChart] raw salesPurchases:', raw.length, 'points');
@@ -73,11 +78,11 @@ export const SalesPurchasesBarChart: React.FC = () => {
         />
       </div>
 
-      <div style={{ width: '100%', height: 'calc(100% - 50px)', minHeight: 200, minWidth: 0 }}>
-        {chartsLoading ? (
+      <div style={{ width: '100%', height: 260, minWidth: 0 }}>
+        {chartsLoading || !isMounted ? (
             <Skeleton active paragraph={{ rows: 6 }} />
         ) : chartData.length > 0 ? (
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height={260}>
             <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
               <XAxis
