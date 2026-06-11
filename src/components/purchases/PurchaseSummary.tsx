@@ -1,6 +1,11 @@
-import React from 'react';
-import { Card, Radio, Row, Col, Form, InputNumber, Input, DatePicker, Typography, Divider, Alert } from 'antd';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Card, Radio, Row, Col, Form, InputNumber, Input, DatePicker,
+  Typography, Divider, Alert, Modal, Space, Button,
+} from 'antd';
+import { EditOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import type { PaymentMethod } from '../../types/entities/purchase.types';
+import dayjs from 'dayjs';
 
 const { Text } = Typography;
 
@@ -49,18 +54,62 @@ const PurchaseSummary: React.FC<Props> = ({
   const netAmount = Math.max(0, totalAmount - discountAmount);
   const supplierDebit = supplierBalance < 0 ? Math.abs(supplierBalance) : 0;
   const creditBalance = supplierBalance > 0 ? supplierBalance : 0;
-
-  // Compute remaining after debit balance
   const remaining = Math.max(0, netAmount - debitBalanceUsed);
   const creditAmount = Math.max(0, remaining - paidAmount);
+
+  // Cheque modal state
+  const [chequeModalOpen, setChequeModalOpen] = useState(false);
+  const [tempChequeNumber, setTempChequeNumber] = useState('');
+  const [tempChequeDate, setTempChequeDate] = useState('');
+  const [tempChequeNote, setTempChequeNote] = useState('');
+  const [chequeNumberError, setChequeNumberError] = useState('');
+  const prevPaymentMethodRef = useRef<PaymentMethod>(paymentMethod);
+
+  // Auto-open modal when user switches to cheque for the first time
+  useEffect(() => {
+    if (paymentMethod === 'cheque' && prevPaymentMethodRef.current !== 'cheque') {
+      setTempChequeNumber(chequeNumber);
+      setTempChequeDate(chequeDate);
+      setTempChequeNote(chequeNote);
+      setChequeNumberError('');
+      setChequeModalOpen(true);
+    }
+    prevPaymentMethodRef.current = paymentMethod;
+  }, [paymentMethod]);
+
+  const handleOpenChequeModal = () => {
+    setTempChequeNumber(chequeNumber);
+    setTempChequeDate(chequeDate);
+    setTempChequeNote(chequeNote);
+    setChequeNumberError('');
+    setChequeModalOpen(true);
+  };
+
+  const handleSaveCheque = () => {
+    if (!tempChequeNumber.trim()) {
+      setChequeNumberError('Cheque number is required');
+      return;
+    }
+    onChequeNumberChange(tempChequeNumber.trim());
+    onChequeDateChange(tempChequeDate);
+    onChequeNoteChange(tempChequeNote);
+    setChequeNumberError('');
+    setChequeModalOpen(false);
+  };
+
+  const handleCancelCheque = () => {
+    setChequeModalOpen(false);
+    // Revert to cash if no cheque details saved yet
+    if (!chequeNumber) {
+      onPaymentMethodChange('cash');
+    }
+  };
 
   const labelStyle: React.CSSProperties = { color: '#666', fontSize: '13px' };
   const valueStyle: React.CSSProperties = { fontFamily: 'monospace', fontSize: '14px', fontWeight: 600 };
 
   const SummaryRow: React.FC<{ label: string; value: number; color?: string }> = ({
-    label,
-    value,
-    color,
+    label, value, color,
   }) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
       <span style={labelStyle}>{label}</span>
@@ -125,6 +174,37 @@ const PurchaseSummary: React.FC<Props> = ({
         </div>
       </div>
 
+      {/* Cheque details summary strip */}
+      {paymentMethod === 'cheque' && (
+        <div style={{ marginBottom: 16, padding: '10px 14px', backgroundColor: '#f9f0ff', borderRadius: 6, border: '1px solid #d3adf7' }}>
+          {chequeNumber ? (
+            <Space wrap>
+              <CheckCircleOutlined style={{ color: '#52c41a' }} />
+              <Text strong>Cheque #{chequeNumber}</Text>
+              {chequeDate && (
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  Due: {dayjs(chequeDate).format('DD MMM YYYY')}
+                </Text>
+              )}
+              {chequeNote && (
+                <Text type="secondary" style={{ fontSize: 12 }}>— {chequeNote}</Text>
+              )}
+              <Button size="small" icon={<EditOutlined />} onClick={handleOpenChequeModal}>
+                Edit
+              </Button>
+            </Space>
+          ) : (
+            <Space>
+              <ExclamationCircleOutlined style={{ color: '#fa8c16' }} />
+              <Text style={{ color: '#fa8c16' }}>Cheque details not entered</Text>
+              <Button size="small" type="primary" onClick={handleOpenChequeModal}>
+                Enter Details
+              </Button>
+            </Space>
+          )}
+        </div>
+      )}
+
       <Row gutter={[16, 12]}>
         {/* Debit Balance Used (only if supplier has debit) */}
         {hasSupplier && supplierDebit > 0 && (
@@ -159,40 +239,6 @@ const PurchaseSummary: React.FC<Props> = ({
             />
           </Form.Item>
         </Col>
-
-        {/* Cheque fields */}
-        {paymentMethod === 'cheque' && (
-          <>
-            <Col xs={24} md={12}>
-              <Form.Item label="Cheque Number *" style={{ marginBottom: 0 }}>
-                <Input
-                  value={chequeNumber}
-                  onChange={(e) => onChequeNumberChange(e.target.value)}
-                  placeholder="Enter cheque number"
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item label="Cheque Date" style={{ marginBottom: 0 }}>
-                <DatePicker
-                  style={{ width: '100%' }}
-                  value={chequeDate ? require('dayjs')(chequeDate) : null}
-                  onChange={(_, dateStr) => onChequeDateChange(dateStr as string)}
-                  format="YYYY-MM-DD"
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24}>
-              <Form.Item label="Cheque Note" style={{ marginBottom: 0 }}>
-                <Input
-                  value={chequeNote}
-                  onChange={(e) => onChequeNoteChange(e.target.value)}
-                  placeholder="Optional note"
-                />
-              </Form.Item>
-            </Col>
-          </>
-        )}
       </Row>
 
       {/* Running totals */}
@@ -212,6 +258,53 @@ const PurchaseSummary: React.FC<Props> = ({
           )}
         </div>
       )}
+
+      {/* Cheque Details Modal */}
+      <Modal
+        open={chequeModalOpen}
+        title="Cheque Payment Details"
+        onOk={handleSaveCheque}
+        onCancel={handleCancelCheque}
+        okText="Save Details"
+        cancelText="Cancel"
+        width={460}
+        maskClosable={false}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
+          <Form.Item
+            label="Cheque Number *"
+            style={{ marginBottom: 0 }}
+            validateStatus={chequeNumberError ? 'error' : ''}
+            help={chequeNumberError}
+          >
+            <Input
+              value={tempChequeNumber}
+              onChange={(e) => {
+                setTempChequeNumber(e.target.value);
+                setChequeNumberError('');
+              }}
+              placeholder="Enter cheque number"
+              autoFocus
+            />
+          </Form.Item>
+          <Form.Item label="Due Date" style={{ marginBottom: 0 }}>
+            <DatePicker
+              style={{ width: '100%' }}
+              value={tempChequeDate ? dayjs(tempChequeDate) : null}
+              onChange={(_, dateStr) => setTempChequeDate(dateStr as string)}
+              format="YYYY-MM-DD"
+              placeholder="Select due date (optional)"
+            />
+          </Form.Item>
+          <Form.Item label="Note" style={{ marginBottom: 0 }}>
+            <Input
+              value={tempChequeNote}
+              onChange={(e) => setTempChequeNote(e.target.value)}
+              placeholder="Optional note"
+            />
+          </Form.Item>
+        </div>
+      </Modal>
     </Card>
   );
 };

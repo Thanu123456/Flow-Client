@@ -583,6 +583,11 @@ const AddPurchasePage: React.FC = () => {
 
       navigate('/purchases');
     } catch (error: any) {
+      // Clean up orphaned draft if item-addition failed mid-way
+      if (newlyCreatedGrnId) {
+        await purchaseService.deleteGRN(newlyCreatedGrnId).catch(() => {});
+        newlyCreatedGrnId = null;
+      }
       const errData = error.response?.data;
       const errMsg = errData?.error?.details || errData?.error?.message || errData?.message || 'An error occurred. Please try again.';
       messageApi.error(errMsg);

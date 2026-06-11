@@ -221,7 +221,7 @@ const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose }) => {
         {/* Info Stack */}
         <Space direction="vertical" size={24} style={{ width: '100%' }}>
           {/* Section 1: General Details */}
-          <Card size="small" title={<Space><ShopOutlined /> General Details</Space>} headStyle={{ backgroundColor: '#fafafa' }}>
+          <Card size="small" title={<Space><ShopOutlined /> General Details</Space>} styles={{ header: { backgroundColor: '#fafafa' } }}>
             <Descriptions size="small" column={{ xs: 1, sm: 2, md: 3 }} bordered>
               <Descriptions.Item label="GRN Date">
                 <Space><CalendarOutlined style={{ color: '#8c8c8c' }} /> {dayjs(grn.grnDate).format('DD MMM YYYY')}</Space>
@@ -293,7 +293,7 @@ const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose }) => {
               )}
             </Col>
             <Col xs={24} md={12}>
-              <Card size="small" title={<Space><BankOutlined /> Payment Summary</Space>} headStyle={{ backgroundColor: '#f6f6f6' }}>
+              <Card size="small" title={<Space><BankOutlined /> Payment Summary</Space>} styles={{ header: { backgroundColor: '#f6f6f6' } }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ display: 'flex', justifySelf: 'flex-end', justifyContent: 'space-between' }}>
                     <Text type="secondary">Sub Total</Text>
@@ -334,7 +334,7 @@ const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose }) => {
               </Card>
 
               {grn.paymentMethod === 'cheque' && grn.chequeNumber && (
-                <Card size="small" title={<Space><BankOutlined /> Cheque Details</Space>} headStyle={{ backgroundColor: '#f6f6f6' }} style={{ marginTop: 16 }}>
+                <Card size="small" title={<Space><BankOutlined /> Cheque Details</Space>} styles={{ header: { backgroundColor: '#f6f6f6' } }} style={{ marginTop: 16 }}>
                   <Descriptions size="small" column={1}>
                     <Descriptions.Item label="Number"><Text strong>{grn.chequeNumber}</Text></Descriptions.Item>
                     <Descriptions.Item label="Date">{dayjs(grn.chequeDate).format('DD MMM YYYY')}</Descriptions.Item>
