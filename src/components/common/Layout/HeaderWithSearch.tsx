@@ -10,6 +10,7 @@ import {
   Modal,
   List,
   Typography,
+  Popover,
 } from "antd";
 import type { MenuProps } from "antd";
 import { useNavigate } from "react-router-dom";
@@ -28,7 +29,28 @@ import {
   KeyOutlined,
   DashboardOutlined,
   CloseOutlined,
+  RightOutlined,
+  UserAddOutlined,
+  ShopOutlined,
+  SolutionOutlined,
+  SafetyOutlined,
+  FolderOpenOutlined,
+  PartitionOutlined,
+  TagsOutlined,
+  HomeOutlined,
+  PlusSquareOutlined,
 } from "@ant-design/icons";
+
+// Quick Action Modals
+import AddCustomerModal from "../../customers/AddCustomerModal";
+import AddSupplierModal from "../../suppliers/AddSupplierModal";
+import AddUserModal from "../../users/AddUserModal";
+import AddRoleModal from "../../roles/AddRoleModal";
+import AddWarrantyModal from "../../warranties/AddWarrantyModal";
+import AddCategoryModal from "../../categories/AddCategoryModal";
+import AddSubCategoryModal from "../../subcategories/AddSubCategoryModal";
+import AddBrandModal from "../../brands/AddBrandModal";
+import AddWarehouseModal from "../../warehouses/AddWarehouseModal";
 
 const { Header: AntHeader } = Layout;
 const { Text } = Typography;
@@ -58,6 +80,199 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+
+  // Quick Action States
+  const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+
+  const handleSuccess = (type: string) => {
+    setActiveModal(null);
+    
+    // If the user is currently on the management page of this entity, refresh the page.
+    const pathMap: Record<string, string> = {
+      customer: "/customers",
+      supplier: "/suppliers",
+      user: "/users",
+      role: "/roles",
+      warranty: "/warranties",
+      category: "/categories",
+      subcategory: "/subcategories",
+      brand: "/brands",
+      warehouse: "/warehouses",
+    };
+
+    if (window.location.pathname === pathMap[type]) {
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    }
+  };
+
+  const quickActionGroups = [
+    {
+      title: "Inventory & Catalog",
+      items: [
+        {
+          label: "Add a new product",
+          icon: <PlusSquareOutlined />,
+          color: "#1890ff",
+          bgColor: "#e6f7ff",
+          onClick: () => {
+            setPopoverOpen(false);
+            navigate("/products/add");
+          },
+        },
+        {
+          label: "Add a new brand",
+          icon: <TagsOutlined />,
+          color: "#722ed1",
+          bgColor: "#f9f0ff",
+          onClick: () => {
+            setPopoverOpen(false);
+            setActiveModal("brand");
+          },
+        },
+        {
+          label: "Add a new category",
+          icon: <FolderOpenOutlined />,
+          color: "#fa8c16",
+          bgColor: "#fff7e6",
+          onClick: () => {
+            setPopoverOpen(false);
+            setActiveModal("category");
+          },
+        },
+        {
+          label: "Add a new sub category",
+          icon: <PartitionOutlined />,
+          color: "#faad14",
+          bgColor: "#fffbe6",
+          onClick: () => {
+            setPopoverOpen(false);
+            setActiveModal("subcategory");
+          },
+        },
+      ],
+    },
+    {
+      title: "People & Access",
+      items: [
+        {
+          label: "Add a new customer",
+          icon: <UserAddOutlined />,
+          color: "#52c41a",
+          bgColor: "#f6ffed",
+          onClick: () => {
+            setPopoverOpen(false);
+            setActiveModal("customer");
+          },
+        },
+        {
+          label: "Add a new supplier",
+          icon: <ShopOutlined />,
+          color: "#13c2c2",
+          bgColor: "#e6fffb",
+          onClick: () => {
+            setPopoverOpen(false);
+            setActiveModal("supplier");
+          },
+        },
+        {
+          label: "Add a new user",
+          icon: <UserOutlined />,
+          color: "#2f54eb",
+          bgColor: "#f0f5ff",
+          onClick: () => {
+            setPopoverOpen(false);
+            setActiveModal("user");
+          },
+        },
+        {
+          label: "Add a new role",
+          icon: <SolutionOutlined />,
+          color: "#f5222d",
+          bgColor: "#fff1f0",
+          onClick: () => {
+            setPopoverOpen(false);
+            setActiveModal("role");
+          },
+        },
+      ],
+    },
+    {
+      title: "Facilities & Support",
+      items: [
+        {
+          label: "Add a new warehouse",
+          icon: <HomeOutlined />,
+          color: "#eb2f96",
+          bgColor: "#fff0f6",
+          onClick: () => {
+            setPopoverOpen(false);
+            setActiveModal("warehouse");
+          },
+        },
+        {
+          label: "Add a new warrenty",
+          icon: <SafetyOutlined />,
+          color: "#00b96b",
+          bgColor: "#e6f8f1",
+          onClick: () => {
+            setPopoverOpen(false);
+            setActiveModal("warranty");
+          },
+        },
+      ],
+    },
+  ];
+
+  const quickActionsContent = (
+    <div className="w-[840px] p-2">
+      <div className="px-3 pb-3 border-b border-gray-100 mb-3">
+        <h4 className="font-semibold text-gray-800 text-sm m-0">Quick Actions</h4>
+        <p className="text-xs text-gray-400 m-0 mt-0.5">Create resources on the fly</p>
+      </div>
+      <div className="grid grid-cols-3 gap-6">
+        {quickActionGroups.map((group, gIdx) => (
+          <div
+            key={group.title}
+            className={`pr-2 ${
+              gIdx < quickActionGroups.length - 1 ? "border-r border-gray-100 pr-6" : ""
+            }`}
+          >
+            <div className="px-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+              {group.title}
+            </div>
+            <div className="space-y-1">
+              {group.items.map((item) => (
+                <div
+                  key={item.label}
+                  onClick={item.onClick}
+                  className="group flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-all duration-200"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="flex items-center justify-center w-8 h-8 rounded-lg transition-transform duration-200 group-hover:scale-105"
+                      style={{
+                        color: item.color,
+                        backgroundColor: item.bgColor,
+                      }}
+                    >
+                      {item.icon}
+                    </div>
+                    <span className="text-xs font-medium text-gray-700 group-hover:text-black transition-colors duration-200">
+                      {item.label}
+                    </span>
+                  </div>
+                  <RightOutlined className="text-[10px] text-gray-400 opacity-0 group-hover:opacity-100 transform translate-x-[-4px] group-hover:translate-x-0 transition-all duration-200" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   const [unreadMessages] = useState(1);
   const [unreadNotifications] = useState(3);
@@ -188,13 +403,23 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({
         {/* Right: Actions */}
         <div className="flex items-center justify-end flex-1">
           <Space size={12} align="center">
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              className="font-medium h-10 px-5 rounded-lg"
+            <Popover
+              content={quickActionsContent}
+              trigger="click"
+              open={popoverOpen}
+              onOpenChange={setPopoverOpen}
+              placement="bottomRight"
+              overlayClassName="quick-actions-popover"
+              styles={{ body: { padding: 4 } }}
             >
-              Add New
-            </Button>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                className="font-medium h-10 px-5 rounded-lg"
+              >
+                Add New
+              </Button>
+            </Popover>
 
             <Button
               icon={<ShoppingCartOutlined />}
@@ -315,6 +540,53 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({
           )}
         </div>
       </Modal>
+
+      {/* Quick Action Modals */}
+      <AddCustomerModal
+        visible={activeModal === "customer"}
+        onCancel={() => setActiveModal(null)}
+        onSuccess={() => handleSuccess("customer")}
+      />
+      <AddSupplierModal
+        visible={activeModal === "supplier"}
+        onCancel={() => setActiveModal(null)}
+        onSuccess={() => handleSuccess("supplier")}
+      />
+      <AddUserModal
+        visible={activeModal === "user"}
+        onCancel={() => setActiveModal(null)}
+        onSuccess={() => handleSuccess("user")}
+      />
+      <AddRoleModal
+        visible={activeModal === "role"}
+        onCancel={() => setActiveModal(null)}
+        onSuccess={() => handleSuccess("role")}
+      />
+      <AddWarrantyModal
+        visible={activeModal === "warranty"}
+        onCancel={() => setActiveModal(null)}
+        onSuccess={() => handleSuccess("warranty")}
+      />
+      <AddCategoryModal
+        visible={activeModal === "category"}
+        onCancel={() => setActiveModal(null)}
+        onSuccess={() => handleSuccess("category")}
+      />
+      <AddSubCategoryModal
+        visible={activeModal === "subcategory"}
+        onCancel={() => setActiveModal(null)}
+        onSuccess={() => handleSuccess("subcategory")}
+      />
+      <AddBrandModal
+        visible={activeModal === "brand"}
+        onCancel={() => setActiveModal(null)}
+        onSuccess={() => handleSuccess("brand")}
+      />
+      <AddWarehouseModal
+        visible={activeModal === "warehouse"}
+        onCancel={() => setActiveModal(null)}
+        onSuccess={() => handleSuccess("warehouse")}
+      />
     </>
   );
 };
