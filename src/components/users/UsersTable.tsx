@@ -60,6 +60,7 @@ const UsersTable: React.FC<Props> = ({
     {
       title: 'User',
       key: 'user',
+      width: 220,
       render: (_: any, record: User) => (
         <Space>
           <Avatar src={record.profileImageUrl} icon={<UserOutlined />} />
@@ -74,7 +75,8 @@ const UsersTable: React.FC<Props> = ({
       title: 'User ID',
       dataIndex: 'userId',
       key: 'userId',
-      render: (userId: string) => userId || '-',
+      width: 120,
+      render: (userId: string) => userId ? <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{userId}</span> : <span style={{ color: '#bfbfbf' }}>—</span>,
     },
     {
       title: 'Role',

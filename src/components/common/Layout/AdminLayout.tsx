@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Layout } from 'antd';
 import Sidebar from './Sidebar';
+import HeaderWithSearch from './HeaderWithSearch';
 
 const { Content } = Layout;
 
@@ -24,6 +25,12 @@ const AdminLayout: React.FC = () => {
           background: '#f8f9fb',
         }}
       >
+        {!isPosRoute && (
+          <HeaderWithSearch
+            onMenuClick={() => setCollapsed(!collapsed)}
+            collapsed={false}
+          />
+        )}
         <Content
           style={{
             background: '#f8f9fb',
