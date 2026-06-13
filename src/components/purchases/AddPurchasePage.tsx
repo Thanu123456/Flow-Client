@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Card, Row, Col, Select, AutoComplete, DatePicker, Input, Button, Space,
+  App, Card, Row, Col, Select, AutoComplete, DatePicker, Input, Button, Space,
   InputNumber, Checkbox, Modal, Form, message, Typography, Divider, Tag, Alert,
   Spin, Tooltip,
 } from 'antd';
@@ -110,6 +110,7 @@ const AddPurchasePage: React.FC = () => {
   const { id: editId } = useParams<{ id: string }>();
   const isEdit = Boolean(editId);
   const [messageApi, contextHolder] = message.useMessage();
+  const { modal } = App.useApp();
 
   const { createGRN, updateGRN, removeItem, completeGRN, getGRN } =
     usePurchaseStore();
@@ -181,7 +182,12 @@ const AddPurchasePage: React.FC = () => {
         setPaymentMethod(grn.paymentMethod);
         setGrnDate(dayjs(grn.grnDate).format('YYYY-MM-DD'));
         setNotes(grn.notes || '');
-        if (grn.items.length > 0) setSupplierLocked(true);
+        // Do NOT lock supplier in edit mode — user should be able to change it
+
+        // Pre-populate supplier options so the Select shows the supplier name
+        if (grn.supplierId && grn.supplierName) {
+          setSupplierOptions([{ value: grn.supplierId, label: grn.supplierName }]);
+        }
 
         // Load supplier balance if supplier set
         if (grn.supplierId) {
@@ -228,7 +234,7 @@ const AddPurchasePage: React.FC = () => {
   // ── Product search ───────────────────────────────────────
   const handleProductSearch = useCallback(
     async (query: string) => {
-      if (!query || query.length < 2) {
+      if (!query || query.length < 1) {
         setProductOptions([]);
         return;
       }
@@ -332,6 +338,10 @@ const AddPurchasePage: React.FC = () => {
     }
     if (!quantity || quantity <= 0) {
       messageApi.warning('Quantity must be greater than 0');
+      return;
+    }
+    if (!costPrice || costPrice <= 0) {
+      messageApi.warning('Cost price must be greater than 0');
       return;
     }
 
@@ -445,7 +455,10 @@ const AddPurchasePage: React.FC = () => {
   const validate = (doComplete: boolean): string | null => {
     if (!warehouseId) return 'Please select a warehouse';
     if (activeItems.length === 0) return 'Please add at least one item';
+    const zeroPrice = activeItems.find((i) => i.costPrice <= 0);
+    if (zeroPrice) return `"${zeroPrice.productName}" has an invalid cost price. All items must have a cost price greater than 0`;
     if (doComplete) {
+      if (paymentMethod === 'cheque' && !supplierId) return 'Cheque payment requires a supplier';
       if (paymentMethod === 'cheque' && !chequeNumber) return 'Cheque number is required';
       if (paymentMethod === 'credit' && !supplierId) return 'Credit payment requires a supplier';
       if (!supplierId && paymentMethod !== 'credit' && paidAmount !== netAmount && Math.abs(paidAmount - netAmount) > 0.01) {
@@ -482,9 +495,21 @@ const AddPurchasePage: React.FC = () => {
         // Handle item changes
         const toRemove = items.filter((i) => i.isDeleted && i.backendId);
         const toAdd = items.filter((i) => i.isNew && !i.isDeleted);
+        const toModify = items.filter((i) => i.isModified && !i.isNew && !i.isDeleted && i.backendId);
 
         for (const item of toRemove) {
           await removeItem(grnId, item.backendId!);
+        }
+        for (const item of toModify) {
+          await purchaseService.updateItem(grnId, item.backendId!, {
+            quantity: item.quantity,
+            costPrice: item.costPrice,
+            retailPrice: item.retailPrice,
+            wholesalePrice: item.wholesalePrice,
+            ourPrice: item.ourPrice,
+            manufactureDate: item.manufactureDate,
+            expiryDate: item.expiryDate,
+          });
         }
         for (const item of toAdd) {
           const backendItem = await purchaseService.addItem(grnId, {
@@ -619,7 +644,7 @@ const AddPurchasePage: React.FC = () => {
     };
 
     if (activeItems.length > 0) {
-      Modal.confirm({
+      modal.confirm({
         title: 'Reset Form',
         icon: <ExclamationCircleOutlined />,
         content: 'This will clear all items and purchase information. Are you sure?',

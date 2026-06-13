@@ -124,7 +124,7 @@ const PurchasesTable: React.FC<Props> = ({
             </div>
           </Tooltip>
           {record.status === 'draft' && (
-            <Tooltip title="Complete GRN">
+            <Tooltip title="Edit GRN">
               <div
                 className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-orange-50"
                 onClick={() => onEdit(record)}

@@ -260,23 +260,27 @@ const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose }) => {
               size="small"
               bordered
               scroll={{ x: 800 }}
-              expandable={{
-                expandedRowRender: (record: GRNItem) =>
-                  record.hasSerialNumbers && record.serialNumbers && record.serialNumbers.length > 0 ? (
-                    <div style={{ padding: '12px 24px', backgroundColor: '#fafafa', borderRadius: '4px' }}>
-                      <div style={{ marginBottom: 8, fontWeight: 600 }}>Serial Numbers</div>
-                      <Space wrap>
-                        {record.serialNumbers.map((sn) => (
-                          <Tag key={sn} color="blue" style={{ borderRadius: '4px' }}>
-                            {sn}
-                          </Tag>
-                        ))}
-                      </Space>
-                    </div>
-                  ) : null,
-                rowExpandable: (record: GRNItem) =>
-                  record.hasSerialNumbers && (record.serialNumbers?.length ?? 0) > 0,
-              }}
+              expandable={
+                grn.items.some((i) => i.hasSerialNumbers && (i.serialNumbers?.length ?? 0) > 0)
+                  ? {
+                      expandedRowRender: (record: GRNItem) =>
+                        record.hasSerialNumbers && record.serialNumbers && record.serialNumbers.length > 0 ? (
+                          <div style={{ padding: '12px 24px', backgroundColor: '#fafafa', borderRadius: '4px' }}>
+                            <div style={{ marginBottom: 8, fontWeight: 600 }}>Serial Numbers</div>
+                            <Space wrap>
+                              {record.serialNumbers.map((sn) => (
+                                <Tag key={sn} color="blue" style={{ borderRadius: '4px' }}>
+                                  {sn}
+                                </Tag>
+                              ))}
+                            </Space>
+                          </div>
+                        ) : null,
+                      rowExpandable: (record: GRNItem) =>
+                        record.hasSerialNumbers && (record.serialNumbers?.length ?? 0) > 0,
+                    }
+                  : undefined
+              }
             />
           </div>
 

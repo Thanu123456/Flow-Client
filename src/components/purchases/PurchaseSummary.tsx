@@ -163,6 +163,14 @@ const PurchaseSummary: React.FC<Props> = ({
               Credit
             </Radio.Button>
           </Radio.Group>
+          {paymentMethod === 'cheque' && !hasSupplier && (
+            <Alert
+              message="Cheque payment requires a supplier"
+              type="warning"
+              showIcon
+              style={{ marginTop: 8 }}
+            />
+          )}
           {paymentMethod === 'credit' && !hasSupplier && (
             <Alert
               message="Credit payment requires a supplier"
