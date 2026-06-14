@@ -85,6 +85,10 @@ const PurchasesPage: React.FC = () => {
     navigate(`/purchases/${record.id}/edit`);
   };
 
+  const handleReturn = (record: GRNListItem) => {
+    navigate(`/purchase-returns/new/${record.id}`);
+  };
+
   const buildExportParams = () => ({
     page: 1,
     perPage: 1000,
@@ -208,6 +212,7 @@ const PurchasesPage: React.FC = () => {
           loading={loading || loadingDetail}
           onView={handleView}
           onEdit={handleEdit}
+          onReturn={handleReturn}
           pagination={{
             page: pagination.page,
             perPage: pagination.perPage,

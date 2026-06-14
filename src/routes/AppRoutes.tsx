@@ -45,6 +45,8 @@ import EditProduct from "../pages/management/EditProduct";
 // Transaction Pages
 import Purchases from "../pages/transactions/Purchases";
 import AddPurchase from "../pages/transactions/AddPurchase";
+import PurchaseReturns from "../pages/transactions/PurchaseReturns";
+import AddPurchaseReturn from "../pages/transactions/AddPurchaseReturn";
 import Sales from "../pages/transactions/Sales";
 import SalesReturns from "../pages/transactions/SalesReturns";
 import ProcessRefund from "../pages/transactions/ProcessRefund";
@@ -183,6 +185,17 @@ const AppRoutes: React.FC = () => {
           <Route path="/purchases/add" element={<AddPurchase />} />
           <Route path="/purchases/:id/edit" element={<AddPurchase />} />
         </Route>
+
+        {/* Purchase Returns Routes */}
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.PURCHASES_RETURNS} />
+          }
+        >
+          <Route path="/purchase-returns" element={<PurchaseReturns />} />
+          <Route path="/purchase-returns/new/:grnId" element={<AddPurchaseReturn />} />
+        </Route>
+
         <Route path="/pos" element={<POS />} />
 
         {/* Hold Bills Route */}
