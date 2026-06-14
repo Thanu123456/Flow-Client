@@ -22,6 +22,7 @@ import {
   SafetyCertificateOutlined,
   RightOutlined,
   RollbackOutlined,
+  CreditCardOutlined,
 } from "@ant-design/icons";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -303,6 +304,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     if (p.startsWith("/pos")) return "pos";
     if (p.startsWith("/purchases")) return "purchases";
     if (p.startsWith("/suppliers")) return "suppliers";
+    if (p.startsWith("/credit-supplier")) return "credit-supplier";
     if (p.startsWith("/customers")) return "customers";
     if (p.startsWith("/users")) return "users";
     if (p.startsWith("/roles")) return "roles";
@@ -317,7 +319,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     const next = new Set<string>();
     if (["/brands", "/categories", "/subcategories", "/units", "/products", "/inventory", "/warehouses", "/variations", "/warranties"].some((s) => p.startsWith(s))) next.add("inventory");
     if (["/sales", "/pos", "/purchases", "/sales-returns"].some((s) => p.startsWith(s))) next.add("transactions");
-    if (["/customers", "/suppliers"].some((s) => p.startsWith(s))) next.add("contacts");
+    if (["/customers", "/suppliers", "/credit-supplier"].some((s) => p.startsWith(s))) next.add("contacts");
     if (["/users", "/roles"].some((s) => p.startsWith(s))) next.add("team");
     setExpandedKeys(next);
   }, [location.pathname]);
@@ -402,6 +404,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       contactItems.push({ key: "customers", label: "Customers", icon: <TeamOutlined />, path: "/customers" });
     if (isOwner || hasPermission(PERMISSIONS.SUPPLIERS_VIEW))
       contactItems.push({ key: "suppliers", label: "Suppliers", icon: <ShopOutlined />, path: "/suppliers" });
+    if (isOwner || hasPermission(PERMISSIONS.SUPPLIERS_CREDIT))
+      contactItems.push({ key: "credit-supplier", label: "Credit Supplier", icon: <CreditCardOutlined />, path: "/credit-supplier" });
     if (contactItems.length > 0) {
       groups.push({
         title: "People",

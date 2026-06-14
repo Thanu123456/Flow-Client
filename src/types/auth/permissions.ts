@@ -38,6 +38,7 @@ export const PERMISSIONS = {
   SUPPLIERS_ADD: 'suppliers.add',
   SUPPLIERS_EDIT: 'suppliers.edit',
   SUPPLIERS_DELETE: 'suppliers.delete',
+  SUPPLIERS_CREDIT: 'suppliers.credit',
 
   // Warranties
   WARRANTIES_VIEW: 'warranties.view',

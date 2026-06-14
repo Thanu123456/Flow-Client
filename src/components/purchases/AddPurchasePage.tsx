@@ -817,141 +817,142 @@ const AddPurchasePage: React.FC = () => {
 
           {/* Product details display */}
           {selectedProduct && (
-            <>
-              <Col xs={24}>
-                <Divider style={{ margin: '8px 0' }}>Product Details</Divider>
-              </Col>
-              <Col xs={12} md={4}>
-                <div style={{ textAlign: 'center', padding: '8px', backgroundColor: '#fafafa', borderRadius: 4 }}>
-                  <div style={{ fontSize: 12, color: '#666' }}>Category</div>
-                  <div style={{ fontWeight: 600 }}>{selectedProduct.categoryName || '-'}</div>
-                </div>
-              </Col>
-              <Col xs={12} md={4}>
-                <div style={{ textAlign: 'center', padding: '8px', backgroundColor: '#fafafa', borderRadius: 4 }}>
-                  <div style={{ fontSize: 12, color: '#666' }}>Current Stock</div>
-                  <div style={{ fontWeight: 600, color: (selectedVariation?.currentStock ?? selectedProduct.currentStock) <= 0 ? '#ff4d4f' : '#52c41a' }}>
-                    {selectedVariation ? selectedVariation.currentStock : selectedProduct.currentStock}
-                    {selectedProduct.unitShortName && ` ${selectedProduct.unitShortName}`}
-                  </div>
-                </div>
-              </Col>
-              <Col xs={24} md={4}>
-                <Form.Item label="Quantity *" style={{ marginBottom: 0 }}>
-                  <InputNumber
-                    min={0.0001}
-                    value={quantity}
-                    onChange={(v) => setQuantity(v ?? 1)}
-                    precision={4}
-                    style={{ width: '100%' }}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={4}>
-                <Form.Item label="Cost Price *" style={{ marginBottom: 0 }}>
-                  <InputNumber
-                    min={0}
-                    value={costPrice}
-                    onChange={(v) => setCostPrice(v ?? 0)}
-                    precision={2}
-                    prefix="Rs."
-                    style={{ width: '100%' }}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={4}>
-                <Form.Item label="Retail Price" style={{ marginBottom: 0 }}>
-                  <InputNumber
-                    min={0}
-                    value={retailPrice}
-                    onChange={(v) => setRetailPrice(v ?? 0)}
-                    precision={2}
-                    prefix="Rs."
-                    style={{ width: '100%' }}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={4}>
-                <Form.Item label="Wholesale Price" style={{ marginBottom: 0 }}>
-                  <InputNumber
-                    min={0}
-                    value={wholesalePrice}
-                    onChange={(v) => setWholesalePrice(v ?? 0)}
-                    precision={2}
-                    prefix="Rs."
-                    style={{ width: '100%' }}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={4}>
-                <Form.Item label="Our Price" style={{ marginBottom: 0 }}>
-                  <InputNumber
-                    min={0}
-                    value={ourPrice}
-                    onChange={(v) => setOurPrice(v ?? 0)}
-                    precision={2}
-                    prefix="Rs."
-                    style={{ width: '100%' }}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={4}>
-                <Form.Item label="Net Price (auto)" style={{ marginBottom: 0 }}>
-                  <div
-                    style={{
-                      padding: '4px 11px',
-                      border: '1px solid #d9d9d9',
-                      borderRadius: 6,
-                      backgroundColor: '#fafafa',
-                      fontFamily: 'monospace',
-                      fontWeight: 600,
-                    }}
-                  >
-                    Rs. {netPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </div>
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={4}>
-                <Form.Item label="Manufacture Date" style={{ marginBottom: 0 }}>
-                  <DatePicker
-                    style={{ width: '100%' }}
-                    value={manufactureDate ? dayjs(manufactureDate) : null}
-                    onChange={(_, str) => setManufactureDate(str as string)}
-                    format="YYYY-MM-DD"
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={4}>
-                <Form.Item label="Expiry Date" style={{ marginBottom: 0 }}>
-                  <DatePicker
-                    style={{ width: '100%' }}
-                    value={expiryDate ? dayjs(expiryDate) : null}
-                    onChange={(_, str) => setExpiryDate(str as string)}
-                    format="YYYY-MM-DD"
-                    disabledDate={(d) => d.isBefore(dayjs())}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={4}>
-                <Form.Item label="Serial Numbers" style={{ marginBottom: 0 }}>
-                  <Checkbox
-                    checked={hasSerialNumbers}
-                    onChange={(e) => setHasSerialNumbers(e.target.checked)}
-                  >
-                    Requires S/N
-                  </Checkbox>
-                  {hasSerialNumbers && pendingSerials.length > 0 && (
-                    <Tag color="green">{pendingSerials.length} entered</Tag>
-                  )}
-                </Form.Item>
-              </Col>
-              <Col xs={24} style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                <Button onClick={resetProductForm}>Reset</Button>
-                <Button type="primary" icon={<PlusOutlined />} onClick={handleAddItem}>
-                  Add to List
-                </Button>
-              </Col>
-            </>
+            <Col xs={24}>
+              <Divider style={{ margin: '8px 0' }}>Product Details</Divider>
+
+              <Form layout="vertical">
+              <Row gutter={[16, 20]}>
+
+                {/* ── Row 1: Category | Current Stock (2 wide columns) ── */}
+                <Col xs={24} sm={12}>
+                  <Form.Item label="Category" style={{ marginBottom: 0 }}>
+                    <Input
+                      readOnly
+                      value={selectedProduct.categoryName || '—'}
+                      style={{ backgroundColor: '#fafafa', cursor: 'default', fontWeight: 600 }}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Form.Item label="Current Stock" style={{ marginBottom: 0 }}>
+                    <Input
+                      readOnly
+                      value={`${selectedVariation ? selectedVariation.currentStock : selectedProduct.currentStock}${selectedProduct.unitShortName ? ' ' + selectedProduct.unitShortName : ''}`}
+                      style={{
+                        backgroundColor: '#fafafa', cursor: 'default', fontWeight: 700,
+                        color: (selectedVariation?.currentStock ?? selectedProduct.currentStock) <= 0 ? '#ff4d4f' : '#52c41a',
+                      }}
+                    />
+                  </Form.Item>
+                </Col>
+
+                {/* ── Row 2: Quantity | Cost Price | Net Price (3 columns) ── */}
+                <Col xs={12} sm={8}>
+                  <Form.Item label="Quantity *" style={{ marginBottom: 0 }}>
+                    <InputNumber
+                      min={0.0001} value={quantity}
+                      onChange={(v) => setQuantity(v ?? 1)}
+                      precision={4} style={{ width: '100%' }}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={12} sm={8}>
+                  <Form.Item label="Cost Price *" style={{ marginBottom: 0 }}>
+                    <InputNumber
+                      min={0} value={costPrice}
+                      onChange={(v) => setCostPrice(v ?? 0)}
+                      precision={2} prefix="Rs." style={{ width: '100%' }}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={12} sm={8}>
+                  <Form.Item label="Net Price (auto)" style={{ marginBottom: 0 }}>
+                    <Input
+                      readOnly prefix="Rs."
+                      value={netPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      style={{ backgroundColor: '#fafafa', fontWeight: 700, cursor: 'default', color: '#222' }}
+                    />
+                  </Form.Item>
+                </Col>
+
+                {/* ── Row 3: Retail Price | Wholesale Price | Our Price (3 columns) ── */}
+                <Col xs={12} sm={8}>
+                  <Form.Item label="Retail Price" style={{ marginBottom: 0 }}>
+                    <InputNumber
+                      min={0} value={retailPrice}
+                      onChange={(v) => setRetailPrice(v ?? 0)}
+                      precision={2} prefix="Rs." style={{ width: '100%' }}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={12} sm={8}>
+                  <Form.Item label="Wholesale Price" style={{ marginBottom: 0 }}>
+                    <InputNumber
+                      min={0} value={wholesalePrice}
+                      onChange={(v) => setWholesalePrice(v ?? 0)}
+                      precision={2} prefix="Rs." style={{ width: '100%' }}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={12} sm={8}>
+                  <Form.Item label="Our Price" style={{ marginBottom: 0 }}>
+                    <InputNumber
+                      min={0} value={ourPrice}
+                      onChange={(v) => setOurPrice(v ?? 0)}
+                      precision={2} prefix="Rs." style={{ width: '100%' }}
+                    />
+                  </Form.Item>
+                </Col>
+
+                {/* ── Row 4: Manufacture Date | Expiry Date | Serial Numbers (3 columns) ── */}
+                <Col xs={12} sm={8}>
+                  <Form.Item label="Manufacture Date" style={{ marginBottom: 0 }}>
+                    <DatePicker
+                      style={{ width: '100%' }}
+                      value={manufactureDate ? dayjs(manufactureDate) : null}
+                      onChange={(_, str) => setManufactureDate(str as string)}
+                      format="YYYY-MM-DD"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={12} sm={8}>
+                  <Form.Item label="Expiry Date" style={{ marginBottom: 0 }}>
+                    <DatePicker
+                      style={{ width: '100%' }}
+                      value={expiryDate ? dayjs(expiryDate) : null}
+                      onChange={(_, str) => setExpiryDate(str as string)}
+                      format="YYYY-MM-DD"
+                      disabledDate={(d) => d.isBefore(dayjs())}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={12} sm={8}>
+                  <Form.Item label="Serial Numbers" style={{ marginBottom: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 32 }}>
+                      <Checkbox
+                        checked={hasSerialNumbers}
+                        onChange={(e) => setHasSerialNumbers(e.target.checked)}
+                      >
+                        Requires S/N
+                      </Checkbox>
+                      {hasSerialNumbers && pendingSerials.length > 0 && (
+                        <Tag color="green">{pendingSerials.length} entered</Tag>
+                      )}
+                    </div>
+                  </Form.Item>
+                </Col>
+
+                {/* ── Actions ── */}
+                <Col xs={24} style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                  <Button onClick={resetProductForm}>Reset</Button>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={handleAddItem}>
+                    Add to List
+                  </Button>
+                </Col>
+
+              </Row>
+              </Form>
+            </Col>
           )}
         </Row>
       </Card>
