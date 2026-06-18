@@ -36,6 +36,7 @@ import Customers from "../pages/management/Customers";
 import Suppliers from "../pages/management/Suppliers";
 import CreditSupplier from "../pages/management/CreditSupplier";
 import SupplierPayment from "../pages/management/SupplierPayment";
+import CreditCustomer from "../pages/management/CreditCustomer";
 import Warranties from "../pages/management/Warranties";
 import Products from "../pages/management/Products";
 import Stock from "../pages/management/Stock";
@@ -158,6 +159,13 @@ const AppRoutes: React.FC = () => {
         >
           <Route path="/credit-supplier" element={<CreditSupplier />} />
           <Route path="/credit-supplier/payment" element={<SupplierPayment />} />
+        </Route>
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.CUSTOMERS_CREDIT} />
+          }
+        >
+          <Route path="/credit-customer" element={<CreditCustomer />} />
         </Route>
 
         {/* Warranty Management Routes */}

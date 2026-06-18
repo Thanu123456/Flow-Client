@@ -409,6 +409,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       contactItems.push({ key: "suppliers", label: "Suppliers", icon: <ShopOutlined />, path: "/suppliers" });
     if (isOwner || hasPermission(PERMISSIONS.SUPPLIERS_CREDIT))
       contactItems.push({ key: "credit-supplier", label: "Credit Supplier", icon: <CreditCardOutlined />, path: "/credit-supplier" });
+    if (isOwner || hasPermission(PERMISSIONS.CUSTOMERS_CREDIT))
+      contactItems.push({ key: "credit-customer", label: "Credit Customer", icon: <CreditCardOutlined />, path: "/credit-customer" });
     if (contactItems.length > 0) {
       groups.push({
         title: "People",

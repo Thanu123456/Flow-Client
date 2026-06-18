@@ -32,6 +32,7 @@ export const PERMISSIONS = {
   CUSTOMERS_ADD: 'customers.add',
   CUSTOMERS_EDIT: 'customers.edit',
   CUSTOMERS_DELETE: 'customers.delete',
+  CUSTOMERS_CREDIT: 'customers.credit',
 
   // Suppliers
   SUPPLIERS_VIEW: 'suppliers.view',
