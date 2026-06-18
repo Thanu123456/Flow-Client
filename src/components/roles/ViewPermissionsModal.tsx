@@ -1,5 +1,6 @@
-import React from 'react';
-import { Modal, Tag, Typography, Card, Empty, Space } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Modal, Tag, Typography, Card, Empty, Space, Spin } from 'antd';
+import { roleService } from '../../services/management/roleService';
 import type { Role } from '../../types/entities/role.types';
 
 const { Text } = Typography;
@@ -15,6 +16,24 @@ const ViewPermissionsModal: React.FC<ViewPermissionsModalProps> = ({
   role,
   onClose,
 }) => {
+  const [freshRole, setFreshRole] = useState<Role | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (visible && role) {
+      setLoading(true);
+      roleService
+        .getRoleById(role.id)
+        .then((data) => setFreshRole(data))
+        .catch(() => setFreshRole(role))
+        .finally(() => setLoading(false));
+    } else {
+      setFreshRole(null);
+    }
+  }, [visible, role]);
+
+  const displayRole = freshRole ?? role;
+
   const getModuleIcon = (moduleName: string) => {
     const icons: Record<string, string> = {
       dashboard: '📊',
@@ -31,15 +50,16 @@ const ViewPermissionsModal: React.FC<ViewPermissionsModalProps> = ({
     return icons[moduleName.toLowerCase()] || '📋';
   };
 
-  // Group permissions by module
-  const permissionsByModule = role?.permissions.reduce((acc, permission) => {
-    const module = permission.module;
-    if (!acc[module]) {
-      acc[module] = [];
-    }
-    acc[module].push(permission);
-    return acc;
-  }, {} as Record<string, typeof role.permissions>) || {};
+  const permissionsByModule =
+    displayRole?.permissions.reduce(
+      (acc, permission) => {
+        const module = permission.module;
+        if (!acc[module]) acc[module] = [];
+        acc[module].push(permission);
+        return acc;
+      },
+      {} as Record<string, typeof displayRole.permissions>
+    ) || {};
 
   const moduleNames = Object.keys(permissionsByModule).sort();
 
@@ -48,8 +68,8 @@ const ViewPermissionsModal: React.FC<ViewPermissionsModalProps> = ({
       title={
         <Space>
           <span>Permissions for</span>
-          <Text strong>{role?.name}</Text>
-          {role?.isSystem && <Tag color="blue">System Role</Tag>}
+          <Text strong>{displayRole?.name}</Text>
+          {displayRole?.isSystem && <Tag color="blue">System Role</Tag>}
         </Space>
       }
       open={visible}
@@ -57,7 +77,11 @@ const ViewPermissionsModal: React.FC<ViewPermissionsModalProps> = ({
       footer={null}
       width={600}
     >
-      {!role?.permissions.length ? (
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 40 }}>
+          <Spin />
+        </div>
+      ) : !displayRole?.permissions.length ? (
         <Empty description="No permissions assigned to this role" />
       ) : (
         <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
@@ -90,7 +114,8 @@ const ViewPermissionsModal: React.FC<ViewPermissionsModalProps> = ({
 
       <div style={{ marginTop: 16, textAlign: 'center' }}>
         <Text type="secondary">
-          Total: {role?.permissions.length || 0} permissions across {moduleNames.length} modules
+          Total: {displayRole?.permissions.length || 0} permissions across{' '}
+          {moduleNames.length} modules
         </Text>
       </div>
     </Modal>

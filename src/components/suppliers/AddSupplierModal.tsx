@@ -11,6 +11,7 @@ import {
   App,
 } from 'antd';
 import { useSupplierStore } from '../../store/management/supplierStore';
+import ImageUpload from '../common/Upload/ImageUpload';
 import type { SupplierFormData } from '../../types/entities/supplier.types';
 
 const { TextArea } = Input;
@@ -179,11 +180,14 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
         </Row>
 
         <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item name="imageUrl" label="Image URL">
-              <Input placeholder="Enter image URL (optional)" />
+          <Col span={24}>
+            <Form.Item name="imageUrl" label="Supplier Image">
+              <ImageUpload placeholder="Click or drag to upload supplier image" />
             </Form.Item>
           </Col>
+        </Row>
+
+        <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="isActive" label="Status" valuePropName="checked">
               <Switch />

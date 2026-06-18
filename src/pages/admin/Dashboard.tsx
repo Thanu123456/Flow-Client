@@ -29,7 +29,6 @@ import { useWarehouseStore } from '../../store/management/warehouseStore';
 import { useWarrantyStore } from '../../store/management/warrantyStore';
 import { useVariationStore } from '../../store/management/variationStore';
 import { useDashboardStore } from '../../store/reports/dashboardStore';
-import HeaderWithSearch from '../../components/common/Layout/HeaderWithSearch';
 import {
     SalesPurchasesChart,
     SummaryCards,
@@ -152,7 +151,6 @@ const Dashboard: React.FC = () => {
 
     return (
         <div style={{ background: token.colorBgLayout, minHeight: '100vh' }}>
-            <HeaderWithSearch />
             <div style={{ padding: '12px 24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 12, position: 'relative' }}>
                     {charts?.stockAlerts && charts.stockAlerts.length > 0 && showAlert && (
