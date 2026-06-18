@@ -36,6 +36,7 @@ import Customers from "../pages/management/Customers";
 import Suppliers from "../pages/management/Suppliers";
 import CreditSupplier from "../pages/management/CreditSupplier";
 import SupplierPayment from "../pages/management/SupplierPayment";
+import CreditCustomer from "../pages/management/CreditCustomer";
 import Warranties from "../pages/management/Warranties";
 import Products from "../pages/management/Products";
 import Stock from "../pages/management/Stock";
@@ -45,6 +46,8 @@ import EditProduct from "../pages/management/EditProduct";
 // Transaction Pages
 import Purchases from "../pages/transactions/Purchases";
 import AddPurchase from "../pages/transactions/AddPurchase";
+import PurchaseReturns from "../pages/transactions/PurchaseReturns";
+import AddPurchaseReturn from "../pages/transactions/AddPurchaseReturn";
 import Sales from "../pages/transactions/Sales";
 import SalesReturns from "../pages/transactions/SalesReturns";
 import ProcessRefund from "../pages/transactions/ProcessRefund";
@@ -157,6 +160,13 @@ const AppRoutes: React.FC = () => {
           <Route path="/credit-supplier" element={<CreditSupplier />} />
           <Route path="/credit-supplier/payment" element={<SupplierPayment />} />
         </Route>
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.CUSTOMERS_CREDIT} />
+          }
+        >
+          <Route path="/credit-customer" element={<CreditCustomer />} />
+        </Route>
 
         {/* Warranty Management Routes */}
         <Route
@@ -183,6 +193,17 @@ const AppRoutes: React.FC = () => {
           <Route path="/purchases/add" element={<AddPurchase />} />
           <Route path="/purchases/:id/edit" element={<AddPurchase />} />
         </Route>
+
+        {/* Purchase Returns Routes */}
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.PURCHASES_RETURNS} />
+          }
+        >
+          <Route path="/purchase-returns" element={<PurchaseReturns />} />
+          <Route path="/purchase-returns/new/:grnId" element={<AddPurchaseReturn />} />
+        </Route>
+
         <Route path="/pos" element={<POS />} />
 
         {/* Hold Bills Route */}

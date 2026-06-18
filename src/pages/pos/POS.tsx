@@ -194,6 +194,17 @@ const POS: React.FC = () => {
         }
     }, [isPaymentModalOpen, paymentMethod, priceMode, isRefundMode, generateBillNumber]);
 
+    // When switching to Credit inside the modal, reset paidAmount to 0 so the full amount is recorded as credit.
+    // Switching away from Credit restores the full payable amount.
+    useEffect(() => {
+        if (!isPaymentModalOpen) return;
+        if (paymentMethod === 'Credit') {
+            setPaidAmount(0);
+        } else {
+            setPaidAmount(totalPayable);
+        }
+    }, [paymentMethod, isPaymentModalOpen]);
+
 
     // ─── Feature #5 – Calculate total weight ─────────────────────────
     useEffect(() => {
@@ -801,7 +812,7 @@ const POS: React.FC = () => {
                                 <Button style={{ backgroundColor: '#ff5252', color: 'white', border: 'none', height: '100%' }} className="hover:opacity-90 font-bold flex-1 w-full rounded-xl shadow-sm text-base tracking-wide" onClick={clearCart}>RESET (DEL)</Button>
                             </div>
                             <Button
-                                onClick={() => { if (cart.length > 0) { setIsPaymentModalOpen(true); setPaidAmount(totalPayable); } }}
+                                onClick={() => { if (cart.length > 0) { setIsPaymentModalOpen(true); setPaidAmount(paymentMethod === 'Credit' ? 0 : totalPayable); } }}
                                 style={{ height: '100%', fontSize: '32px', ...(cart.length > 0 ? { backgroundColor: '#32ff7e', color: '#006266', border: 'none' } : { border: 'none' }) }}
                                 className={`w-1/2 font-black border-none shadow-md rounded-xl tracking-wide transition-all flex items-center justify-center ${cart.length > 0 ? 'hover:opacity-90 transform hover:-translate-y-0.5' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
                             >

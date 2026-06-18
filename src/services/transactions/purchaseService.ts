@@ -50,6 +50,7 @@ const transformGRNItem = (item: any): GRNItem => ({
   hasSerialNumbers: item.has_serial_numbers ?? false,
   serialNumbers: item.serial_numbers || undefined,
   currentStock: toNum(item.current_stock),
+  returnedQty: toNum(item.returned_qty),
 });
 
 const transformGRN = (g: any): GRN => ({

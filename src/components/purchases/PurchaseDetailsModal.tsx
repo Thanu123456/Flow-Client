@@ -1,9 +1,10 @@
 import React, { useRef } from 'react';
 import { Modal, Descriptions, Tag, Table, Divider, Button, Space, Typography, Card, Row, Col, Tooltip } from 'antd';
-import { PrinterOutlined, FileTextOutlined, ShopOutlined, UserOutlined, CalendarOutlined, BankOutlined } from '@ant-design/icons';
+import { PrinterOutlined, FileTextOutlined, ShopOutlined, UserOutlined, CalendarOutlined, BankOutlined, RollbackOutlined } from '@ant-design/icons';
 import type { GRN, GRNItem, GRNStatus, PaymentMethod } from '../../types/entities/purchase.types';
 import dayjs from 'dayjs';
 import PrintGRN from './PrintGRN';
+import { useNavigate } from 'react-router-dom';
 
 const { Text, Title } = Typography;
 
@@ -30,8 +31,13 @@ const fmt = (n: number) =>
 
 const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose }) => {
   const printRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   if (!grn) return null;
+
+  const isFullyReturned =
+    grn.items.length > 0 &&
+    grn.items.every((item) => item.returnedQty >= item.quantity);
 
   const handlePrint = () => {
     if (!printRef.current) return;
@@ -208,6 +214,15 @@ const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose }) => {
           <div key="footer-content" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
             <Text type="secondary" style={{ fontSize: '12px' }}>Generated on {dayjs(grn.createdAt).format('DD MMM YYYY HH:mm')}</Text>
             <Space>
+              {grn.status === 'completed' && grn.supplierId && !isFullyReturned && (
+                <Button
+                  icon={<RollbackOutlined />}
+                  danger
+                  onClick={() => { onClose(); navigate(`/purchase-returns/new/${grn.id}`); }}
+                >
+                  Create Return
+                </Button>
+              )}
               <Button icon={<PrinterOutlined />} onClick={handlePrint}>
                 Print GRN
               </Button>

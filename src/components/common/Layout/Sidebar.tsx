@@ -302,6 +302,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     if (p.startsWith("/sales-returns")) return "sales-returns";
     if (p.startsWith("/sales")) return "sales";
     if (p.startsWith("/pos")) return "pos";
+    if (p.startsWith("/purchase-returns")) return "purchase-returns";
     if (p.startsWith("/purchases")) return "purchases";
     if (p.startsWith("/suppliers")) return "suppliers";
     if (p.startsWith("/credit-supplier")) return "credit-supplier";
@@ -318,7 +319,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     const p = location.pathname;
     const next = new Set<string>();
     if (["/brands", "/categories", "/subcategories", "/units", "/products", "/inventory", "/warehouses", "/variations", "/warranties"].some((s) => p.startsWith(s))) next.add("inventory");
-    if (["/sales", "/pos", "/purchases", "/sales-returns"].some((s) => p.startsWith(s))) next.add("transactions");
+    if (["/sales", "/pos", "/purchases", "/sales-returns", "/purchase-returns"].some((s) => p.startsWith(s))) next.add("transactions");
     if (["/customers", "/suppliers", "/credit-supplier"].some((s) => p.startsWith(s))) next.add("contacts");
     if (["/users", "/roles"].some((s) => p.startsWith(s))) next.add("team");
     setExpandedKeys(next);
@@ -391,6 +392,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       txItems.push({ key: "sales-returns", label: "Sale Returns", icon: <RollbackOutlined />, path: "/sales-returns" });
     if (isOwner || hasPermission(PERMISSIONS.PURCHASES_VIEW))
       txItems.push({ key: "purchases", label: "GRN", icon: <FileTextOutlined />, path: "/purchases" });
+    if (isOwner || hasPermission(PERMISSIONS.PURCHASES_RETURNS))
+      txItems.push({ key: "purchase-returns", label: "Purchase Returns", icon: <RollbackOutlined />, path: "/purchase-returns" });
     if (txItems.length > 0) {
       groups.push({
         title: "Transactions",
@@ -406,6 +409,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       contactItems.push({ key: "suppliers", label: "Suppliers", icon: <ShopOutlined />, path: "/suppliers" });
     if (isOwner || hasPermission(PERMISSIONS.SUPPLIERS_CREDIT))
       contactItems.push({ key: "credit-supplier", label: "Credit Supplier", icon: <CreditCardOutlined />, path: "/credit-supplier" });
+    if (isOwner || hasPermission(PERMISSIONS.CUSTOMERS_CREDIT))
+      contactItems.push({ key: "credit-customer", label: "Credit Customer", icon: <CreditCardOutlined />, path: "/credit-customer" });
     if (contactItems.length > 0) {
       groups.push({
         title: "People",

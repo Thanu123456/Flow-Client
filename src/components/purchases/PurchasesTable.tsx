@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tag, Tooltip, Space } from 'antd';
-import { EyeOutlined, EditOutlined } from '@ant-design/icons';
+import { EyeOutlined, EditOutlined, RollbackOutlined } from '@ant-design/icons';
 import { CommonTable } from '../common/Table';
 import type { GRNListItem, GRNStatus, PaymentMethod } from '../../types/entities/purchase.types';
 import dayjs from 'dayjs';
@@ -10,6 +10,7 @@ interface Props {
   loading: boolean;
   onView: (grn: GRNListItem) => void;
   onEdit: (grn: GRNListItem) => void;
+  onReturn: (grn: GRNListItem) => void;
   pagination: {
     page: number;
     perPage: number;
@@ -36,6 +37,7 @@ const PurchasesTable: React.FC<Props> = ({
   loading,
   onView,
   onEdit,
+  onReturn,
   pagination,
   onPageChange,
 }) => {
@@ -130,6 +132,16 @@ const PurchasesTable: React.FC<Props> = ({
                 onClick={() => onEdit(record)}
               >
                 <EditOutlined style={{ color: '#fa8c16' }} />
+              </div>
+            </Tooltip>
+          )}
+          {record.status === 'completed' && record.supplierName && (
+            <Tooltip title="Create Return">
+              <div
+                className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-red-50"
+                onClick={() => onReturn(record)}
+              >
+                <RollbackOutlined style={{ color: '#f5222d' }} />
               </div>
             </Tooltip>
           )}
