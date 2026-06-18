@@ -35,6 +35,10 @@ const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose }) => {
 
   if (!grn) return null;
 
+  const isFullyReturned =
+    grn.items.length > 0 &&
+    grn.items.every((item) => item.returnedQty >= item.quantity);
+
   const handlePrint = () => {
     if (!printRef.current) return;
     const content = printRef.current.innerHTML;
@@ -210,7 +214,7 @@ const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose }) => {
           <div key="footer-content" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
             <Text type="secondary" style={{ fontSize: '12px' }}>Generated on {dayjs(grn.createdAt).format('DD MMM YYYY HH:mm')}</Text>
             <Space>
-              {grn.status === 'completed' && grn.supplierId && (
+              {grn.status === 'completed' && grn.supplierId && !isFullyReturned && (
                 <Button
                   icon={<RollbackOutlined />}
                   danger

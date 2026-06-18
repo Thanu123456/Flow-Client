@@ -31,6 +31,7 @@ export interface GRNItem {
   hasSerialNumbers: boolean;
   serialNumbers?: string[];
   currentStock: number;
+  returnedQty: number;
 }
 
 export interface GRN {

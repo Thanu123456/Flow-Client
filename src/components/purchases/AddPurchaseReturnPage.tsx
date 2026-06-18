@@ -48,11 +48,12 @@ const AddPurchaseReturnPage: React.FC = () => {
         setGrn(data);
         const initialLines: Record<string, ReturnLine> = {};
         data.items.forEach((item) => {
+          const remaining = item.quantity - item.returnedQty;
           initialLines[item.id] = {
             grnItemId: item.id,
             selected: false,
-            returnQty: 1,
-            maxQty: item.quantity,
+            returnQty: Math.min(1, remaining),
+            maxQty: remaining,
             reason: '',
           };
         });
@@ -117,12 +118,16 @@ const AddPurchaseReturnPage: React.FC = () => {
       title: '',
       key: 'select',
       width: 40,
-      render: (_: any, record: GRNItem) => (
-        <Checkbox
-          checked={lines[record.id]?.selected}
-          onChange={(e) => toggleSelect(record.id, e.target.checked)}
-        />
-      ),
+      render: (_: any, record: GRNItem) => {
+        const fullyReturned = lines[record.id]?.maxQty <= 0;
+        return (
+          <Checkbox
+            checked={lines[record.id]?.selected}
+            disabled={fullyReturned}
+            onChange={(e) => toggleSelect(record.id, e.target.checked)}
+          />
+        );
+      },
     },
     {
       title: 'Product',
@@ -148,7 +153,14 @@ const AddPurchaseReturnPage: React.FC = () => {
       align: 'right' as const,
       width: 110,
       render: (v: number, record: GRNItem) => (
-        <Text>{v} {record.unitShortName || ''}</Text>
+        <div style={{ textAlign: 'right' }}>
+          <Text>{v} {record.unitShortName || ''}</Text>
+          {record.returnedQty > 0 && (
+            <div>
+              <Text type="danger" style={{ fontSize: 11 }}>Returned: {record.returnedQty}</Text>
+            </div>
+          )}
+        </div>
       ),
     },
     {
@@ -167,17 +179,23 @@ const AddPurchaseReturnPage: React.FC = () => {
       title: 'Return Qty',
       key: 'returnQty',
       width: 120,
-      render: (_: any, record: GRNItem) => (
-        <InputNumber
-          min={1}
-          max={record.quantity}
-          value={lines[record.id]?.returnQty ?? 1}
-          disabled={!lines[record.id]?.selected}
-          onChange={(v) => setQty(record.id, v ?? 1)}
-          style={{ width: 90 }}
-          size="small"
-        />
-      ),
+      render: (_: any, record: GRNItem) => {
+        const line = lines[record.id];
+        if (line?.maxQty <= 0) {
+          return <Tag color="default" style={{ fontSize: 11 }}>Fully Returned</Tag>;
+        }
+        return (
+          <InputNumber
+            min={1}
+            max={line?.maxQty ?? record.quantity}
+            value={line?.returnQty ?? 1}
+            disabled={!line?.selected}
+            onChange={(v) => setQty(record.id, v ?? 1)}
+            style={{ width: 90 }}
+            size="small"
+          />
+        );
+      },
     },
     {
       title: 'Reason',
@@ -290,9 +308,10 @@ const AddPurchaseReturnPage: React.FC = () => {
               pagination={false}
               size="small"
               scroll={{ x: 800 }}
-              rowClassName={(record: GRNItem) =>
-                lines[record.id]?.selected ? 'bg-red-50' : ''
-              }
+              rowClassName={(record: GRNItem) => {
+                if (lines[record.id]?.maxQty <= 0) return 'ant-table-row-disabled';
+                return lines[record.id]?.selected ? 'bg-red-50' : '';
+              }}
             />
           </Card>
 
