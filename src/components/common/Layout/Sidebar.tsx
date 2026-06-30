@@ -23,6 +23,7 @@ import {
   RightOutlined,
   RollbackOutlined,
   CreditCardOutlined,
+  SwapOutlined,
 } from "@ant-design/icons";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -295,6 +296,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     if (p.startsWith("/subcategories")) return "subcategories";
     if (p.startsWith("/units")) return "units";
     if (p.startsWith("/products")) return "products";
+    if (p.startsWith("/adjustments")) return "adjustments";
     if (p.startsWith("/inventory")) return "inventory-stock";
     if (p.startsWith("/warehouses")) return "warehouses";
     if (p.startsWith("/variations")) return "variations";
@@ -318,7 +320,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
   useMemo(() => {
     const p = location.pathname;
     const next = new Set<string>();
-    if (["/brands", "/categories", "/subcategories", "/units", "/products", "/inventory", "/warehouses", "/variations", "/warranties"].some((s) => p.startsWith(s))) next.add("inventory");
+    if (["/brands", "/categories", "/subcategories", "/units", "/products", "/inventory", "/adjustments", "/warehouses", "/variations", "/warranties"].some((s) => p.startsWith(s))) next.add("inventory");
     if (["/sales", "/pos", "/purchases", "/sales-returns", "/purchase-returns"].some((s) => p.startsWith(s))) next.add("transactions");
     if (["/customers", "/suppliers", "/credit-supplier"].some((s) => p.startsWith(s))) next.add("contacts");
     if (["/users", "/roles"].some((s) => p.startsWith(s))) next.add("team");
@@ -359,6 +361,11 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
         { key: "products", label: "Products", icon: <InboxOutlined />, path: "/products" },
         { key: "inventory-stock", label: "Stock", icon: <AppstoreOutlined />, path: "/inventory" },
         { key: "variations", label: "Variations", icon: <AppstoreOutlined />, path: "/variations" }
+      );
+    }
+    if (isOwner || hasPermission(PERMISSIONS.INVENTORY_ADJUST)) {
+      invChildren.push(
+        { key: "adjustments", label: "Adjustments", icon: <SwapOutlined />, path: "/adjustments" }
       );
     }
     if (isOwner || hasPermission(PERMISSIONS.SETTINGS_WAREHOUSES)) {

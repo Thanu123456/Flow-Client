@@ -42,6 +42,8 @@ import Products from "../pages/management/Products";
 import Stock from "../pages/management/Stock";
 import AddProduct from "../pages/management/AddProduct";
 import EditProduct from "../pages/management/EditProduct";
+import StockAdjustment from "../pages/management/StockAdjustment";
+import AddStockAdjustment from "../pages/management/AddStockAdjustment";
 
 // Transaction Pages
 import Purchases from "../pages/transactions/Purchases";
@@ -118,6 +120,16 @@ const AppRoutes: React.FC = () => {
         <Route path="/units" element={<Units />} />
         <Route path="/warehouses" element={<Warehouses />} />
         <Route path="/variations" element={<Variations />} />
+
+        {/* Stock Adjustment Routes */}
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.INVENTORY_ADJUST} />
+          }
+        >
+          <Route path="/adjustments" element={<StockAdjustment />} />
+          <Route path="/adjustments/add" element={<AddStockAdjustment />} />
+        </Route>
 
         {/* Management Routes with Permission Guards */}
         <Route
