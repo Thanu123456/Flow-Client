@@ -45,6 +45,7 @@ interface AuthContextType extends AuthState {
   refreshEmailVerificationStatus: () => Promise<void>;
   logout: () => Promise<void>;
   endShift: () => Promise<KioskEndShiftResponse | void>;
+  switchToKioskMode: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -136,7 +137,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
-    localStorage.removeItem('tenant');
+    // Deliberately does NOT clear `tenant` — same reasoning as api.ts's
+    // clearAuthData(): it's which shop this device is branded to, not the
+    // current user's session. Wiping it here broke kiosk re-login after
+    // "End Shift" (endShift() -> logout() -> clearAuthState()), since the
+    // next kiosk login on this device would have no tenant_id to send.
     localStorage.removeItem('isKiosk');
     localStorage.removeItem('role');
     localStorage.removeItem('mustChangePassword');
@@ -296,6 +301,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Hands the device off to kiosk mode: revokes this owner/admin session
+  // server-side (same as logout) but — unlike logout — deliberately keeps
+  // `tenant` in localStorage, since /kiosk/login needs it to know which
+  // shop's schema to look the employee up in.
+  const switchToKioskMode = async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error('Switch to kiosk mode error:', error);
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      localStorage.removeItem('role');
+      localStorage.removeItem('mustChangePassword');
+      localStorage.setItem('isKiosk', 'false');
+
+      setState(prev => ({
+        ...prev,
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        role: null,
+        isKiosk: false,
+        mustChangePassword: false,
+      }));
+
+      window.location.href = '/kiosk/login';
+    }
+  };
+
   // Helper to handle state updates after login
   const handleLoginSuccess = (response: LoginResponse) => {
     // Check Tenant Status if present (Owner/Admin)
@@ -362,7 +398,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const handleKioskLoginSuccess = (response: KioskLoginResponse) => {
-      const role = response.user.role || 'employee';
+      // `role` here mirrors the user_type convention used by owner/employee
+      // logins ('owner' | 'employee') so isOwner/isEmployee checks stay
+      // consistent across both login flows. The employee's actual role NAME
+      // (e.g. "Cashier") lives on `user.role` for display purposes only.
+      const role = 'employee';
 
       localStorage.setItem('token', response.access_token);
       localStorage.setItem('user', JSON.stringify(response.user));
@@ -394,7 +434,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       cancelMfaLogin,
       refreshEmailVerificationStatus,
       logout,
-      endShift
+      endShift,
+      switchToKioskMode
     }}>
       {children}
     </AuthContext.Provider>

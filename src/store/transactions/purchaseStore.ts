@@ -68,12 +68,6 @@ export const usePurchaseStore = create<PurchaseState>()(
         const tryFetch = async (attemptsLeft: number): Promise<void> => {
           try {
             const response = await purchaseService.listGRNs(params);
-            // Retry if backend returned 0 items on first load — cold-start can
-            // return an empty result with HTTP 200 before the DB is fully warm.
-            if (!hasExisting && response.data.length === 0 && attemptsLeft > 0) {
-              await new Promise(r => setTimeout(r, 3000));
-              return tryFetch(attemptsLeft - 1);
-            }
             set({
               grns: response.data,
               pagination: {

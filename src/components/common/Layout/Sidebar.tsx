@@ -25,7 +25,7 @@ import {
   CreditCardOutlined,
   SwapOutlined,
 } from "@ant-design/icons";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
 import { usePermissions } from "../../../hooks/auth/usePermissions";
 import { PERMISSIONS } from "../../../types/auth/permissions";
@@ -279,8 +279,7 @@ const CollapsedItem: React.FC<CollapsedItemProps> = ({
 ───────────────────────────────────────────────────────── */
 const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, endShift, isKiosk } = useAuth();
   const { hasPermission, isOwner } = usePermissions();
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   const [activeFlyout, setActiveFlyout] = useState<string | null>(null);
@@ -337,14 +336,19 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
 
   const handleLogout = () => {
     Modal.confirm({
-      title: "Confirm Logout",
-      content: "Are you sure you want to log out of the system?",
-      okText: "Logout",
+      title: isKiosk ? "End Shift" : "Confirm Logout",
+      content: isKiosk
+        ? "Are you sure you want to end your shift and sign out?"
+        : "Are you sure you want to log out of the system?",
+      okText: isKiosk ? "End Shift" : "Logout",
       okType: "danger",
       cancelText: "Stay",
       onOk: async () => {
-        await logout();
-        navigate("/login");
+        if (isKiosk) {
+          await endShift();
+        } else {
+          await logout();
+        }
       },
       centered: true,
     });

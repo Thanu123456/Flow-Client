@@ -14,6 +14,9 @@ import {
 } from "antd";
 import type { MenuProps } from "antd";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../../contexts/AuthContext";
+import { usePermissions } from "../../../hooks/auth/usePermissions";
+import { PERMISSIONS } from "../../../types/auth/permissions";
 import {
   MenuOutlined,
   SearchOutlined,
@@ -39,6 +42,7 @@ import {
   TagsOutlined,
   HomeOutlined,
   PlusSquareOutlined,
+  SwapOutlined,
 } from "@ant-design/icons";
 
 // Quick Action Modals
@@ -76,6 +80,8 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({
   setSidebarOpen,
 }) => {
   const navigate = useNavigate();
+  const { user, isKiosk, logout, endShift, switchToKioskMode } = useAuth();
+  const { isOwner, hasPermission } = usePermissions();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -277,12 +283,15 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({
   const [unreadMessages] = useState(1);
   const [unreadNotifications] = useState(3);
 
-  const user = {
-    name: "John Doe",
-    email: "john@example.com",
-    avatar: null,
-    role: "Admin",
-  };
+  // `user` is UserInfo (owner/employee) or KioskUserInfo (kiosk) depending on
+  // login flow — only full_name and profile_image_url are common to both.
+  const displayName = (user as any)?.full_name || "User";
+  const displayEmail = (user as any)?.email as string | undefined;
+  const displayAvatar = (user as any)?.profile_image_url as string | undefined;
+  const displayRole = isOwner
+    ? "Owner"
+    : (user as any)?.role_name || (user as any)?.role || "Employee";
+  const avatarInitial = displayName.charAt(0).toUpperCase();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -338,14 +347,16 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({
     }
   };
 
+  const canManageSettings = isOwner || hasPermission(PERMISSIONS.SETTINGS_SYSTEM);
+
   const userMenuItems: MenuProps["items"] = [
     {
       key: "profile-info",
       label: (
         <div className="px-3 py-2">
-          <div className="font-semibold text-gray-800">{user.name}</div>
-          <div className="text-xs text-gray-500">{user.email}</div>
-          <div className="text-xs text-gray-400 mt-1">{user.role}</div>
+          <div className="font-semibold text-gray-800">{displayName}</div>
+          {displayEmail && <div className="text-xs text-gray-500">{displayEmail}</div>}
+          <div className="text-xs text-gray-400 mt-1">{displayRole}</div>
         </div>
       ),
       disabled: true,
@@ -353,11 +364,42 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({
     { type: "divider" },
     { key: "dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
     { key: "profile", icon: <UserOutlined />, label: "My Profile" },
-    { key: "settings", icon: <SettingOutlined />, label: "Settings" },
-    { key: "change-password", icon: <KeyOutlined />, label: "Change Password" },
-    { type: "divider" },
-    { key: "logout", icon: <LogoutOutlined />, label: "Logout", danger: true },
+    // Kiosk sessions authenticate with a PIN, not a password — there's no
+    // password to change, and system Settings is an owner/admin concern.
+    ...(canManageSettings ? [{ key: "settings", icon: <SettingOutlined />, label: "Settings" }] : []),
+    ...(!isKiosk ? [{ key: "change-password", icon: <KeyOutlined />, label: "Change Password" }] : []),
+    { type: "divider" as const },
+    // "Switch to Kiosk Mode" hands the device off to an employee — meaningless
+    // if we're already in a kiosk session.
+    ...(!isKiosk ? [{ key: "switch-to-kiosk", icon: <SwapOutlined />, label: "Switch to Kiosk Mode" }] : []),
+    { type: "divider" as const },
+    {
+      key: "logout",
+      icon: <LogoutOutlined />,
+      label: isKiosk ? "End Shift" : "Logout",
+      danger: true,
+    },
   ];
+
+  const handleUserMenuClick: MenuProps["onClick"] = ({ key }) => {
+    if (key === "logout") {
+      if (isKiosk) {
+        endShift();
+      } else {
+        logout();
+      }
+    } else if (key === "switch-to-kiosk") {
+      switchToKioskMode();
+    } else if (key === "dashboard") {
+      navigate("/dashboard");
+    } else if (key === "profile") {
+      navigate("/profile");
+    } else if (key === "settings") {
+      navigate("/settings");
+    } else if (key === "change-password") {
+      navigate("/change-password");
+    }
+  };
 
   return (
     <>
@@ -461,17 +503,18 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({
             />
 
             <Dropdown
-              menu={{ items: userMenuItems }}
+              menu={{ items: userMenuItems, onClick: handleUserMenuClick }}
               trigger={["click"]}
               placement="bottomRight"
             >
               <div className="cursor-pointer">
                 <Avatar
                   size={40}
-                  src={user.avatar}
-                  icon={!user.avatar && <UserOutlined />}
-                  className="bg-gradient-to-br from-orange-400 to-orange-600 ring-4 ring-white shadow-md hover:ring-gray-200 transition-all"
-                />
+                  src={displayAvatar}
+                  className="bg-gradient-to-br from-indigo-500 to-indigo-700 ring-4 ring-white shadow-md hover:ring-gray-200 transition-all"
+                >
+                  {!displayAvatar && avatarInitial}
+                </Avatar>
               </div>
             </Dropdown>
           </Space>

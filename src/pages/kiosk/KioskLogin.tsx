@@ -93,10 +93,17 @@ const KioskLogin: React.FC = () => {
             };
             await kioskLogin(loginData);
             messageApi.success('Shift Started Successfully!');
-            navigate('/kiosk/dashboard');
+            // Cashiers land straight on the POS terminal; Sidebar/Header (for any
+            // other permitted pages) are filtered to their role's permissions.
+            navigate('/pos');
         } catch (error: any) {
             console.error('Kiosk Login Failed:', error);
-            const errorMsg = error.response?.data?.message || 'Invalid User ID or PIN';
+            // Backend errors are shaped { error: { message, details } }, never
+            // top-level `message` — read the real reason instead of always
+            // falling back to a generic PIN error.
+            const errorMsg = error.response?.data?.error?.details
+                || error.response?.data?.error?.message
+                || 'Invalid User ID or PIN';
             setErrorAlert(errorMsg);
             setPinValue('');
             form.setFieldValue('pin', '');

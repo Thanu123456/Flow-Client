@@ -41,8 +41,23 @@ export const authService = {
   },
 
   // Kiosk Login - Backend: POST /kiosk/login
+  // The kiosk device isn't authenticated yet (no JWT to carry tenant info),
+  // so the tenant this device is branded for — resolved earlier and stashed
+  // in localStorage by a prior owner/kiosk login on this device — has to be
+  // sent explicitly. Without it the backend can't tell which shop's schema
+  // to look the employee up in.
   async kioskLogin(data: KioskLoginRequest): Promise<KioskLoginResponse> {
-    const response = await api.post<{ data: KioskLoginResponse }>('/kiosk/login', data);
+    let tenantId: string | undefined;
+    try {
+      const storedTenant = localStorage.getItem('tenant');
+      tenantId = storedTenant ? JSON.parse(storedTenant).id : undefined;
+    } catch {
+      tenantId = undefined;
+    }
+
+    const response = await api.post<{ data: KioskLoginResponse }>('/kiosk/login', data, {
+      headers: tenantId ? { 'X-Tenant-ID': tenantId } : undefined,
+    });
     return response.data.data;
   },
 

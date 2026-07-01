@@ -23,6 +23,7 @@ import KioskPOS from "../pages/kiosk/KioskPOS";
 
 // Admin Pages
 import Dashboard from "../pages/admin/Dashboard";
+import Profile from "../pages/admin/Profile";
 
 import Brands from "../pages/management/Brands";
 import Categories from "../pages/management/Categories";
@@ -89,6 +90,7 @@ const AppRoutes: React.FC = () => {
       <Route element={<PrivateRoutes />}>
         <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/profile" element={<Profile />} />
 
         {/* Product Management Routes */}
         <Route
