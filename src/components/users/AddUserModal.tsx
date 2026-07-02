@@ -11,15 +11,12 @@ import {
   Col,
   Typography,
   App,
-  Upload,
-  Avatar,
 } from 'antd';
-import { UserOutlined, CameraOutlined } from '@ant-design/icons';
-import type { UploadChangeParam, UploadFile } from 'antd/es/upload';
 import { useUserStore } from '../../store/management/userStore';
 import { useRoleStore } from '../../store/management/roleStore';
 import { useWarehouseStore } from '../../store/management/warehouseStore';
 import type { UserFormData } from '../../types/entities/user.types';
+import ImageUpload from '../common/Upload/ImageUpload';
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -39,7 +36,6 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
   const [form] = Form.useForm<UserFormData>();
   const [submitting, setSubmitting] = useState(false);
   const [kioskEnabled, setKioskEnabled] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
 
   const { createUser } = useUserStore();
   const { allRoles, getAllRoles } = useRoleStore();
@@ -51,21 +47,8 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
       getWarehouses({ page: 1, limit: 100 });
       form.resetFields();
       setKioskEnabled(false);
-      setAvatarUrl(undefined);
     }
   }, [visible, getAllRoles, getWarehouses, form]);
-
-  const handleAvatarChange = (info: UploadChangeParam<UploadFile>) => {
-    const file = info.file.originFileObj as File;
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      setAvatarUrl(dataUrl);
-      form.setFieldValue('profileImageUrl', dataUrl);
-    };
-    reader.readAsDataURL(file);
-  };
 
   const handleSubmit = async () => {
     try {
@@ -161,42 +144,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
           </Col>
           <Col span={12}>
             <Form.Item name="profileImageUrl" label="Profile Image">
-              <Upload
-                accept="image/*"
-                showUploadList={false}
-                beforeUpload={() => false}
-                onChange={handleAvatarChange}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
-                  <div style={{ position: 'relative', display: 'inline-block' }}>
-                    <Avatar
-                      size={64}
-                      src={avatarUrl}
-                      icon={!avatarUrl && <UserOutlined />}
-                      style={{ background: '#f0f0f0' }}
-                    />
-                    <div
-                      style={{
-                        position: 'absolute',
-                        bottom: 0,
-                        right: 0,
-                        background: '#1890ff',
-                        borderRadius: '50%',
-                        width: 20,
-                        height: 20,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <CameraOutlined style={{ color: '#fff', fontSize: 10 }} />
-                    </div>
-                  </div>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    {avatarUrl ? 'Click to change photo' : 'Click to upload photo'}
-                  </Text>
-                </div>
-              </Upload>
+              <ImageUpload placeholder="Click or drag to upload profile image" />
             </Form.Item>
           </Col>
         </Row>
