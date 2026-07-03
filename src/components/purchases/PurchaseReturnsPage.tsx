@@ -34,6 +34,22 @@ const PurchaseReturnsPage: React.FC = () => {
 
   useEffect(() => { fetchReturns(); }, [fetchReturns]);
 
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setSearchText('');
+    setDateRange(null);
+    setRefreshing(true);
+    try {
+      // Fetch with explicitly cleared filters — fetchReturns would still
+      // close over the previous filter values here.
+      await listReturns({ page: 1, perPage: pagination.perPage });
+    } catch {
+      // error state handled in store
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   useEffect(() => {
     if (error) messageApi.error(error);
   }, [error]);
@@ -128,7 +144,8 @@ const PurchaseReturnsPage: React.FC = () => {
           <Space>
             <CommonButton
               icon={<ReloadOutlined style={{ color: 'blue' }} />}
-              onClick={() => fetchReturns(pagination.page, pagination.perPage)}
+              onClick={handleRefresh}
+              loading={refreshing}
             >
               Refresh
             </CommonButton>

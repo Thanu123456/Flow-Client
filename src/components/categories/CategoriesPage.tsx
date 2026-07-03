@@ -75,7 +75,21 @@ const CategoriesPage: React.FC<CategoriesPageProps> = ({
     getCategories(params);
   };
 
-  const handleRefresh = () => getCategories(paginationParams);
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setSearchTerm("");
+    setStatusFilter(undefined);
+    const params = { ...paginationParams, page: 1, search: "", status: undefined };
+    setPaginationParams(params);
+    setRefreshing(true);
+    try {
+      await getCategories(params);
+    } catch {
+      // error state handled in store
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleAddCategory = () => {
     setAddModalVisible(true);
@@ -175,6 +189,7 @@ const CategoriesPage: React.FC<CategoriesPageProps> = ({
             <CommonButton
               icon={<ReloadOutlined style={{ color: "blue" }} />}
               onClick={handleRefresh}
+              loading={refreshing}
             >
               Refresh
             </CommonButton>

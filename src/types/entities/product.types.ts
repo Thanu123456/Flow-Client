@@ -141,3 +141,15 @@ export interface ProductResponse {
     limit: number;
     totalPages: number;
 }
+
+export interface BulkImportRowError {
+    row: number;
+    reason: string;
+}
+
+export interface BulkImportResult {
+    totalRows: number;
+    successCount: number;
+    failedCount: number;
+    errors: BulkImportRowError[];
+}

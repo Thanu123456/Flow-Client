@@ -65,7 +65,21 @@ const VariationsPage: React.FC = () => {
     getVariations(params);
   };
 
-  const handleRefresh = () => getVariations(paginationParams);
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setSearchTerm("");
+    setStatusFilter(undefined);
+    const params = { ...paginationParams, page: 1, search: "", status: undefined };
+    setPaginationParams(params);
+    setRefreshing(true);
+    try {
+      await getVariations(params);
+    } catch {
+      // error state handled in store
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleAddVariation = () => setAddModalVisible(true);
 
@@ -159,6 +173,7 @@ const VariationsPage: React.FC = () => {
             <CommonButton
               icon={<ReloadOutlined style={{ color: "blue" }} />}
               onClick={handleRefresh}
+              loading={refreshing}
             >
               Refresh
             </CommonButton>

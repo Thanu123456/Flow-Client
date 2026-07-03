@@ -70,7 +70,21 @@ const SubCategoriesPage: React.FC<SubCategoriesPageProps> = ({
     getSubcategories(params);
   };
 
-  const handleRefresh = () => getSubcategories(paginationParams);
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setSearchTerm("");
+    setStatusFilter(undefined);
+    const params = { ...paginationParams, page: 1, search: "", status: undefined };
+    setPaginationParams(params);
+    setRefreshing(true);
+    try {
+      await getSubcategories(params);
+    } catch {
+      // error state handled in store
+    } finally {
+      setRefreshing(false);
+    }
+  };
   const handleAddSubcategory = () => setAddModalVisible(true);
   const handleEditSubcategory = (subcategory: Subcategory) => {
     setSelectedSubcategory(subcategory);
@@ -165,6 +179,7 @@ const SubCategoriesPage: React.FC<SubCategoriesPageProps> = ({
             <CommonButton
               icon={<ReloadOutlined style={{ color: "blue" }} />}
               onClick={handleRefresh}
+              loading={refreshing}
             >
               Refresh
             </CommonButton>

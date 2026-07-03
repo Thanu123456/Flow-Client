@@ -47,11 +47,21 @@ const WarrantiesPage: React.FC = () => {
     fetchWarranties(page, pageSize);
   };
 
-  const handleRefresh = () => {
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
     setSearchTerm('');
     setStatusFilter(undefined);
     setSelectedRowKeys([]);
-    fetchWarranties(1, pagination.limit);
+    setRefreshing(true);
+    try {
+      // Fetch with explicitly cleared filters — fetchWarranties would
+      // still close over the previous search/filter values here.
+      await getWarranties({ page: 1, limit: pagination.limit });
+    } catch {
+      // error state handled in store
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleEdit = (warranty: Warranty) => {
@@ -173,6 +183,7 @@ const WarrantiesPage: React.FC = () => {
             <CommonButton
               icon={<ReloadOutlined style={{ color: "blue" }} />}
               onClick={handleRefresh}
+              loading={refreshing}
             >
               Refresh
             </CommonButton>

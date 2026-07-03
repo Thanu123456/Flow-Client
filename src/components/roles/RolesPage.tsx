@@ -56,11 +56,21 @@ const RolesPage: React.FC = () => {
     fetchRoles(page, pageSize);
   };
 
-  const handleRefresh = () => {
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
     setSearchText('');
     setStatusFilter('all');
     setTypeFilter('all');
-    fetchRoles(1, pagination.limit);
+    setRefreshing(true);
+    try {
+      // Fetch with explicitly cleared filters — fetchRoles would
+      // still close over the previous search/filter values here.
+      await getRoles({ page: 1, limit: pagination.limit, includeInactive: true, includeSystem: true });
+    } catch {
+      // error state handled in store
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleEdit = (role: Role) => {
@@ -178,7 +188,7 @@ const RolesPage: React.FC = () => {
               <Button icon={<FileExcelOutlined style={{ color: "#107C41" }} />} onClick={handleExportExcel}>
                 Excel
               </Button>
-              <Button icon={<ReloadOutlined style={{ color: "blue" }} />} onClick={handleRefresh}>
+              <Button icon={<ReloadOutlined style={{ color: "blue" }} />} onClick={handleRefresh} loading={refreshing}>
                 Refresh
               </Button>
               <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddModalVisible(true)}>

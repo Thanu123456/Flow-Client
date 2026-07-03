@@ -1,10 +1,21 @@
 import { axiosInstance } from "../api/axiosInstance";
 import type {
+    BulkImportResult,
     CreateProductRequest,
     Product,
     ProductPaginationParams,
     ProductResponse,
 } from "../../types/entities/product.types";
+
+const transformBulkImportResult = (r: any): BulkImportResult => ({
+    totalRows: r.total_rows ?? 0,
+    successCount: r.success_count ?? 0,
+    failedCount: r.failed_count ?? 0,
+    errors: (r.errors ?? []).map((e: any) => ({
+        row: e.row,
+        reason: e.reason,
+    })),
+});
 
 // Helper to transform backend product response to frontend Product type
 const transformProduct = (p: any): Product => ({
@@ -133,5 +144,27 @@ export const productService = {
         return response.data.sku || response.data.data?.sku;
     },
 
-    // ExportPDF, ExportExcel, Import can be added later
+    // Download the bulk-import Excel template
+    downloadTemplate: async (): Promise<Blob> => {
+        const response = await axiosInstance.get("/admin/products/template", {
+            responseType: "blob",
+        });
+        return response.data;
+    },
+
+    // Upload a filled bulk-import Excel file
+    importProducts: async (file: File): Promise<BulkImportResult> => {
+        const formData = new FormData();
+        formData.append("file", file);
+        // The shared axios instance defaults to Content-Type: application/json, which makes
+        // axios silently JSON-stringify FormData bodies instead of sending them as multipart.
+        // Clearing it here lets axios/the browser set the correct multipart boundary header.
+        const response = await axiosInstance.post("/admin/products/import", formData, {
+            headers: { "Content-Type": undefined },
+        });
+        const result = response.data.data || response.data;
+        return transformBulkImportResult(result);
+    },
+
+    // ExportPDF, ExportExcel can be added later
 };

@@ -45,11 +45,21 @@ const StockPage: React.FC = () => {
         fetchProducts(page, pageSize);
     };
 
-    const handleRefresh = () => {
+    const [refreshing, setRefreshing] = useState(false);
+    const handleRefresh = async () => {
         setSearchTerm("");
         setTypeFilter(undefined);
         setStockFilter("all");
-        fetchProducts(1, pagination.limit || 50);
+        setRefreshing(true);
+        try {
+            // Fetch with explicitly cleared filters — fetchProducts would
+            // still close over the previous search/filter values here.
+            await getProducts({ page: 1, limit: pagination.limit || 50 });
+        } catch {
+            // error state handled in store
+        } finally {
+            setRefreshing(false);
+        }
     };
 
     const filteredProducts = products.filter((p) => {
@@ -180,6 +190,7 @@ const StockPage: React.FC = () => {
                     <CommonButton
                         icon={<ReloadOutlined style={{ color: "blue" }} />}
                         onClick={handleRefresh}
+                        loading={refreshing}
                     >
                         Refresh
                     </CommonButton>

@@ -65,7 +65,24 @@ const PurchasesPage: React.FC = () => {
     }
   }, [error]);
 
-  const handleRefresh = () => fetchGRNs(pagination.page, pagination.perPage);
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setSearchText('');
+    setPaymentFilter('');
+    setStatusFilter('');
+    setWarehouseFilter('');
+    setDateRange(null);
+    setRefreshing(true);
+    try {
+      // Fetch with explicitly cleared filters — fetchGRNs would still
+      // close over the previous filter values here.
+      await listGRNs({ page: 1, perPage: pagination.perPage });
+    } catch {
+      // error state handled in store
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleView = async (record: GRNListItem) => {
     setLoadingDetail(true);
@@ -137,7 +154,7 @@ const PurchasesPage: React.FC = () => {
           <Space>
             <CommonButton icon={<FilePdfOutlined style={{ color: '#FF0000' }} />} onClick={handleExportPDF} tooltip="Download PDF">PDF</CommonButton>
             <CommonButton icon={<FileExcelOutlined style={{ color: '#107C41' }} />} onClick={handleExportExcel} tooltip="Download Excel">Excel</CommonButton>
-            <CommonButton icon={<ReloadOutlined style={{ color: 'blue' }} />} onClick={handleRefresh}>Refresh</CommonButton>
+            <CommonButton icon={<ReloadOutlined style={{ color: 'blue' }} />} onClick={handleRefresh} loading={refreshing}>Refresh</CommonButton>
             <CommonButton type="primary" icon={<PlusOutlined />} onClick={() => navigate('/purchases/add')}>
               Add Purchase
             </CommonButton>
