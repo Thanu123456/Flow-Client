@@ -50,7 +50,8 @@ const StockAdjustmentPage: React.FC = () => {
   );
 
   useEffect(() => {
-    load(1);
+    listAdjustments({ page: 1, perPage: pagination.perPage });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSearch = () => load(1);
@@ -175,7 +176,6 @@ const StockAdjustmentPage: React.FC = () => {
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => navigate("/adjustments/add")}
-          style={{ background: "linear-gradient(135deg,#4f46e5,#6366f1)", border: "none" }}
         >
           New Adjustment
         </Button>

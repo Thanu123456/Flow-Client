@@ -71,8 +71,6 @@ export const useStockAdjustmentStore = create<AdjustmentState>()(
         try {
           const adj = await stockAdjustmentService.createAdjustment(req);
           set({ submitting: false });
-          // Refresh list
-          await get().listAdjustments();
           return adj;
         } catch (err: any) {
           const msg = err?.response?.data?.error?.message ?? "Failed to create adjustment";

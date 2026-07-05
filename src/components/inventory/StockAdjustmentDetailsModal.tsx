@@ -119,7 +119,7 @@ const StockAdjustmentDetailsModal: React.FC<Props> = ({ open, onClose }) => {
               <Descriptions.Item label="Notes" span={2}>{adj.notes}</Descriptions.Item>
             )}
             <Descriptions.Item label="Created By">
-              {adj.createdByName || adj.createdBy}
+              {adj.createdByName || "—"}
             </Descriptions.Item>
             <Descriptions.Item label="Date">
               {dayjs(adj.createdAt).format("YYYY-MM-DD HH:mm")}

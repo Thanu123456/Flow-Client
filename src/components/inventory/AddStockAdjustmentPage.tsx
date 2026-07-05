@@ -15,7 +15,6 @@ import { useWarehouseStore } from "../../store/management/warehouseStore";
 import type {
   AdjustmentMovementType,
   AdjustmentReferenceType,
-  AdjustmentPriority,
   AdjustmentItemLocal,
   CreateAdjustmentRequest,
 } from "../../types/entities/stockAdjustment.types";
@@ -49,7 +48,7 @@ const REFERENCE_OPTIONS: { value: AdjustmentReferenceType; label: string; forMov
 const AddStockAdjustmentPage: React.FC = () => {
   const navigate = useNavigate();
   const { createAdjustment, submitting } = useStockAdjustmentStore();
-  const { warehouses, getAllWarehouses } = useWarehouseStore();
+  const { allWarehouses: warehouses, getAllWarehouses } = useWarehouseStore();
 
   const [form] = Form.useForm();
   const [movementType, setMovementType] = useState<AdjustmentMovementType>("in");
@@ -78,7 +77,7 @@ const AddStockAdjustmentPage: React.FC = () => {
           ? `${p.name} – ${p.variation_type}`
           : p.name;
         return {
-          value: `${p.id}::${p.variation_id ?? ""}`,
+          value: `${p.sku ? `[${p.sku}] ` : ""}${label}`,
           label: `${p.sku ? `[${p.sku}] ` : ""}${label}`,
           productId: p.id,
           productName: p.name,
@@ -357,10 +356,12 @@ const AddStockAdjustmentPage: React.FC = () => {
                 options={productOptions}
                 onSearch={handleProductSearch}
                 onSelect={handleProductSelect}
-                placeholder="Search by name, SKU or barcode..."
                 notFoundContent={searching ? "Searching..." : "No products found"}
               >
-                <Input prefix={<SearchOutlined style={{ color: "#9ca3af" }} />} />
+                <Input
+                  prefix={<SearchOutlined style={{ color: "#9ca3af" }} />}
+                  placeholder="Search by name, SKU or barcode..."
+                />
               </AutoComplete>
             </Form.Item>
 
@@ -371,7 +372,7 @@ const AddStockAdjustmentPage: React.FC = () => {
                 onChange={setSelectedWarehouseId}
                 showSearch
                 filterOption={(input, opt) =>
-                  (opt?.children as string)?.toLowerCase().includes(input.toLowerCase())
+                  String(opt?.children ?? "").toLowerCase().includes(input.toLowerCase())
                 }
               >
                 {warehouses.map((w) => (
@@ -460,7 +461,6 @@ const AddStockAdjustmentPage: React.FC = () => {
             loading={submitting}
             onClick={handleSave}
             disabled={!items.length}
-            style={{ background: "linear-gradient(135deg,#4f46e5,#6366f1)", border: "none" }}
           >
             Save Adjustment
           </Button>
