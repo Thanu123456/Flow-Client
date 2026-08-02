@@ -9,7 +9,6 @@ interface ExpireAlertItem {
     id: string;
     productID: string;
     productName: string;
-    variationType: string;
     purchaseDate: string;
     expiryDate: string;
 }
@@ -35,11 +34,6 @@ const ExpireDateAlertTable: React.FC = () => {
             dataIndex: 'productName',
             key: 'productName',
             render: (text) => <span className="font-normal">{text}</span>
-        },
-        {
-            title: 'VARIATION',
-            dataIndex: 'variationType',
-            key: 'variationType',
         },
         {
             title: 'PURCHASED',

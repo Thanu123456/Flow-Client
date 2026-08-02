@@ -20,7 +20,6 @@ export interface DashboardData {
     secondarySummary: {
         stockValue: number;
         codReturns: number;
-        codPending: number;
         codDelivered: number;
         estimatedProfit: number;
         creditCollected: number;
@@ -66,7 +65,6 @@ export interface StockAlertItem {
     productID: string;
     productName: string;
     brandName: string;
-    variationType: string;
     unit: string;
     stock: number;
 }
@@ -83,7 +81,6 @@ export interface ExpireAlertItem {
     id: string;
     productID: string;
     productName: string;
-    variationType: string;
     purchaseDate: string;
     expiryDate: string;
 }

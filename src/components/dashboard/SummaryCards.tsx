@@ -147,19 +147,11 @@ export const SecondarySummaryCards: React.FC = () => {
     },
     {
       title: 'COD RETURNS',
-      subtitle: '0 Orders Returned',
       amount: data?.secondarySummary?.codReturns || 0.00,
       color: 'red'
     },
     {
-      title: 'COD PENDING',
-      subtitle: '0 Pending Orders',
-      amount: data?.secondarySummary?.codPending || 0.00,
-      color: 'orange'
-    },
-    {
       title: 'COD DELIVERED',
-      subtitle: '0 Delivered Orders',
       amount: data?.secondarySummary?.codDelivered || 0.00,
       color: 'green'
     },

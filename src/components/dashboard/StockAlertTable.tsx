@@ -10,7 +10,6 @@ interface StockAlertItem {
     productID: string;
     productName: string;
     brandName: string;
-    variationType: string;
     unit: string;
     stock: number;
 }
@@ -41,11 +40,6 @@ const StockAlertTable: React.FC = () => {
             title: 'BRAND NAME',
             dataIndex: 'brandName',
             key: 'brandName',
-        },
-        {
-            title: 'VARIATION',
-            dataIndex: 'variationType',
-            key: 'variationType',
         },
         {
             title: 'UNIT',
