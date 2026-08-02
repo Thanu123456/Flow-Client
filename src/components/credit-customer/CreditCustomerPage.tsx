@@ -1,24 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Table, Input, Select, Space, Row, Col, message, Typography,
+  Input, Select, Space, Row, Col, message,
 } from 'antd';
-import { ReloadOutlined, DollarOutlined, PlusOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
+import { ReloadOutlined, PlusOutlined } from '@ant-design/icons';
 import { useCustomerCreditStore } from '../../store/management/customerCreditStore';
 import PageLayout from '../common/PageLayout/PageLayout';
 import { CommonButton } from '../common/Button';
 import type { CreditCustomer, BalanceFilter } from '../../types/entities/customerCredit.types';
 import CustomerPaymentModal from './CustomerPaymentModal';
+import CreditCustomerTable from './CreditCustomerTable';
 
 const { Search } = Input;
-const { Text } = Typography;
-
-const formatBalance = (balanceStr: string) => {
-  const n = parseFloat(balanceStr || '0');
-  if (n > 0) return <span style={{ color: '#cf1322', fontWeight: 600 }}>Credit: {n.toFixed(2)}</span>;
-  if (n < 0) return <span style={{ color: '#389e0d', fontWeight: 600 }}>Debit: {Math.abs(n).toFixed(2)}</span>;
-  return <span style={{ color: '#8c8c8c' }}>0.00</span>;
-};
 
 const CreditCustomerPage: React.FC = () => {
   const [messageApi, contextHolder] = message.useMessage();
@@ -26,6 +18,8 @@ const CreditCustomerPage: React.FC = () => {
 
   const [searchText, setSearchText] = useState('');
   const [balanceFilter, setBalanceFilter] = useState<BalanceFilter>('all');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const [payModalVisible, setPayModalVisible] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<CreditCustomer | null>(null);
@@ -35,6 +29,8 @@ const CreditCustomerPage: React.FC = () => {
   }, [fetchCreditCustomers, searchText, balanceFilter]);
 
   useEffect(() => { fetch(); }, [fetch]);
+
+  useEffect(() => { setPage(1); }, [searchText, balanceFilter]);
 
   useEffect(() => {
     if (error) messageApi.error(error);
@@ -50,62 +46,10 @@ const CreditCustomerPage: React.FC = () => {
     setSelectedCustomer(null);
   };
 
-  const columns = [
-    {
-      title: 'CUSTOMER NAME',
-      dataIndex: 'displayName',
-      key: 'displayName',
-      render: (v: string) => <Text strong>{v}</Text>,
-    },
-    {
-      title: 'PHONE NUMBER',
-      dataIndex: 'phone',
-      key: 'phone',
-    },
-    {
-      title: 'LAST PAID AMOUNT',
-      dataIndex: 'lastTransactionAmount',
-      key: 'lastTransactionAmount',
-      align: 'right' as const,
-      render: (v?: string) =>
-        v ? parseFloat(v).toFixed(2) : <span style={{ color: '#bfbfbf' }}>N/A</span>,
-    },
-    {
-      title: 'LAST PAID DATE',
-      dataIndex: 'lastTransactionDate',
-      key: 'lastTransactionDate',
-      render: (v?: string) =>
-        v ? dayjs(v).format('YYYY-MM-DD') : <span style={{ color: '#bfbfbf' }}>N/A</span>,
-    },
-    {
-      title: 'NOTE',
-      dataIndex: 'lastTransactionNote',
-      key: 'lastTransactionNote',
-      render: (v?: string) => v || <span style={{ color: '#bfbfbf' }}>N/A</span>,
-    },
-    {
-      title: 'CREDIT/DEBIT BALANCE',
-      dataIndex: 'outstandingBalance',
-      key: 'outstandingBalance',
-      align: 'right' as const,
-      render: (v: string) => formatBalance(v),
-    },
-    {
-      title: 'ACTION',
-      key: 'action',
-      align: 'center' as const,
-      render: (_: any, record: CreditCustomer) => (
-        <CommonButton
-          type="default"
-          size="small"
-          icon={<DollarOutlined />}
-          onClick={() => handlePayClick(record)}
-        >
-          Pay / Credit
-        </CommonButton>
-      ),
-    },
-  ];
+  const handlePageChange = (newPage: number, newPageSize: number) => {
+    setPage(newPage);
+    setPageSize(newPageSize);
+  };
 
   return (
     <>
@@ -159,18 +103,17 @@ const CreditCustomerPage: React.FC = () => {
           </Row>
         </div>
 
-        <Table
-          columns={columns}
-          dataSource={customers}
-          rowKey="id"
+        <CreditCustomerTable
+          data={customers}
           loading={loading}
-          size="small"
+          onPay={handlePayClick}
           pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showTotal: (total) => `${total} customers`,
+            page,
+            limit: pageSize,
+            total: customers.length,
+            totalPages: Math.ceil(customers.length / pageSize),
           }}
-          locale={{ emptyText: 'No customers with outstanding balance' }}
+          onPageChange={handlePageChange}
         />
       </PageLayout>
 
