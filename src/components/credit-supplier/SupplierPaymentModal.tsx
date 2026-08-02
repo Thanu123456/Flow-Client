@@ -104,6 +104,13 @@ const SupplierPaymentModal: React.FC<Props> = ({ visible, supplier, onClose, onS
       setTransactions([]);
       setSelectedRowKeys([]);
       loadTransactions(supplier.id);
+
+      // Default the pay amount to the outstanding credit balance so paying
+      // off the full balance doesn't require the user to look it up and retype it.
+      const outstanding = parseFloat(supplier.outstandingBalance || '0');
+      if (outstanding > 0) {
+        form.setFieldsValue({ amount: outstanding.toFixed(2) });
+      }
     }
   }, [visible, supplier?.id]);
 
