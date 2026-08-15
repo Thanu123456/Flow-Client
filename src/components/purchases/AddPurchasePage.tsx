@@ -150,6 +150,9 @@ const AddPurchasePage: React.FC = () => {
   const [hasSerialNumbers, setHasSerialNumbers] = useState(false);
   const [pendingSerials, setPendingSerials] = useState<string[]>([]);
   const [serialModalOpen, setSerialModalOpen] = useState(false);
+  // Item whose quantity is being changed via the items table; re-opens the
+  // serial modal so its serial count stays in sync with the new quantity.
+  const [editingSerialItem, setEditingSerialItem] = useState<GRNItemLocal | null>(null);
 
   // ── Items list ───────────────────────────────────────────
   const [items, setItems] = useState<GRNItemLocal[]>([]);
@@ -434,6 +437,13 @@ const AddPurchasePage: React.FC = () => {
   };
 
   const handleQuantityChange = (localId: string, qty: number) => {
+    const target = items.find((i) => i.localId === localId);
+    if (target?.hasSerialNumbers) {
+      // Changing quantity changes how many serials are required — reopen the
+      // serial modal so the user reconciles the serial list before it commits.
+      setEditingSerialItem({ ...target, quantity: qty });
+      return;
+    }
     setItems((prev) =>
       prev.map((item) =>
         item.localId === localId
@@ -457,6 +467,12 @@ const AddPurchasePage: React.FC = () => {
     if (activeItems.length === 0) return 'Please add at least one item';
     const zeroPrice = activeItems.find((i) => i.costPrice <= 0);
     if (zeroPrice) return `"${zeroPrice.productName}" has an invalid cost price. All items must have a cost price greater than 0`;
+    const badSerial = activeItems.find(
+      (i) => i.hasSerialNumbers && i.serialNumbers.length !== Math.round(i.quantity)
+    );
+    if (badSerial) {
+      return `"${badSerial.productName}" requires ${Math.round(badSerial.quantity)} serial number(s), but ${badSerial.serialNumbers.length} ${badSerial.serialNumbers.length === 1 ? 'is' : 'are'} entered`;
+    }
     if (doComplete) {
       if (paymentMethod === 'cheque' && !supplierId) return 'Cheque payment requires a supplier';
       if (paymentMethod === 'cheque' && !chequeNumber) return 'Cheque number is required';
@@ -510,6 +526,14 @@ const AddPurchasePage: React.FC = () => {
             manufactureDate: item.manufactureDate,
             expiryDate: item.expiryDate,
           });
+          // Quantity edits can change the serial list (see handleQuantityChange) —
+          // resync it with the backend, which was previously left stale.
+          if (item.hasSerialNumbers) {
+            await purchaseService.addSerialNumbers(grnId, {
+              grnItemId: item.backendId!,
+              serialNumbers: item.serialNumbers,
+            });
+          }
         }
         for (const item of toAdd) {
           const backendItem = await purchaseService.addItem(grnId, {
@@ -850,9 +874,9 @@ const AddPurchasePage: React.FC = () => {
                 <Col xs={12} sm={8}>
                   <Form.Item label="Quantity *" style={{ marginBottom: 0 }}>
                     <InputNumber
-                      min={0.0001} value={quantity}
+                      min={hasSerialNumbers ? 1 : 0.0001} value={quantity}
                       onChange={(v) => setQuantity(v ?? 1)}
-                      precision={4} style={{ width: '100%' }}
+                      precision={hasSerialNumbers ? 0 : 4} style={{ width: '100%' }}
                     />
                   </Form.Item>
                 </Col>
@@ -1021,6 +1045,32 @@ const AddPurchasePage: React.FC = () => {
             doAddItem(serials);
           }}
           onCancel={() => setSerialModalOpen(false)}
+        />
+      )}
+
+      {editingSerialItem && (
+        <SerialNumberModal
+          open={Boolean(editingSerialItem)}
+          productName={editingSerialItem.productName}
+          quantity={Math.round(editingSerialItem.quantity)}
+          existing={editingSerialItem.serialNumbers}
+          onSave={(serials) => {
+            setItems((prev) =>
+              prev.map((item) =>
+                item.localId === editingSerialItem.localId
+                  ? {
+                      ...item,
+                      quantity: editingSerialItem.quantity,
+                      netPrice: editingSerialItem.quantity * item.costPrice,
+                      serialNumbers: serials,
+                      isModified: !item.isNew,
+                    }
+                  : item
+              )
+            );
+            setEditingSerialItem(null);
+          }}
+          onCancel={() => setEditingSerialItem(null)}
         />
       )}
     </div>

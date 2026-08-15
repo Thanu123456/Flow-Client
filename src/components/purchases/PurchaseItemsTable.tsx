@@ -79,9 +79,9 @@ const PurchaseItemsTable: React.FC<Props> = ({
           <span>{record.quantity}</span>
         ) : (
           <InputNumber
-            min={0.0001}
+            min={record.hasSerialNumbers ? 1 : 0.0001}
             value={record.quantity}
-            precision={4}
+            precision={record.hasSerialNumbers ? 0 : 4}
             style={{ width: 90 }}
             onChange={(val) => {
               if (val && val > 0) onQuantityChange(record.localId, val);

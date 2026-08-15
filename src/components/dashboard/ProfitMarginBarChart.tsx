@@ -14,15 +14,17 @@ const ProfitMarginBarChart: React.FC = () => {
     setIsMounted(true);
   }, []);
 
-  // We can use SalesPurchases data for ProfitMargin as well
+  // Revenue comes from salesPurchases; profit comes from the backend's profitMargin
+  // series (sales - salesReturn - (purchases - purchasesReturn) - expenses) so this
+  // chart always agrees with the PROFIT KPI card for the same period.
   const data = React.useMemo(() => {
-      const raw = charts?.salesPurchases ?? [];
-      console.log('[ProfitMarginBarChart] raw salesPurchases:', raw.length, 'points');
-      if (!raw.length) return [];
-      return raw.map(p => ({
+      const revenuePoints = charts?.salesPurchases ?? [];
+      const profitPoints = charts?.profitMargin ?? [];
+      if (!revenuePoints.length) return [];
+      return revenuePoints.map((p, i) => ({
           month: dayjs(p.label).isValid() ? dayjs(p.label).format('MMM DD') : p.label,
           revenue: p.values.sales || 0,
-          profit: (p.values.sales || 0) - (p.values.purchases || 0)
+          profit: profitPoints[i]?.value ?? 0
       }));
   }, [charts]);
 
