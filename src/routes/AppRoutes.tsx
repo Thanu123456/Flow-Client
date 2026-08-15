@@ -53,6 +53,8 @@ import PurchaseReturns from "../pages/transactions/PurchaseReturns";
 import AddPurchaseReturn from "../pages/transactions/AddPurchaseReturn";
 import Sales from "../pages/transactions/Sales";
 import SalesReturns from "../pages/transactions/SalesReturns";
+import Reports from "../pages/reports/Reports";
+import SalesReports from "../pages/reports/SalesReports";
 import ProcessRefund from "../pages/transactions/ProcessRefund";
 import HoldBills from "../pages/transactions/HoldBills";
 
@@ -247,6 +249,16 @@ const AppRoutes: React.FC = () => {
           <Route path="/sales-returns" element={<SalesReturns />} />
           <Route path="/sales-returns/new" element={<ProcessRefund />} />
           <Route path="/sales-returns/new/:saleId" element={<ProcessRefund />} />
+        </Route>
+
+        {/* Reports Routes */}
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.REPORTS_SALES} />
+          }
+        >
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/reports/sales" element={<SalesReports />} />
         </Route>
       </Route>
 

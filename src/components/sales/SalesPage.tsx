@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Space, message, DatePicker } from 'antd';
 import { ReloadOutlined, FilePdfOutlined, FileExcelOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import SalesHistoryTable from './SalesHistoryTable';
+import SalesReport from '../reports/SalesReport';
 import { PageLayout } from '../common/PageLayout';
 import { CommonButton } from '../common/Button';
+import { reportService } from '../../services/reports/reportService';
+import { exportElementToPdf } from '../../utils/pdf/exportElementToPdf';
+import type { SalesReportResponse } from '../../types/entities/report.types';
 
 const SalesPage: React.FC = () => {
 	const [collapsed, setCollapsed] = useState(false);
@@ -12,6 +16,10 @@ const SalesPage: React.FC = () => {
 	const [paymentFilter, setPaymentFilter] = useState<string | undefined>(undefined);
 	const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
 	const [refresh, setRefresh] = useState(false);
+	const [exportingPdf, setExportingPdf] = useState(false);
+	const [exportingExcel, setExportingExcel] = useState(false);
+	const [reportData, setReportData] = useState<SalesReportResponse | null>(null);
+	const reportRef = useRef<HTMLDivElement>(null);
 
 	const handleRefresh = () => {
 		setSearchText('');
@@ -20,12 +28,51 @@ const SalesPage: React.FC = () => {
 		setRefresh(!refresh);
 	};
 
-	const handleExportPDF = () => {
-		message.info('Export to PDF coming soon');
+	const handleExportPDF = async () => {
+		setExportingPdf(true);
+		try {
+			const report = await reportService.getSalesReport({
+				search: searchText || undefined,
+				payment_method: paymentFilter || undefined,
+				date_from: dateRange?.[0]?.format('YYYY-MM-DD') ?? undefined,
+				date_to: dateRange?.[1]?.format('YYYY-MM-DD') ?? undefined,
+			});
+			setReportData(report);
+			// Wait for the hidden template to render with the new data before capturing it.
+			await new Promise((resolve) => setTimeout(resolve, 100));
+			if (reportRef.current) {
+				await exportElementToPdf(reportRef.current, `Sales-Report-${dayjs().format('YYYY-MM-DD-HHmm')}.pdf`);
+			}
+		} catch {
+			message.error('Failed to generate PDF report');
+		} finally {
+			setExportingPdf(false);
+			setReportData(null);
+		}
 	};
 
-	const handleExportExcel = () => {
-		message.info('Export to Excel coming soon');
+	const handleExportExcel = async () => {
+		setExportingExcel(true);
+		try {
+			const blob = await reportService.exportSalesReportExcel({
+				search: searchText || undefined,
+				payment_method: paymentFilter || undefined,
+				date_from: dateRange?.[0]?.format('YYYY-MM-DD') ?? undefined,
+				date_to: dateRange?.[1]?.format('YYYY-MM-DD') ?? undefined,
+			});
+			const url = window.URL.createObjectURL(blob);
+			const link = document.createElement('a');
+			link.href = url;
+			link.setAttribute('download', `Sales-Report-${dayjs().format('YYYY-MM-DD-HHmm')}.xlsx`);
+			document.body.appendChild(link);
+			link.click();
+			link.remove();
+			window.URL.revokeObjectURL(url);
+		} catch {
+			message.error('Failed to export Excel');
+		} finally {
+			setExportingExcel(false);
+		}
 	};
 
 	return (
@@ -75,6 +122,7 @@ const SalesPage: React.FC = () => {
 					<CommonButton
 						icon={<FilePdfOutlined style={{ color: "#FF0000" }} />}
 						onClick={handleExportPDF}
+						loading={exportingPdf}
 						tooltip="Download PDF"
 					>
 						PDF
@@ -82,6 +130,7 @@ const SalesPage: React.FC = () => {
 					<CommonButton
 						icon={<FileExcelOutlined style={{ color: "#107C41" }} />}
 						onClick={handleExportExcel}
+						loading={exportingExcel}
 						tooltip="Download Excel"
 					>
 						Excel
@@ -101,6 +150,13 @@ const SalesPage: React.FC = () => {
 				dateRange={dateRange}
 				refresh={refresh}
 			/>
+
+			{/* Off-screen render target for PDF capture — not visible to the user */}
+			{reportData && (
+				<div style={{ position: 'fixed', top: 0, left: '-10000px', zIndex: -1 }}>
+					<SalesReport ref={reportRef} report={reportData} />
+				</div>
+			)}
 		</PageLayout>
 	);
 };
