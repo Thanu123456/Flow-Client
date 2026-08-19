@@ -28,4 +28,17 @@ export const reportService = {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
   },
+
+  exportSalesReportPdf: async (filter?: SalesReportFilter): Promise<Blob> => {
+    const response = await axiosInstance.get("/admin/reports/sales/export/pdf", {
+      params: {
+        search: filter?.search || undefined,
+        payment_method: filter?.payment_method || undefined,
+        date_from: filter?.date_from || undefined,
+        date_to: filter?.date_to || undefined,
+      },
+      responseType: "arraybuffer",
+    });
+    return new Blob([response.data], { type: "application/pdf" });
+  },
 };

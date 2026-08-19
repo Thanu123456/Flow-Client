@@ -3,6 +3,7 @@ import { Card, Col, Row, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import {
   DollarOutlined, ShoppingCartOutlined, DatabaseOutlined, FundOutlined,
+  HistoryOutlined, TrophyOutlined,
 } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
@@ -26,20 +27,37 @@ const REPORTS: ReportEntry[] = [
   {
     key: 'purchases',
     title: 'Purchase Report',
-    description: 'Coming soon.',
-    icon: <ShoppingCartOutlined style={{ fontSize: 28, color: '#bbb' }} />,
+    description: 'GRN list and analytics — totals, discounts, outstanding balance, top suppliers and items.',
+    icon: <ShoppingCartOutlined style={{ fontSize: 28, color: '#1677ff' }} />,
+    path: '/reports/purchases',
   },
   {
     key: 'inventory',
-    title: 'Inventory Report',
-    description: 'Coming soon.',
-    icon: <DatabaseOutlined style={{ fontSize: 28, color: '#bbb' }} />,
+    title: 'Stock Report',
+    description: 'Current stock levels, valuation, low/out-of-stock alerts, and batch/expiry export.',
+    icon: <DatabaseOutlined style={{ fontSize: 28, color: '#1677ff' }} />,
+    path: '/reports/inventory',
   },
   {
     key: 'financial',
-    title: 'Financial Report',
-    description: 'Coming soon.',
-    icon: <FundOutlined style={{ fontSize: 28, color: '#bbb' }} />,
+    title: 'Profit & Loss Report',
+    description: 'Revenue, gross/net profit, expenses, and estimated profit from remaining stock.',
+    icon: <FundOutlined style={{ fontSize: 28, color: '#1677ff' }} />,
+    path: '/reports/financial',
+  },
+  {
+    key: 'log-history',
+    title: 'Log History Report',
+    description: 'Cashier session log — cash/card totals per shift, live sessions, and leaderboard.',
+    icon: <HistoryOutlined style={{ fontSize: 28, color: '#1677ff' }} />,
+    path: '/reports/log-history',
+  },
+  {
+    key: 'top-selling',
+    title: 'Top Selling Product Report',
+    description: 'Ranks products by revenue and quantity sold, with peak hour/day per product.',
+    icon: <TrophyOutlined style={{ fontSize: 28, color: '#1677ff' }} />,
+    path: '/reports/top-selling',
   },
 ];
 

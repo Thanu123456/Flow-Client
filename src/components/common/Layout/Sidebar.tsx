@@ -24,6 +24,10 @@ import {
   RollbackOutlined,
   CreditCardOutlined,
   SwapOutlined,
+  DatabaseOutlined,
+  FundOutlined,
+  HistoryOutlined,
+  TrophyOutlined,
 } from "@ant-design/icons";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -310,6 +314,12 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     if (p.startsWith("/customers")) return "customers";
     if (p.startsWith("/users")) return "users";
     if (p.startsWith("/roles")) return "roles";
+    if (p.startsWith("/reports/sales")) return "report-sales";
+    if (p.startsWith("/reports/top-selling")) return "report-top-selling";
+    if (p.startsWith("/reports/purchases")) return "report-purchases";
+    if (p.startsWith("/reports/inventory")) return "report-stock";
+    if (p.startsWith("/reports/financial")) return "report-financial";
+    if (p.startsWith("/reports/log-history")) return "report-log-history";
     if (p.startsWith("/reports")) return "reports";
     if (p.startsWith("/settings")) return "settings";
     return "dashboard";
@@ -429,11 +439,30 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       });
     }
 
-    // Analytics
-    if (isOwner || hasPermission(PERMISSIONS.REPORTS_SALES) || hasPermission(PERMISSIONS.REPORTS_INVENTORY)) {
+    // Analytics — direct links to each report, so it's one click instead of hub -> card -> report
+    const reportChildren: NavItem[] = [];
+    if (isOwner || hasPermission(PERMISSIONS.REPORTS_SALES)) {
+      reportChildren.push(
+        { key: "report-sales", label: "Sales Report", icon: <DollarOutlined />, path: "/reports/sales" },
+        { key: "report-top-selling", label: "Top Selling Product", icon: <TrophyOutlined />, path: "/reports/top-selling" }
+      );
+    }
+    if (isOwner || hasPermission(PERMISSIONS.REPORTS_PURCHASES)) {
+      reportChildren.push({ key: "report-purchases", label: "Purchases Report", icon: <ShoppingCartOutlined />, path: "/reports/purchases" });
+    }
+    if (isOwner || hasPermission(PERMISSIONS.REPORTS_INVENTORY)) {
+      reportChildren.push({ key: "report-stock", label: "Stock Report", icon: <DatabaseOutlined />, path: "/reports/inventory" });
+    }
+    if (isOwner || hasPermission(PERMISSIONS.REPORTS_FINANCIAL)) {
+      reportChildren.push({ key: "report-financial", label: "Profit & Loss Report", icon: <FundOutlined />, path: "/reports/financial" });
+    }
+    if (isOwner || hasPermission(PERMISSIONS.REPORTS_LOG_HISTORY)) {
+      reportChildren.push({ key: "report-log-history", label: "Log History Report", icon: <HistoryOutlined />, path: "/reports/log-history" });
+    }
+    if (reportChildren.length > 0) {
       groups.push({
         title: "Analytics",
-        items: [{ key: "reports", label: "Reports", icon: <BarChartOutlined />, path: "/reports" }],
+        items: [{ key: "reports", label: "Reports", icon: <BarChartOutlined />, children: reportChildren }],
       });
     }
 

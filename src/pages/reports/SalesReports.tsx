@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Card, Col, Row, Statistic, Table, Typography, Space, DatePicker, Input, Select,
+  Card, Col, Row, Statistic, Table, Typography, Space, Input, Select,
   Spin, Empty, message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -8,11 +8,14 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import dayjs from 'dayjs';
-import { ReloadOutlined, FilePdfOutlined, FileExcelOutlined } from '@ant-design/icons';
+import { ReloadOutlined } from '@ant-design/icons';
 import { CommonButton } from '../../components/common/Button';
-import SalesReport from '../../components/reports/SalesReport';
+import PeriodFilter from '../../components/reports/shared/PeriodFilter';
+import type { PeriodFilterValue } from '../../components/reports/shared/PeriodFilter';
+import KPIStatRow from '../../components/reports/shared/KPIStatRow';
+import ExportButtons from '../../components/reports/shared/ExportButtons';
 import { reportService } from '../../services/reports/reportService';
-import { exportElementToPdf } from '../../utils/pdf/exportElementToPdf';
+import { downloadBlob } from '../../utils/downloadBlob';
 import type {
   SalesReportResponse, SalesReportItem, ProductPerformanceItem, CategoryBreakdownItem,
 } from '../../types/entities/report.types';
@@ -23,25 +26,20 @@ const fmt = (n: number) => `LKR ${n.toLocaleString('en-US', { minimumFractionDig
 
 const SalesReports: React.FC = () => {
   const [loading, setLoading] = useState(false);
-  const [exportingPdf, setExportingPdf] = useState(false);
-  const [exportingExcel, setExportingExcel] = useState(false);
   const [report, setReport] = useState<SalesReportResponse | null>(null);
   const [searchText, setSearchText] = useState('');
   const [paymentFilter, setPaymentFilter] = useState<string | undefined>(undefined);
-  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([
-    dayjs().subtract(29, 'days').startOf('day'),
-    dayjs().endOf('day'),
-  ]);
-  const printRef = useRef<HTMLDivElement>(null);
+  const [period, setPeriod] = useState<PeriodFilterValue | null>(null);
 
   const currentFilter = {
     search: searchText || undefined,
     payment_method: paymentFilter,
-    date_from: dateRange[0]?.format('YYYY-MM-DD'),
-    date_to: dateRange[1]?.format('YYYY-MM-DD'),
+    date_from: period?.dateFrom,
+    date_to: period?.dateTo,
   };
 
   const loadReport = useCallback(async () => {
+    if (!period) return;
     setLoading(true);
     try {
       const data = await reportService.getSalesReport(currentFilter);
@@ -52,42 +50,18 @@ const SalesReports: React.FC = () => {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchText, paymentFilter, dateRange]);
+  }, [searchText, paymentFilter, period]);
 
   useEffect(() => { loadReport(); }, [loadReport]);
 
-  const handleExportPDF = async () => {
-    if (!report) return;
-    setExportingPdf(true);
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      if (printRef.current) {
-        await exportElementToPdf(printRef.current, `Sales-Report-${dayjs().format('YYYY-MM-DD-HHmm')}.pdf`);
-      }
-    } catch {
-      message.error('Failed to generate PDF');
-    } finally {
-      setExportingPdf(false);
-    }
+  const handleExportPdf = async () => {
+    const blob = await reportService.exportSalesReportPdf(currentFilter);
+    downloadBlob(blob, `Sales-Report-${dayjs().format('YYYY-MM-DD-HHmm')}.pdf`);
   };
 
   const handleExportExcel = async () => {
-    setExportingExcel(true);
-    try {
-      const blob = await reportService.exportSalesReportExcel(currentFilter);
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `Sales-Report-${dayjs().format('YYYY-MM-DD-HHmm')}.xlsx`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch {
-      message.error('Failed to export Excel');
-    } finally {
-      setExportingExcel(false);
-    }
+    const blob = await reportService.exportSalesReportExcel(currentFilter);
+    downloadBlob(blob, `Sales-Report-${dayjs().format('YYYY-MM-DD-HHmm')}.xlsx`);
   };
 
   const itemColumns: ColumnsType<SalesReportItem> = [
@@ -146,20 +120,8 @@ const SalesReports: React.FC = () => {
               { label: 'Credit', value: 'credit' },
             ]}
           />
-          <DatePicker.RangePicker
-            value={dateRange}
-            onChange={(dates: any) => dates && setDateRange(dates)}
-            format="YYYY-MM-DD"
-            allowClear={false}
-            presets={[
-              { label: 'Today', value: [dayjs().startOf('day'), dayjs().endOf('day')] },
-              { label: 'Last 7 Days', value: [dayjs().subtract(7, 'days'), dayjs()] },
-              { label: 'Last 30 Days', value: [dayjs().subtract(30, 'days'), dayjs()] },
-              { label: 'This Month', value: [dayjs().startOf('month'), dayjs().endOf('month')] },
-            ]}
-          />
-          <CommonButton icon={<FilePdfOutlined style={{ color: '#FF0000' }} />} onClick={handleExportPDF} loading={exportingPdf} tooltip="Download PDF">PDF</CommonButton>
-          <CommonButton icon={<FileExcelOutlined style={{ color: '#107C41' }} />} onClick={handleExportExcel} loading={exportingExcel} tooltip="Download Excel">Excel</CommonButton>
+          <PeriodFilter onChange={setPeriod} defaultPreset="custom" />
+          <ExportButtons onExportExcel={handleExportExcel} onExportPdf={handleExportPdf} disabled={!report} />
           <CommonButton icon={<ReloadOutlined style={{ color: 'blue' }} />} onClick={loadReport} loading={loading}>Refresh</CommonButton>
         </Space>
       </div>
@@ -168,25 +130,22 @@ const SalesReports: React.FC = () => {
         {report ? (
           <>
             {/* Tier 1: Summary */}
-            <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-              <Col xs={12} md={6}><Card size="small"><Statistic title="Gross Sales" value={report.summary.gross_sales} precision={2} prefix="LKR" /></Card></Col>
-              <Col xs={12} md={6}><Card size="small"><Statistic title="Total Discounts" value={report.summary.total_discounts} precision={2} prefix="LKR" /></Card></Col>
-              <Col xs={12} md={6}><Card size="small"><Statistic title="Delivery Charges" value={report.summary.delivery_charges} precision={2} prefix="LKR" /></Card></Col>
-              <Col xs={12} md={6}><Card size="small"><Statistic title="Total Refunds" value={report.summary.total_refunds} precision={2} prefix="LKR" /></Card></Col>
-              <Col xs={12} md={6}><Card size="small"><Statistic title="Invoice Count" value={report.summary.invoice_count} /></Card></Col>
-              <Col xs={12} md={6}><Card size="small"><Statistic title="Average Ticket Value" value={report.summary.average_ticket_value} precision={2} prefix="LKR" /></Card></Col>
-              <Col xs={24} md={12}>
-                <Card size="small" style={{ background: '#0b3d91' }}>
-                  <Statistic
-                    title={<span style={{ color: 'rgba(255,255,255,0.85)' }}>Net Sales (Gross − Discounts − Refunds)</span>}
-                    value={report.summary.net_sales}
-                    precision={2}
-                    prefix="LKR"
-                    valueStyle={{ color: '#fff' }}
-                  />
-                </Card>
-              </Col>
-            </Row>
+            <KPIStatRow
+              items={[
+                { label: 'Gross Sales', value: report.summary.gross_sales },
+                { label: 'Total Discounts', value: report.summary.total_discounts },
+                { label: 'Delivery Charges', value: report.summary.delivery_charges },
+                { label: 'Total Refunds', value: report.summary.total_refunds },
+                { label: 'Invoice Count', value: report.summary.invoice_count, precision: 0, prefix: '' },
+                { label: 'Average Ticket Value', value: report.summary.average_ticket_value },
+                {
+                  label: 'Net Sales (Gross − Discounts − Refunds)',
+                  value: report.summary.net_sales,
+                  highlight: true,
+                  span: { xs: 24, md: 12 },
+                },
+              ]}
+            />
 
             {/* Tier 2: Payment Reconciliation */}
             <Card title="Payment Reconciliation" size="small" style={{ marginBottom: 16 }}>
@@ -256,11 +215,6 @@ const SalesReports: React.FC = () => {
                 pagination={{ pageSize: 15, showTotal: (t) => `${t} records` }}
               />
             </Card>
-
-            {/* Off-screen render target for PDF capture */}
-            <div style={{ position: 'fixed', top: 0, left: '-10000px', zIndex: -1 }}>
-              <SalesReport ref={printRef} report={report} />
-            </div>
           </>
         ) : (
           !loading && <Empty description="No report data" />

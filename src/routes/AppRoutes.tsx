@@ -55,6 +55,11 @@ import Sales from "../pages/transactions/Sales";
 import SalesReturns from "../pages/transactions/SalesReturns";
 import Reports from "../pages/reports/Reports";
 import SalesReports from "../pages/reports/SalesReports";
+import PurchaseReports from "../pages/reports/PurchaseReports";
+import FinancialReports from "../pages/reports/FinancialReports";
+import InventoryReports from "../pages/reports/InventoryReports";
+import LogHistoryReports from "../pages/reports/LogHistoryReports";
+import TopSellingReports from "../pages/reports/TopSellingReports";
 import ProcessRefund from "../pages/transactions/ProcessRefund";
 import HoldBills from "../pages/transactions/HoldBills";
 
@@ -259,6 +264,35 @@ const AppRoutes: React.FC = () => {
         >
           <Route path="/reports" element={<Reports />} />
           <Route path="/reports/sales" element={<SalesReports />} />
+          <Route path="/reports/top-selling" element={<TopSellingReports />} />
+        </Route>
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.REPORTS_PURCHASES} />
+          }
+        >
+          <Route path="/reports/purchases" element={<PurchaseReports />} />
+        </Route>
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.REPORTS_INVENTORY} />
+          }
+        >
+          <Route path="/reports/inventory" element={<InventoryReports />} />
+        </Route>
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.REPORTS_FINANCIAL} />
+          }
+        >
+          <Route path="/reports/financial" element={<FinancialReports />} />
+        </Route>
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.REPORTS_LOG_HISTORY} />
+          }
+        >
+          <Route path="/reports/log-history" element={<LogHistoryReports />} />
         </Route>
       </Route>
 

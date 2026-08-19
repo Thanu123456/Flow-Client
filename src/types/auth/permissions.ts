@@ -52,6 +52,8 @@ export const PERMISSIONS = {
   REPORTS_INVENTORY: 'reports.inventory',
   REPORTS_FINANCIAL: 'reports.financial',
   REPORTS_EXPORT: 'reports.export',
+  REPORTS_PURCHASES: 'reports.purchases',
+  REPORTS_LOG_HISTORY: 'reports.log_history',
 
   // Settings
   SETTINGS_CATEGORIES: 'settings.categories',
