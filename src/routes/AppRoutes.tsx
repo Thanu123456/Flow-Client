@@ -41,6 +41,9 @@ import CreditCustomer from "../pages/management/CreditCustomer";
 import Warranties from "../pages/management/Warranties";
 import Products from "../pages/management/Products";
 import Stock from "../pages/management/Stock";
+import LowStock from "../pages/inventory/LowStock";
+import OutOfStock from "../pages/inventory/OutOfStock";
+import ExpiredProducts from "../pages/inventory/ExpiredProducts";
 import AddProduct from "../pages/management/AddProduct";
 import EditProduct from "../pages/management/EditProduct";
 import StockAdjustment from "../pages/management/StockAdjustment";
@@ -107,6 +110,9 @@ const AppRoutes: React.FC = () => {
         >
           <Route path="/products" element={<Products />} />
           <Route path="/inventory" element={<Stock />} />
+          <Route path="/inventory/low-stock" element={<LowStock />} />
+          <Route path="/inventory/out-of-stock" element={<OutOfStock />} />
+          <Route path="/inventory/expired" element={<ExpiredProducts />} />
         </Route>
         <Route
           element={

@@ -14,7 +14,8 @@ import type {
 import type {
   KioskLoginRequest,
   KioskLoginResponse,
-  KioskEndShiftResponse
+  KioskEndShiftResponse,
+  KioskSessionInfo
 } from '../../types/auth/kiosk.types';
 import type {
   SuperAdminLoginRequest,
@@ -64,6 +65,12 @@ export const authService = {
   // Kiosk End Shift - Backend: POST /kiosk/end-shift
   async endShift(): Promise<KioskEndShiftResponse> {
     const response = await api.post<{ data: KioskEndShiftResponse }>('/kiosk/end-shift');
+    return response.data.data;
+  },
+
+  // Kiosk Session Info (live shift totals) - Backend: GET /kiosk/session
+  async getKioskSession(): Promise<KioskSessionInfo> {
+    const response = await api.get<{ data: KioskSessionInfo }>('/kiosk/session');
     return response.data.data;
   },
 

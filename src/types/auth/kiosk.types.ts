@@ -36,3 +36,13 @@ export interface KioskEndShiftResponse {
   total_card_sales: number;
   total_refunds: number;
 }
+
+export interface KioskSessionInfo {
+  id: string;
+  user_id: string;
+  shift_started_at: string;
+  shift_ended_at?: string;
+  total_sales: number;
+  total_transactions: number;
+  is_active: boolean;
+}

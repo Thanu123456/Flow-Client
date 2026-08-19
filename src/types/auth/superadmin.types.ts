@@ -283,3 +283,17 @@ export interface AuditLog {
   status: 'success' | 'failure';
   tenant_id?: string;
 }
+
+export interface SystemSettings {
+  site_name: string;
+  maintenance_mode: boolean;
+  allow_registration: boolean;
+  email_verification: boolean;
+  session_timeout: number;
+  max_login_attempts: number;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_encryption: 'tls' | 'ssl' | 'none';
+  smtp_user: string;
+  smtp_pass: string;
+}

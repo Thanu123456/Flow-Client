@@ -28,6 +28,9 @@ import {
   FundOutlined,
   HistoryOutlined,
   TrophyOutlined,
+  WarningOutlined,
+  StopOutlined,
+  ClockCircleOutlined,
 } from "@ant-design/icons";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -374,7 +377,10 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       invChildren.push(
         { key: "products", label: "Products", icon: <InboxOutlined />, path: "/products" },
         { key: "inventory-stock", label: "Stock", icon: <AppstoreOutlined />, path: "/inventory" },
-        { key: "variations", label: "Variations", icon: <AppstoreOutlined />, path: "/variations" }
+        { key: "variations", label: "Variations", icon: <AppstoreOutlined />, path: "/variations" },
+        { key: "low-stock", label: "Low Stock", icon: <WarningOutlined />, path: "/inventory/low-stock" },
+        { key: "out-of-stock", label: "Out of Stock", icon: <StopOutlined />, path: "/inventory/out-of-stock" },
+        { key: "expired-products", label: "Expired Products", icon: <ClockCircleOutlined />, path: "/inventory/expired" }
       );
     }
     if (isOwner || hasPermission(PERMISSIONS.INVENTORY_ADJUST)) {

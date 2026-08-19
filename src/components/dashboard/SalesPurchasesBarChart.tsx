@@ -50,7 +50,6 @@ export const SalesPurchasesBarChart: React.FC = () => {
 
   const chartData = useMemo(() => {
     const raw = charts?.salesPurchases ?? [];
-    console.log('[SalesPurchasesBarChart] raw salesPurchases:', raw.length, 'points');
     if (!raw.length) return [];
     return raw.map(p => ({
       name: dayjs(p.label).isValid() ? dayjs(p.label).format('MMM DD') : p.label,

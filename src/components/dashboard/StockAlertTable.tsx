@@ -17,11 +17,7 @@ interface StockAlertItem {
 const StockAlertTable: React.FC = () => {
     const { charts, chartsLoading } = useDashboardStore();
 
-    const data: StockAlertItem[] = React.useMemo(() => {
-        const raw = charts?.stockAlerts ?? [];
-        console.log('[StockAlertTable] raw stockAlerts:', raw.length, 'items', raw);
-        return raw;
-    }, [charts]);
+    const data: StockAlertItem[] = React.useMemo(() => charts?.stockAlerts ?? [], [charts]);
 
     const columns: ColumnsType<StockAlertItem> = [
         {

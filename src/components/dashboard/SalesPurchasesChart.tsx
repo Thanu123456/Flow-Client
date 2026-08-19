@@ -50,7 +50,6 @@ export const SalesPurchasesChart: React.FC = () => {
 
   const chartData = useMemo(() => {
     const raw = charts?.salesPurchases ?? [];
-    console.log('[SalesPurchasesChart] raw salesPurchases:', raw.length, 'points', raw);
     if (!raw.length) return [];
     return raw.map(point => ({
       name: dayjs(point.label).isValid() ? dayjs(point.label).format('MMM DD') : point.label,

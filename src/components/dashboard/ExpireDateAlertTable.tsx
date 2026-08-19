@@ -16,11 +16,7 @@ interface ExpireAlertItem {
 const ExpireDateAlertTable: React.FC = () => {
     const { charts, chartsLoading } = useDashboardStore();
 
-    const data: ExpireAlertItem[] = React.useMemo(() => {
-        const raw = charts?.expireAlerts ?? [];
-        console.log('[ExpireDateAlertTable] raw expireAlerts:', raw.length, 'items', raw);
-        return raw;
-    }, [charts]);
+    const data: ExpireAlertItem[] = React.useMemo(() => charts?.expireAlerts ?? [], [charts]);
 
     const columns: ColumnsType<ExpireAlertItem> = [
         {

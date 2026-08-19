@@ -10,6 +10,9 @@ import { useProductStore } from '../../store/inventory/productStore';
 import { useCategoryStore } from '../../store/management/categoryStore';
 import { usePOSStore } from '../../store/transactions/posStore';
 import { useCustomerStore } from '../../store/management/customerStore';
+import { useAuth } from '../../contexts/AuthContext';
+import { usePermissions } from '../../hooks/auth/usePermissions';
+import { PERMISSIONS } from '../../types/auth/permissions';
 import type { Product, ProductVariation } from '../../types/entities/product.types';
 import AddCustomerModal from '../../components/customers/AddCustomerModal';
 import WeightEntryModal from '../../components/pos/WeightEntryModal';
@@ -17,6 +20,7 @@ import PriceModeSelector from '../../components/pos/PriceModeSelector';
 import HeldBillsModal from '../../components/pos/HeldBillsModal';
 import HoldNoteModal from '../../components/pos/HoldNoteModal';
 import POSRefundModal from '../../components/pos/POSRefundModal';
+import CustomerPaymentModal from '../../components/credit-customer/CustomerPaymentModal';
 import { isWeightBasedProduct, formatQuantity } from '../../utils/posHelpers';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import { axiosInstance } from '../../services/api/axiosInstance';
@@ -80,6 +84,9 @@ const POS: React.FC = () => {
     // ── POS Refund Modal ───────────────────────────────────────────────
     const [refundModalVisible, setRefundModalVisible] = useState(false);
 
+    // ── Customer Credit Payment Modal ──────────────────────────────────
+    const [creditPaymentModalVisible, setCreditPaymentModalVisible] = useState(false);
+
     // ── Customer state ─────────────────────────────────────────────────
 
     // ── Print Bill checkbox ────────────────────────────────────────────
@@ -110,8 +117,16 @@ const POS: React.FC = () => {
         ? `${selectedCustomer.fullName} - ${selectedCustomer.phone}`
         : 'Walk-In Customer';
 
-    // Static user (will be from auth context in production)
-    const user = { name: "John Doe", email: "john@example.com", avatar: null as string | null, role: "Admin" };
+    // ── Signed-in user (owner/employee or kiosk cashier) ────────────────
+    // full_name and profile_image_url are common to both session shapes;
+    // email only exists on full sessions, role only on kiosk sessions.
+    const { user: authUser, isKiosk, logout, endShift } = useAuth();
+    const { isOwner, hasPermission } = usePermissions();
+    const canManageSettings = isOwner || hasPermission(PERMISSIONS.SETTINGS_SYSTEM);
+    const displayName = (authUser as any)?.full_name || 'User';
+    const displayEmail = (authUser as any)?.email as string | undefined;
+    const displayAvatar = (authUser as any)?.profile_image_url as string | undefined;
+    const displayRole = isOwner ? 'Owner' : (authUser as any)?.role_name || (authUser as any)?.role || 'Employee';
 
     // ─── Clock ───────────────────────────────────────────────────────
     useEffect(() => {
@@ -431,7 +446,7 @@ const POS: React.FC = () => {
                 // Main POS screen shortcuts
                 if (e.key === 'Delete') { clearCart(); return; }
                 if (e.key === 'F1') { e.preventDefault(); setIsAddCustomerModalVisible(true); return; }
-                if (e.key === 'F2') { e.preventDefault(); setPaymentMethod('Credit'); message.success('Payment method set to Credit'); return; }
+                if (e.key === 'F2') { e.preventDefault(); setCreditPaymentModalVisible(true); return; }
                 if (e.key === 'F3') { e.preventDefault(); setIsPriceModeVisible(true); return; }
                 if (e.key === 'F4') { e.preventDefault(); if (cart.length > 0) setHoldNoteModalOpen(true); return; }
             }
@@ -497,15 +512,40 @@ const POS: React.FC = () => {
 
     // ─── User menu ────────────────────────────────────────────────────
     const userMenuItems: MenuProps['items'] = [
-        { key: 'profile-info', label: (<div className="px-3 py-2"><div className="font-semibold text-gray-800">{user.name}</div><div className="text-xs text-gray-500">{user.email}</div><div className="text-xs text-gray-400 mt-1">{user.role}</div></div>), disabled: true },
+        { key: 'profile-info', label: (<div className="px-3 py-2"><div className="font-semibold text-gray-800">{displayName}</div>{displayEmail && <div className="text-xs text-gray-500">{displayEmail}</div>}<div className="text-xs text-gray-400 mt-1">{displayRole}</div></div>), disabled: true },
         { type: 'divider' },
-        { key: 'dashboard', icon: <DashboardOutlined />, label: 'Dashboard', onClick: () => navigate('/dashboard') },
+        { key: 'dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
         { key: 'profile', icon: <UserOutlined />, label: 'My Profile' },
-        { key: 'settings', icon: <SettingOutlined />, label: 'Settings' },
-        { key: 'change-password', icon: <KeyOutlined />, label: 'Change Password' },
+        // Kiosk sessions authenticate with a PIN, not a password — there's no
+        // password to change, and system Settings is an owner/admin concern.
+        ...(canManageSettings ? [{ key: 'settings', icon: <SettingOutlined />, label: 'Settings' }] : []),
+        ...(!isKiosk ? [{ key: 'change-password', icon: <KeyOutlined />, label: 'Change Password' }] : []),
         { type: 'divider' },
-        { key: 'logout', icon: <LogoutOutlined />, label: 'Logout', danger: true },
+        { key: 'logout', icon: <LogoutOutlined />, label: isKiosk ? 'End Shift' : 'Logout', danger: true },
     ];
+
+    const handleUserMenuClick: MenuProps['onClick'] = ({ key }) => {
+        if (key === 'logout') {
+            Modal.confirm({
+                title: isKiosk ? 'End Shift' : 'Confirm Logout',
+                content: isKiosk
+                    ? 'Are you sure you want to end your shift and sign out?'
+                    : 'Are you sure you want to log out of the system?',
+                okText: isKiosk ? 'End Shift' : 'Logout',
+                okType: 'danger',
+                cancelText: 'Stay',
+                onOk: () => (isKiosk ? endShift() : logout()),
+            });
+        } else if (key === 'dashboard') {
+            navigate('/dashboard');
+        } else if (key === 'profile') {
+            navigate('/profile');
+        } else if (key === 'settings') {
+            navigate('/settings');
+        } else if (key === 'change-password') {
+            navigate('/change-password');
+        }
+    };
 
     // ─── Price Mode label ─────────────────────────────────────────────
     const priceModeLabel: Record<PriceMode, string> = { retail: 'Retail', wholesale: 'WholeSale', our: 'Our Price' };
@@ -583,9 +623,9 @@ const POS: React.FC = () => {
                     </Button>
                     <Button onClick={() => setRefundModalVisible(true)} size="middle" style={{ backgroundColor: '#fa5f55', color: 'white', border: 'none' }} className="hover:opacity-90 text-xs rounded-lg shadow-sm font-semibold">REFUND</Button>
 
-                    <Dropdown menu={{ items: userMenuItems }} trigger={['click']} placement="bottomRight">
+                    <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }} trigger={['click']} placement="bottomRight">
                         <div className="cursor-pointer ml-2">
-                            <Avatar size={40} src={user.avatar} icon={!user.avatar && <UserOutlined />} className="bg-indigo-500 hover:bg-indigo-600 transition-all shadow-sm" />
+                            <Avatar size={40} src={displayAvatar} icon={!displayAvatar && <UserOutlined />} className="bg-indigo-500 hover:bg-indigo-600 transition-all shadow-sm" />
                         </div>
                     </Dropdown>
                     <Button type="text" onClick={() => navigate('/dashboard')} className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 font-semibold ml-2 rounded-lg px-4 transition-colors">Exit POS</Button>
@@ -715,7 +755,7 @@ const POS: React.FC = () => {
                     {/* Action buttons */}
                     <div className="p-3 border-b border-gray-200 flex gap-2 shrink-0">
                         <Button onClick={() => setIsAddCustomerModalVisible(true)} style={{ backgroundColor: '#54a0ff', color: 'white', border: 'none', height: '40px' }} className="flex-1 hover:opacity-90 font-semibold text-[11px] rounded-lg shadow-sm">CREATE CUSTOMER (F1)</Button>
-                        <Button onClick={() => { setPaymentMethod('Credit'); message.success('Payment method set to Credit'); }} style={{ backgroundColor: '#ff6b6b', color: 'white', border: 'none', height: '40px' }} className="flex-1 hover:opacity-90 font-semibold text-[11px] rounded-lg shadow-sm">CREDIT (F2)</Button>
+                        <Button onClick={() => setCreditPaymentModalVisible(true)} style={{ backgroundColor: '#ff6b6b', color: 'white', border: 'none', height: '40px' }} className="flex-1 hover:opacity-90 font-semibold text-[11px] rounded-lg shadow-sm">CREDIT (F2)</Button>
                         {/* Feature #6 – Price Mode button */}
                         <Button
                             onClick={() => setIsPriceModeVisible(true)}
@@ -1162,6 +1202,14 @@ const POS: React.FC = () => {
             <POSRefundModal
                 visible={refundModalVisible}
                 onClose={() => setRefundModalVisible(false)}
+            />
+
+            {/* ── Customer Credit Payment Modal ──────────────────────────── */}
+            <CustomerPaymentModal
+                visible={creditPaymentModalVisible}
+                customer={null}
+                onClose={() => setCreditPaymentModalVisible(false)}
+                onSuccess={() => setCreditPaymentModalVisible(false)}
             />
 
             {/* ── Feature #10 – Held Bills Modal ─────────────────────────── */}
