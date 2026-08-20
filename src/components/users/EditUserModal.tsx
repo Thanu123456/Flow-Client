@@ -11,11 +11,15 @@ import {
   Col,
   Typography,
   App,
+  Alert,
+  Avatar,
 } from 'antd';
+import { UserOutlined } from '@ant-design/icons';
 import { useUserStore } from '../../store/management/userStore';
 import { useRoleStore } from '../../store/management/roleStore';
 import { useWarehouseStore } from '../../store/management/warehouseStore';
 import type { User, UserFormData } from '../../types/entities/user.types';
+import ImageUpload from '../common/Upload/ImageUpload';
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -41,6 +45,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   const { updateUser } = useUserStore();
   const { allRoles, getAllRoles } = useRoleStore();
   const { warehouses, getWarehouses } = useWarehouseStore();
+
+  const isOwner = user?.userType === 'owner';
 
   useEffect(() => {
     if (visible) {
@@ -76,16 +82,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
 
       const userValues = {
         ...values,
-        status: values.status ? 'active' : 'inactive'
+        status: values.status ? 'active' : 'inactive',
       } as Partial<UserFormData>;
 
       await updateUser(user.id, userValues);
       message.success('User updated successfully');
       onSuccess();
     } catch (error: any) {
-      if (error.errorFields) {
-        return; // Form validation error
-      }
+      if (error.errorFields) return;
       message.error(error.message || 'Failed to update user');
     } finally {
       setSubmitting(false);
@@ -102,11 +106,23 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       title="Edit User"
       open={visible}
       onCancel={onCancel}
-      onOk={handleSubmit}
+      onOk={isOwner ? onCancel : handleSubmit}
+      okText={isOwner ? 'Close' : 'Save'}
+      cancelButtonProps={isOwner ? { style: { display: 'none' } } : undefined}
       confirmLoading={submitting}
       width={700}
       destroyOnHidden
     >
+      {isOwner && (
+        <Alert
+          message="Owner Account"
+          description="Owner account details are managed by the system and cannot be edited here."
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
       <Form form={form} layout="vertical">
         <Divider orientation="left">Personal Information</Divider>
         <Row gutter={16}>
@@ -119,7 +135,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 { min: 2, message: 'Name must be at least 2 characters' },
               ]}
             >
-              <Input placeholder="Enter full name" />
+              <Input placeholder="Enter full name" disabled={isOwner} />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -131,7 +147,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 { type: 'email', message: 'Please enter a valid email' },
               ]}
             >
-              <Input placeholder="Enter email address" />
+              <Input placeholder="Enter email address" disabled={isOwner} />
             </Form.Item>
           </Col>
         </Row>
@@ -143,12 +159,21 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               label="Phone Number"
               rules={[{ required: true, message: 'Please enter phone number' }]}
             >
-              <Input placeholder="Enter phone number" />
+              <Input placeholder="Enter phone number" disabled={isOwner} />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="profileImageUrl" label="Profile Image URL">
-              <Input placeholder="Enter profile image URL (optional)" />
+            <Form.Item name="profileImageUrl" label="Profile Image">
+              {isOwner ? (
+                <Avatar
+                  size={64}
+                  src={user?.profileImageUrl}
+                  icon={!user?.profileImageUrl && <UserOutlined />}
+                  style={{ background: '#f0f0f0' }}
+                />
+              ) : (
+                <ImageUpload placeholder="Click or drag to upload profile image" />
+              )}
             </Form.Item>
           </Col>
         </Row>
@@ -159,9 +184,13 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             <Form.Item
               name="roleId"
               label="Role"
-              rules={[{ required: user?.userType !== 'owner', message: 'Please select a role' }]}
+              rules={[{ required: !isOwner, message: 'Please select a role' }]}
             >
-              <Select placeholder={user?.userType === 'owner' ? 'N/A (Owner has full access)' : 'Select role'} allowClear={user?.userType === 'owner'} disabled={user?.userType === 'owner'}>
+              <Select
+                placeholder={isOwner ? 'Owner (full access)' : 'Select role'}
+                allowClear={isOwner}
+                disabled={isOwner}
+              >
                 {allRoles
                   .filter((role) => role.isActive)
                   .map((role) => (
@@ -174,7 +203,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           </Col>
           <Col span={12}>
             <Form.Item name="warehouseId" label="Default Warehouse">
-              <Select placeholder="Select warehouse (optional)" allowClear>
+              <Select placeholder="Select warehouse (optional)" allowClear disabled={isOwner}>
                 {warehouses
                   .filter((w) => w.status === 'active')
                   .map((warehouse) => (
@@ -190,7 +219,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="status" label="Status" valuePropName="checked">
-              <Switch />
+              <Switch disabled={isOwner} />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -200,46 +229,45 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 max={100}
                 placeholder="0-100"
                 style={{ width: '100%' }}
+                disabled={isOwner}
               />
             </Form.Item>
           </Col>
         </Row>
 
-        <Divider orientation="left">Kiosk Access</Divider>
-        <Form.Item name="kioskEnabled" valuePropName="checked">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Switch checked={kioskEnabled} onChange={handleKioskChange} />
-            <Text>Enable Kiosk Login (User ID + PIN)</Text>
-          </div>
-        </Form.Item>
+        {!isOwner && (
+          <>
+            <Divider orientation="left">Kiosk Access</Divider>
+            <Form.Item name="kioskEnabled" valuePropName="checked">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Switch checked={kioskEnabled} onChange={handleKioskChange} />
+                <Text>Enable Kiosk Login (User ID + PIN)</Text>
+              </div>
+            </Form.Item>
 
-        {kioskEnabled && (
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="userId"
-                label="User ID (for Kiosk)"
-                rules={[
-                  {
-                    required: kioskEnabled,
-                    message: 'Please enter user ID for kiosk',
-                  },
-                  {
-                    pattern: /^[A-Za-z0-9]+$/,
-                    message: 'User ID must be alphanumeric',
-                  },
-                ]}
-              >
-                <Input placeholder="e.g., EMP001" />
-              </Form.Item>
-            </Col>
-          </Row>
+            {kioskEnabled && (
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="userId"
+                    label="User ID (for Kiosk)"
+                    rules={[
+                      { required: kioskEnabled, message: 'Please enter user ID for kiosk' },
+                      { pattern: /^[A-Za-z0-9]+$/, message: 'User ID must be alphanumeric' },
+                    ]}
+                  >
+                    <Input placeholder="e.g., EMP001" />
+                  </Form.Item>
+                </Col>
+              </Row>
+            )}
+
+            <Text type="secondary">
+              Note: To change password or PIN, use the dedicated reset options from the user
+              actions menu.
+            </Text>
+          </>
         )}
-
-        <Text type="secondary">
-          Note: To change password or PIN, use the dedicated reset options from
-          the user actions menu.
-        </Text>
       </Form>
     </Modal>
   );

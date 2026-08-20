@@ -22,8 +22,17 @@ import {
   SafetyCertificateOutlined,
   RightOutlined,
   RollbackOutlined,
+  CreditCardOutlined,
+  SwapOutlined,
+  DatabaseOutlined,
+  FundOutlined,
+  HistoryOutlined,
+  TrophyOutlined,
+  WarningOutlined,
+  StopOutlined,
+  ClockCircleOutlined,
 } from "@ant-design/icons";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
 import { usePermissions } from "../../../hooks/auth/usePermissions";
 import { PERMISSIONS } from "../../../types/auth/permissions";
@@ -277,8 +286,7 @@ const CollapsedItem: React.FC<CollapsedItemProps> = ({
 ───────────────────────────────────────────────────────── */
 const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, endShift, isKiosk } = useAuth();
   const { hasPermission, isOwner } = usePermissions();
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   const [activeFlyout, setActiveFlyout] = useState<string | null>(null);
@@ -294,6 +302,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     if (p.startsWith("/subcategories")) return "subcategories";
     if (p.startsWith("/units")) return "units";
     if (p.startsWith("/products")) return "products";
+    if (p.startsWith("/adjustments")) return "adjustments";
     if (p.startsWith("/inventory")) return "inventory-stock";
     if (p.startsWith("/warehouses")) return "warehouses";
     if (p.startsWith("/variations")) return "variations";
@@ -301,11 +310,19 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     if (p.startsWith("/sales-returns")) return "sales-returns";
     if (p.startsWith("/sales")) return "sales";
     if (p.startsWith("/pos")) return "pos";
+    if (p.startsWith("/purchase-returns")) return "purchase-returns";
     if (p.startsWith("/purchases")) return "purchases";
     if (p.startsWith("/suppliers")) return "suppliers";
+    if (p.startsWith("/credit-supplier")) return "credit-supplier";
     if (p.startsWith("/customers")) return "customers";
     if (p.startsWith("/users")) return "users";
     if (p.startsWith("/roles")) return "roles";
+    if (p.startsWith("/reports/sales")) return "report-sales";
+    if (p.startsWith("/reports/top-selling")) return "report-top-selling";
+    if (p.startsWith("/reports/purchases")) return "report-purchases";
+    if (p.startsWith("/reports/inventory")) return "report-stock";
+    if (p.startsWith("/reports/financial")) return "report-financial";
+    if (p.startsWith("/reports/log-history")) return "report-log-history";
     if (p.startsWith("/reports")) return "reports";
     if (p.startsWith("/settings")) return "settings";
     return "dashboard";
@@ -315,9 +332,9 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
   useMemo(() => {
     const p = location.pathname;
     const next = new Set<string>();
-    if (["/brands", "/categories", "/subcategories", "/units", "/products", "/inventory", "/warehouses", "/variations", "/warranties"].some((s) => p.startsWith(s))) next.add("inventory");
-    if (["/sales", "/pos", "/purchases", "/sales-returns"].some((s) => p.startsWith(s))) next.add("transactions");
-    if (["/customers", "/suppliers"].some((s) => p.startsWith(s))) next.add("contacts");
+    if (["/brands", "/categories", "/subcategories", "/units", "/products", "/inventory", "/adjustments", "/warehouses", "/variations", "/warranties"].some((s) => p.startsWith(s))) next.add("inventory");
+    if (["/sales", "/pos", "/purchases", "/sales-returns", "/purchase-returns"].some((s) => p.startsWith(s))) next.add("transactions");
+    if (["/customers", "/suppliers", "/credit-supplier"].some((s) => p.startsWith(s))) next.add("contacts");
     if (["/users", "/roles"].some((s) => p.startsWith(s))) next.add("team");
     setExpandedKeys(next);
   }, [location.pathname]);
@@ -332,14 +349,19 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
 
   const handleLogout = () => {
     Modal.confirm({
-      title: "Confirm Logout",
-      content: "Are you sure you want to log out of the system?",
-      okText: "Logout",
+      title: isKiosk ? "End Shift" : "Confirm Logout",
+      content: isKiosk
+        ? "Are you sure you want to end your shift and sign out?"
+        : "Are you sure you want to log out of the system?",
+      okText: isKiosk ? "End Shift" : "Logout",
       okType: "danger",
       cancelText: "Stay",
       onOk: async () => {
-        await logout();
-        navigate("/login");
+        if (isKiosk) {
+          await endShift();
+        } else {
+          await logout();
+        }
       },
       centered: true,
     });
@@ -355,7 +377,15 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       invChildren.push(
         { key: "products", label: "Products", icon: <InboxOutlined />, path: "/products" },
         { key: "inventory-stock", label: "Stock", icon: <AppstoreOutlined />, path: "/inventory" },
-        { key: "variations", label: "Variations", icon: <AppstoreOutlined />, path: "/variations" }
+        { key: "variations", label: "Variations", icon: <AppstoreOutlined />, path: "/variations" },
+        { key: "low-stock", label: "Low Stock", icon: <WarningOutlined />, path: "/inventory/low-stock" },
+        { key: "out-of-stock", label: "Out of Stock", icon: <StopOutlined />, path: "/inventory/out-of-stock" },
+        { key: "expired-products", label: "Expired Products", icon: <ClockCircleOutlined />, path: "/inventory/expired" }
+      );
+    }
+    if (isOwner || hasPermission(PERMISSIONS.INVENTORY_ADJUST)) {
+      invChildren.push(
+        { key: "adjustments", label: "Adjustments", icon: <SwapOutlined />, path: "/adjustments" }
       );
     }
     if (isOwner || hasPermission(PERMISSIONS.SETTINGS_WAREHOUSES)) {
@@ -389,6 +419,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       txItems.push({ key: "sales-returns", label: "Sale Returns", icon: <RollbackOutlined />, path: "/sales-returns" });
     if (isOwner || hasPermission(PERMISSIONS.PURCHASES_VIEW))
       txItems.push({ key: "purchases", label: "GRN", icon: <FileTextOutlined />, path: "/purchases" });
+    if (isOwner || hasPermission(PERMISSIONS.PURCHASES_RETURNS))
+      txItems.push({ key: "purchase-returns", label: "Purchase Returns", icon: <RollbackOutlined />, path: "/purchase-returns" });
     if (txItems.length > 0) {
       groups.push({
         title: "Transactions",
@@ -402,6 +434,10 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       contactItems.push({ key: "customers", label: "Customers", icon: <TeamOutlined />, path: "/customers" });
     if (isOwner || hasPermission(PERMISSIONS.SUPPLIERS_VIEW))
       contactItems.push({ key: "suppliers", label: "Suppliers", icon: <ShopOutlined />, path: "/suppliers" });
+    if (isOwner || hasPermission(PERMISSIONS.SUPPLIERS_CREDIT))
+      contactItems.push({ key: "credit-supplier", label: "Credit Supplier", icon: <CreditCardOutlined />, path: "/credit-supplier" });
+    if (isOwner || hasPermission(PERMISSIONS.CUSTOMERS_CREDIT))
+      contactItems.push({ key: "credit-customer", label: "Credit Customer", icon: <CreditCardOutlined />, path: "/credit-customer" });
     if (contactItems.length > 0) {
       groups.push({
         title: "People",
@@ -409,11 +445,30 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       });
     }
 
-    // Analytics
-    if (isOwner || hasPermission(PERMISSIONS.REPORTS_SALES) || hasPermission(PERMISSIONS.REPORTS_INVENTORY)) {
+    // Analytics — direct links to each report, so it's one click instead of hub -> card -> report
+    const reportChildren: NavItem[] = [];
+    if (isOwner || hasPermission(PERMISSIONS.REPORTS_SALES)) {
+      reportChildren.push(
+        { key: "report-sales", label: "Sales Report", icon: <DollarOutlined />, path: "/reports/sales" },
+        { key: "report-top-selling", label: "Top Selling Product", icon: <TrophyOutlined />, path: "/reports/top-selling" }
+      );
+    }
+    if (isOwner || hasPermission(PERMISSIONS.REPORTS_PURCHASES)) {
+      reportChildren.push({ key: "report-purchases", label: "Purchases Report", icon: <ShoppingCartOutlined />, path: "/reports/purchases" });
+    }
+    if (isOwner || hasPermission(PERMISSIONS.REPORTS_INVENTORY)) {
+      reportChildren.push({ key: "report-stock", label: "Stock Report", icon: <DatabaseOutlined />, path: "/reports/inventory" });
+    }
+    if (isOwner || hasPermission(PERMISSIONS.REPORTS_FINANCIAL)) {
+      reportChildren.push({ key: "report-financial", label: "Profit & Loss Report", icon: <FundOutlined />, path: "/reports/financial" });
+    }
+    if (isOwner || hasPermission(PERMISSIONS.REPORTS_LOG_HISTORY)) {
+      reportChildren.push({ key: "report-log-history", label: "Log History Report", icon: <HistoryOutlined />, path: "/reports/log-history" });
+    }
+    if (reportChildren.length > 0) {
       groups.push({
         title: "Analytics",
-        items: [{ key: "reports", label: "Reports", icon: <BarChartOutlined />, path: "/reports" }],
+        items: [{ key: "reports", label: "Reports", icon: <BarChartOutlined />, children: reportChildren }],
       });
     }
 

@@ -47,11 +47,21 @@ const SuppliersPage: React.FC = () => {
     fetchSuppliers(page, pageSize);
   };
 
-  const handleRefresh = () => {
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
     setSearchTerm('');
     setStatusFilter(undefined);
     setSelectedRowKeys([]);
-    fetchSuppliers(1, pagination.limit);
+    setRefreshing(true);
+    try {
+      // Fetch with explicitly cleared filters — fetchSuppliers would
+      // still close over the previous search/filter values here.
+      await getSuppliers({ page: 1, limit: pagination.limit, includeInactive: false });
+    } catch {
+      // error state handled in store
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleEdit = (supplier: Supplier) => {
@@ -173,6 +183,7 @@ const SuppliersPage: React.FC = () => {
             <CommonButton
               icon={<ReloadOutlined style={{ color: "blue" }} />}
               onClick={handleRefresh}
+              loading={refreshing}
             >
               Refresh
             </CommonButton>

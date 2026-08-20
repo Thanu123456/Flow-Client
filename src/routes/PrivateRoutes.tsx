@@ -5,7 +5,7 @@ import { Spin } from 'antd';
 import AdminLayout from '../components/common/Layout/AdminLayout';
 
 const PrivateRoutes: React.FC = () => {
-    const { isAuthenticated, isLoading, isKiosk, mustChangePassword, role } = useAuth();
+    const { isAuthenticated, isLoading, mustChangePassword, role } = useAuth();
     const location = useLocation();
 
     if (isLoading) {
@@ -26,11 +26,9 @@ const PrivateRoutes: React.FC = () => {
         return <Navigate to="/change-password" replace />;
     }
 
-    // Prevent Kiosk users from accessing regular private routes
-    if (isKiosk) {
-         return <Navigate to="/kiosk/dashboard" replace />;
-    }
-
+    // Kiosk (cashier) sessions share this same layout — Sidebar/Header already
+    // filter navigation down to whatever permissions their role grants, so no
+    // separate kiosk-only route tree is needed.
     return <AdminLayout />;
 };
 

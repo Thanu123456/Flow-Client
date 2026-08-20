@@ -21,8 +21,12 @@ const getLoginRedirectUrl = (): string => {
   return '/login';
 };
 
+// Deliberately does NOT clear `tenant` — that's which shop this device is
+// branded to, not the current user's session. A user's token expiring should
+// never un-brand a kiosk device (it would otherwise break "Switch to Kiosk
+// Mode" whenever the logout call itself raced an expired token).
 const clearAuthData = () =>
-  ['token', 'refreshToken', 'user', 'tenant', 'role', 'isKiosk', 'mustChangePassword'].forEach((k) =>
+  ['token', 'refreshToken', 'user', 'role', 'isKiosk', 'mustChangePassword'].forEach((k) =>
     localStorage.removeItem(k)
   );
 

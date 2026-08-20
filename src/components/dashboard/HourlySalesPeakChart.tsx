@@ -25,18 +25,18 @@ const HourlySalesPeakChart: React.FC = () => {
     >
       <div className="flex justify-between items-center mb-6">
         <div>
-          <Title level={5} style={{ margin: 0, fontWeight: 800 }}>Hourly Sales Peak</Title>
-          <Text type="secondary" className="text-xs uppercase tracking-wider font-semibold">
+          <Title level={5} style={{ margin: 0, fontWeight: 400 }}>Hourly Sales Peak</Title>
+          <Text type="secondary" className="text-xs uppercase tracking-wider font-normal">
             Today's Transaction Volume
           </Text>
         </div>
       </div>
 
-      <div style={{ width: '100%', height: 300 }}>
+      <div style={{ width: '100%', height: 300, minWidth: 0 }}>
         {chartsLoading ? (
             <Skeleton active paragraph={{ rows: 6 }} />
         ) : data.length > 0 ? (
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <AreaChart data={data}>
               <defs>
                 <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">

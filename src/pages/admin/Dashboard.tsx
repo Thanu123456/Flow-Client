@@ -9,7 +9,7 @@ import {
     Avatar,
     Row,
     Col,
-    notification
+    App
 } from 'antd';
 import {
     ReloadOutlined,
@@ -29,7 +29,6 @@ import { useWarehouseStore } from '../../store/management/warehouseStore';
 import { useWarrantyStore } from '../../store/management/warrantyStore';
 import { useVariationStore } from '../../store/management/variationStore';
 import { useDashboardStore } from '../../store/reports/dashboardStore';
-import HeaderWithSearch from '../../components/common/Layout/HeaderWithSearch';
 import {
     SalesPurchasesChart,
     SummaryCards,
@@ -59,6 +58,7 @@ const Dashboard: React.FC = () => {
     const { logout, user, tenant } = useAuth();
     const { token } = theme.useToken();
     const navigate = useNavigate();
+    const { notification } = App.useApp();
 
     const [loading, setLoading] = useState(true);
     const [period, setPeriod] = useState('today');
@@ -69,7 +69,7 @@ const Dashboard: React.FC = () => {
     const showInsightNotification = () => {
         notification.destroy(); // Clear existing to prevent stacking
         notification.warning({
-            message: <span className="font-bold text-amber-900 tracking-tight">Business Insight</span>,
+            message: <span className="font-normal text-amber-900 tracking-tight">Business Insight</span>,
             description: <span className="text-amber-800 font-medium">Review your business activity logs.</span>,
             placement: 'bottomRight',
             duration: 5,
@@ -151,7 +151,6 @@ const Dashboard: React.FC = () => {
 
     return (
         <div style={{ background: token.colorBgLayout, minHeight: '100vh' }}>
-            <HeaderWithSearch />
             <div style={{ padding: '12px 24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 12, position: 'relative' }}>
                     {charts?.stockAlerts && charts.stockAlerts.length > 0 && showAlert && (
@@ -164,12 +163,12 @@ const Dashboard: React.FC = () => {
                                 justifyContent: 'space-between',
                             }}
                         >
-                            <span className="font-extrabold flex items-center gap-3 text-sm uppercase tracking-widest italic">
+                            <span className="font-normal flex items-center gap-3 text-sm uppercase tracking-widest italic">
                                 <span className="w-3 h-3 bg-white rounded-full animate-ping"></span>
                                 ATTENTION: STOCK IS LOW! CHECK ALERT TABLE
                             </span>
                             <button
-                                className="text-white hover:bg-white/20 transition-all bg-white/10 rounded-xl w-8 h-8 flex items-center justify-center font-black text-lg border border-white/20"
+                                className="text-white hover:bg-white/20 transition-all bg-white/10 rounded-xl w-8 h-8 flex items-center justify-center font-normal text-lg border border-white/20"
                                 onClick={() => setShowAlert(false)}
                             >
                                 ×
@@ -178,7 +177,7 @@ const Dashboard: React.FC = () => {
                     )}
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                    <Title level={4} style={{ margin: 0, fontWeight: 700, letterSpacing: '-0.02em' }}>
+                    <Title level={4} style={{ margin: 0, fontWeight: 400, letterSpacing: '-0.02em' }}>
                         Business Overview
                     </Title>
                     
@@ -228,28 +227,28 @@ const Dashboard: React.FC = () => {
                         <Button
                             type={period === 'today' ? 'primary' : 'default'}
                             onClick={() => { setPeriod('today'); fetchDashboardData('today'); }}
-                            className={`${period === 'today' ? 'bg-indigo-900 border-indigo-900' : 'border-gray-200'} rounded-md px-6 font-bold h-10`}
+                            className={`${period === 'today' ? 'bg-indigo-900 border-indigo-900' : 'border-gray-200'} rounded-md px-6 font-normal h-10`}
                         >
                             TODAY
                         </Button>
                         <Button
                             type={period === 'week' ? 'primary' : 'default'}
                             onClick={() => { setPeriod('week'); fetchDashboardData('week'); }}
-                            className={`${period === 'week' ? 'bg-indigo-900 border-indigo-900' : 'border-gray-200'} rounded-md px-4 font-bold h-10`}
+                            className={`${period === 'week' ? 'bg-indigo-900 border-indigo-900' : 'border-gray-200'} rounded-md px-4 font-normal h-10`}
                         >
                             THIS WEEK
                         </Button>
                         <Button
                             type={period === 'month' ? 'primary' : 'default'}
                             onClick={() => { setPeriod('month'); fetchDashboardData('month'); }}
-                            className={`${period === 'month' ? 'bg-indigo-900 border-indigo-900' : 'border-gray-200'} rounded-md px-4 font-bold h-10`}
+                            className={`${period === 'month' ? 'bg-indigo-900 border-indigo-900' : 'border-gray-200'} rounded-md px-4 font-normal h-10`}
                         >
                             THIS MONTH
                         </Button>
                         <Button
                             type={period === 'year' ? 'primary' : 'default'}
                             onClick={() => { setPeriod('year'); fetchDashboardData('year'); }}
-                            className={`${period === 'year' ? 'bg-indigo-900 border-indigo-900' : 'border-gray-200'} rounded-md px-4 font-bold h-10`}
+                            className={`${period === 'year' ? 'bg-indigo-900 border-indigo-900' : 'border-gray-200'} rounded-md px-4 font-normal h-10`}
                         >
                             THIS YEAR
                         </Button>

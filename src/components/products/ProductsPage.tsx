@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Space, message } from "antd";
-import { PlusOutlined, ImportOutlined, ReloadOutlined, FilePdfOutlined, FileExcelOutlined } from "@ant-design/icons";
+import { Space, message, Dropdown } from "antd";
+import type { MenuProps } from "antd";
+import { PlusOutlined, ImportOutlined, ReloadOutlined, FilePdfOutlined, FileExcelOutlined, DownOutlined, DownloadOutlined, UploadOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import ProductsTable from "./ProductsTable";
 import ImportProducts from "./ImportProducts";
@@ -8,6 +9,7 @@ import { PageLayout } from "../common/PageLayout";
 import { CommonButton } from "../common/Button";
 import { useProductStore } from "../../store/inventory/productStore";
 import { useDebounce } from "../../hooks/ui/useDebounce";
+import { productService } from "../../services/inventory/productService";
 import type { ProductType, ProductStatus } from "../../types/entities/product.types";
 
 interface ProductsPageProps {
@@ -59,11 +61,21 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
         fetchProducts(page, pageSize);
     };
 
-    const handleRefresh = () => {
+    const [refreshing, setRefreshing] = useState(false);
+    const handleRefresh = async () => {
         setSearchTerm("");
         setTypeFilter(undefined);
         setStatusFilter(undefined);
-        fetchProducts(1, pagination.limit);
+        setRefreshing(true);
+        try {
+            // Fetch with explicitly cleared filters — fetchProducts would
+            // still close over the previous search/filter values here.
+            await getProducts({ page: 1, limit: pagination.limit || 50 });
+        } catch {
+            // error state handled in store
+        } finally {
+            setRefreshing(false);
+        }
     };
 
     const handleExportPDF = () => {
@@ -73,6 +85,37 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
     const handleExportExcel = () => {
         message.info("Export to Excel coming soon");
     };
+
+    const handleDownloadTemplate = async () => {
+        try {
+            const blob = await productService.downloadTemplate();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "product_import_template.xlsx";
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        } catch (error: any) {
+            message.error(error?.response?.data?.message || "Failed to download template");
+        }
+    };
+
+    const uploadMenuItems: MenuProps["items"] = [
+        {
+            key: "download-template",
+            icon: <DownloadOutlined />,
+            label: "Download Excel Template",
+            onClick: handleDownloadTemplate,
+        },
+        {
+            key: "upload-file",
+            icon: <UploadOutlined />,
+            label: "Upload Excel File",
+            onClick: () => setImportModalVisible(true),
+        },
+    ];
 
     return (
         <>
@@ -107,12 +150,11 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
                 ]}
                 actions={
                     <Space>
-                        <CommonButton
-                            icon={<ImportOutlined />}
-                            onClick={() => setImportModalVisible(true)}
-                        >
-                            Import
-                        </CommonButton>
+                        <Dropdown menu={{ items: uploadMenuItems }} trigger={["click"]}>
+                            <CommonButton icon={<ImportOutlined />}>
+                                Upload <DownOutlined />
+                            </CommonButton>
+                        </Dropdown>
                         <CommonButton
                             icon={<FilePdfOutlined style={{ color: "#FF0000" }} />}
                             onClick={handleExportPDF}
@@ -137,6 +179,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
                         <CommonButton
                             icon={<ReloadOutlined style={{ color: "blue" }} />}
                             onClick={handleRefresh}
+                            loading={refreshing}
                         >
                             Refresh
                         </CommonButton>

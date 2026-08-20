@@ -71,7 +71,21 @@ const BrandsPage: React.FC<BrandsPageProps> = ({
     getBrands(params);
   };
 
-  const handleRefresh = () => getBrands(paginationParams);
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setSearchTerm("");
+    setStatusFilter(undefined);
+    const params = { ...paginationParams, page: 1, search: "", status: undefined };
+    setPaginationParams(params);
+    setRefreshing(true);
+    try {
+      await getBrands(params);
+    } catch {
+      // error state handled in store
+    } finally {
+      setRefreshing(false);
+    }
+  };
   const handleAddBrand = () => setAddModalVisible(true);
   const handleEditBrand = (brand: any) => {
     setSelectedBrand(brand);
@@ -166,6 +180,7 @@ const BrandsPage: React.FC<BrandsPageProps> = ({
             <CommonButton
               icon={<ReloadOutlined style={{ color: "blue" }} />}
               onClick={handleRefresh}
+              loading={refreshing}
             >
               Refresh
             </CommonButton>

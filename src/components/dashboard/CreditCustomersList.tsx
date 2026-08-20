@@ -34,13 +34,13 @@ export const CreditCustomersList: React.FC = () => {
     >
       <div className="mb-6 flex justify-between items-center">
         <div>
-          <Title level={5} style={{ margin: 0, fontWeight: 800 }}>Top Credit Customers</Title>
-          <Text type="secondary" className="text-xs uppercase tracking-wider font-semibold">
+          <Title level={5} style={{ margin: 0, fontWeight: 400 }}>Top Credit Customers</Title>
+          <Text type="secondary" className="text-xs uppercase tracking-wider font-normal">
             By Outstanding Balance
           </Text>
         </div>
         {!chartsLoading && data.length > 0 && (
-            <Tag color="red" className="font-bold border-red-200">Total: {formatCurrency(totalOutstanding)}</Tag>
+            <Tag color="red" className="font-normal border-red-200">Total: {formatCurrency(totalOutstanding)}</Tag>
         )}
       </div>
 
@@ -56,12 +56,12 @@ export const CreditCustomersList: React.FC = () => {
             >
                 <List.Item.Meta
                 avatar={<Avatar icon={<UserOutlined />} className="bg-blue-100 text-blue-600" />}
-                title={<span className="font-bold text-gray-800 text-sm">{item.name}</span>}
+                title={<span className="font-normal text-gray-800 text-sm">{item.name}</span>}
                 description={<span className="text-xs text-gray-400">{item.phone}</span>}
                 />
                 <div className="text-right">
                 <div 
-                    className={`text-sm font-extrabold ${
+                    className={`text-sm font-normal ${
                     item.status === 'high' ? 'text-red-500' : 
                     item.status === 'medium' ? 'text-orange-500' : 'text-gray-700'
                     }`}

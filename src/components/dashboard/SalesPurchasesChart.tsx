@@ -25,11 +25,11 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white p-3 border border-gray-100 shadow-lg rounded-xl min-w-[160px]">
-        <p className="font-bold text-gray-800 mb-2">{label}</p>
+        <p className="font-normal text-gray-800 mb-2">{label}</p>
         {payload.map((entry: any, index: number) => (
           <div key={index} className="flex justify-between items-center mb-1 text-sm">
-            <span style={{ color: entry.color }} className="font-semibold">{entry.name}:</span>
-            <span className="font-bold text-gray-700 ml-4">
+            <span style={{ color: entry.color }} className="font-normal">{entry.name}:</span>
+            <span className="font-normal text-gray-700 ml-4">
               Rs {entry.value.toLocaleString()}
             </span>
           </div>
@@ -43,9 +43,13 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export const SalesPurchasesChart: React.FC = () => {
   const { charts, chartsLoading } = useDashboardStore();
 
+  const [isMounted, setIsMounted] = React.useState(false);
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const chartData = useMemo(() => {
     const raw = charts?.salesPurchases ?? [];
-    console.log('[SalesPurchasesChart] raw salesPurchases:', raw.length, 'points', raw);
     if (!raw.length) return [];
     return raw.map(point => ({
       name: dayjs(point.label).isValid() ? dayjs(point.label).format('MMM DD') : point.label,
@@ -61,7 +65,7 @@ export const SalesPurchasesChart: React.FC = () => {
     >
       <div className="flex justify-between items-center mb-6">
         <div>
-          <Title level={4} style={{ margin: 0, color: '#1a1a2e', fontWeight: 800 }}>Sales vs Purchases (GRN)</Title>
+          <Title level={4} style={{ margin: 0, color: '#1a1a2e', fontWeight: 400 }}>Sales vs Purchases (GRN)</Title>
           <Text type="secondary" className="text-xs font-medium uppercase tracking-wider">
             Revenue and Expense trends
           </Text>
@@ -73,11 +77,11 @@ export const SalesPurchasesChart: React.FC = () => {
         />
       </div>
 
-      <div style={{ width: '100%', height: 380 }}>
-        {chartsLoading ? (
+      <div style={{ width: '100%', height: 380, minWidth: 0 }}>
+        {chartsLoading || !isMounted ? (
           <Skeleton active paragraph={{ rows: 8 }} />
         ) : chartData.length > 0 ? (
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height={380}>
             <ComposedChart
               data={chartData}
               margin={{ top: 20, right: 20, left: 10, bottom: 0 }}
@@ -112,7 +116,7 @@ export const SalesPurchasesChart: React.FC = () => {
                 verticalAlign="top"
                 height={36}
                 iconType="circle"
-                wrapperStyle={{ fontSize: '13px', fontWeight: 600, color: '#4b5563' }}
+                wrapperStyle={{ fontSize: '13px', fontWeight: 400, color: '#4b5563' }}
               />
 
               <Area

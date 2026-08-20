@@ -17,6 +17,7 @@ function CommonTable<T extends Record<string, any>>({
   bulkDeleteText = "Delete Selected",
   sticky = { offsetHeader: 0 },
   rowSelection,
+  simplePagination = false,
   ...restProps
 }: CommonTableProps<T>) {
   const enhancedColumns = columns.map((col) => {
@@ -57,9 +58,9 @@ function CommonTable<T extends Record<string, any>>({
       current: pagination.page,
       pageSize: pagination.limit,
       total: pagination.total,
-      showSizeChanger: true,
-      showQuickJumper: true,
-      showTotal: (total: number, range: [number, number]) =>
+      showSizeChanger: !simplePagination,
+      showQuickJumper: !simplePagination,
+      showTotal: simplePagination ? undefined : (total: number, range: [number, number]) =>
         `${range[0]}-${range[1]} of ${total} items`,
       pageSizeOptions: ["10", "25", "50", "100"],
       onChange: onPageChange,

@@ -1,5 +1,5 @@
 import React from "react";
-import { Form, Input, Switch } from "antd";
+import { Form, Input, Switch, Button } from "antd";
 import type { UnitFormData } from "../../types/entities/unit.types";
 import { unitService } from "../../services/management/unitService";
 import AddModal from "../common/Modal/AddModal";
@@ -35,6 +35,14 @@ const AddUnitModal: React.FC<AddUnitModalProps> = ({
       onSubmit={handleSubmit}
       initialValues={{ status: true }}
       submitButtonText="Add Unit"
+      footer={[
+        <Button key="cancel" onClick={onCancel}>
+          Cancel
+        </Button>,
+        <Button key="submit" type="primary" disabled={true}>
+          Add Unit
+        </Button>,
+      ]}
     >
       {(_form: FormInstance) => (
         <>

@@ -14,31 +14,36 @@ const getSpeedColor = (days: number) => {
 const InventoryTurnoverChart: React.FC = () => {
     const { charts, chartsLoading } = useDashboardStore();
 
-    const data = React.useMemo(() => {
-        const raw = charts?.inventoryTurnover ?? [];
-        console.log('[InventoryTurnoverChart] raw inventoryTurnover:', raw.length, 'items', raw);
-        return raw.map(p => ({ item: p.item, days: p.days }));
-    }, [charts]);
+  const [isMounted, setIsMounted] = React.useState(false);
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
-  return (
-    <Card 
-      className="shadow-sm rounded-2xl border border-gray-100 h-full"
-      styles={{ body: { padding: '24px' } }}
-    >
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <Title level={5} style={{ margin: 0, fontWeight: 800 }}>Inventory Turnover</Title>
-          <Text type="secondary" className="text-xs uppercase tracking-wider font-semibold">
-            Average Days On Hand
-          </Text>
-        </div>
+  const data = React.useMemo(() => {
+      const raw = charts?.inventoryTurnover ?? [];
+      console.log('[InventoryTurnoverChart] raw inventoryTurnover:', raw.length, 'items', raw);
+      return raw.map(p => ({ item: p.item, days: p.days }));
+  }, [charts]);
+
+return (
+  <Card 
+    className="shadow-sm rounded-2xl border border-gray-100 h-full"
+    styles={{ body: { padding: '24px' } }}
+  >
+    <div className="flex justify-between items-center mb-6">
+      <div>
+        <Title level={5} style={{ margin: 0, fontWeight: 400 }}>Inventory Turnover</Title>
+        <Text type="secondary" className="text-xs uppercase tracking-wider font-normal">
+          Average Days On Hand
+        </Text>
       </div>
+    </div>
 
-      <div style={{ width: '100%', height: 300 }}>
-        {chartsLoading ? (
-            <Skeleton active paragraph={{ rows: 6 }} />
-        ) : data.length > 0 ? (
-          <ResponsiveContainer>
+    <div style={{ width: '100%', height: 300, minWidth: 0 }}>
+      {chartsLoading || !isMounted ? (
+          <Skeleton active paragraph={{ rows: 6 }} />
+      ) : data.length > 0 ? (
+        <ResponsiveContainer width="100%" height={300}>
             <BarChart data={data} layout="vertical" margin={{ left: 20 }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
               <XAxis 

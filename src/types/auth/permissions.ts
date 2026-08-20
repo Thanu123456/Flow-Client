@@ -32,12 +32,14 @@ export const PERMISSIONS = {
   CUSTOMERS_ADD: 'customers.add',
   CUSTOMERS_EDIT: 'customers.edit',
   CUSTOMERS_DELETE: 'customers.delete',
+  CUSTOMERS_CREDIT: 'customers.credit',
 
   // Suppliers
   SUPPLIERS_VIEW: 'suppliers.view',
   SUPPLIERS_ADD: 'suppliers.add',
   SUPPLIERS_EDIT: 'suppliers.edit',
   SUPPLIERS_DELETE: 'suppliers.delete',
+  SUPPLIERS_CREDIT: 'suppliers.credit',
 
   // Warranties
   WARRANTIES_VIEW: 'warranties.view',
@@ -50,6 +52,8 @@ export const PERMISSIONS = {
   REPORTS_INVENTORY: 'reports.inventory',
   REPORTS_FINANCIAL: 'reports.financial',
   REPORTS_EXPORT: 'reports.export',
+  REPORTS_PURCHASES: 'reports.purchases',
+  REPORTS_LOG_HISTORY: 'reports.log_history',
 
   // Settings
   SETTINGS_CATEGORIES: 'settings.categories',

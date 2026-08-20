@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
-  Modal, Input, Button, Table, InputNumber, Select, Switch, Checkbox,
+  Modal, Input, Button, Table, InputNumber, Select, Checkbox,
   Typography, message, Spin,
 } from 'antd';
-import { SearchOutlined, DeleteOutlined, CameraOutlined } from '@ant-design/icons';
+import { SearchOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useSaleReturnStore } from '../../store/transactions/saleReturnStore';
@@ -48,8 +48,6 @@ const POSRefundModal: React.FC<POSRefundModalProps> = ({ visible, onClose }) => 
   const [returnItems, setReturnItems]         = useState<ReturnItem[]>([]);
   const [reason, setReason]                   = useState('damaged_product');
   const [note, setNote]                       = useState('');
-  const [usbScanner, setUsbScanner]           = useState(true);
-  const [bluetooth, setBluetooth]             = useState(true);
   const [refundDelivery, setRefundDelivery]   = useState(false);
 
   // Reset everything when modal closes
@@ -86,7 +84,7 @@ const POSRefundModal: React.FC<POSRefundModalProps> = ({ visible, onClose }) => 
   useBarcodeScanner({
     onScan: handleBarcode,
     debounceMs: 100,
-    enabled: usbScanner && visible,
+    enabled: visible,
   });
 
   const handleAddToList = () => {
@@ -215,7 +213,7 @@ const POSRefundModal: React.FC<POSRefundModalProps> = ({ visible, onClose }) => 
       width={1220}
       closable
       centered
-      destroyOnClose
+      destroyOnHidden
       title={null}
       styles={{ body: { padding: 16, overflowX: 'hidden' }, wrapper: { overflowX: 'hidden' } }}
     >
@@ -360,10 +358,10 @@ const POSRefundModal: React.FC<POSRefundModalProps> = ({ visible, onClose }) => 
       </div>
 
       {/* ── BOTTOM ROW ─────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: 14, marginTop: 14, alignItems: 'flex-end' }}>
+      <div style={{ display: 'flex', gap: 14, marginTop: 14, alignItems: 'flex-start' }}>
 
-        {/* Bottom-left: reason, note, scanners */}
-        <div style={{ flex: 1, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        {/* Bottom-left: reason, note */}
+        <div style={{ flex: 1, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
           <div style={{ minWidth: 190 }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: '#444', marginBottom: 4 }}>Reason</div>
             <Select
@@ -382,39 +380,6 @@ const POSRefundModal: React.FC<POSRefundModalProps> = ({ visible, onClose }) => 
               placeholder="Enter Note"
             />
           </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 7, paddingBottom: 2 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-              <Switch
-                checked={usbScanner}
-                onChange={setUsbScanner}
-                style={usbScanner ? { backgroundColor: '#52c41a' } : {}}
-              />
-              USB Scanner
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-              <Switch
-                checked={bluetooth}
-                onChange={setBluetooth}
-                style={bluetooth ? { backgroundColor: '#7c6ef7' } : {}}
-              />
-              Bluetooth
-            </div>
-          </div>
-
-          <Button
-            icon={<CameraOutlined />}
-            style={{
-              height: 58,
-              minWidth: 90,
-              whiteSpace: 'normal',
-              lineHeight: '1.3',
-              fontSize: 12,
-              fontWeight: 600,
-            }}
-          >
-            Web Cam{'\n'}Scanner
-          </Button>
         </div>
 
         {/* Bottom-right: payment info + refund button */}

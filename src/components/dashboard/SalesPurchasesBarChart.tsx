@@ -25,11 +25,11 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white p-3 border border-gray-100 shadow-lg rounded-xl min-w-[160px]">
-        <p className="font-bold text-gray-800 mb-2">{label}</p>
+        <p className="font-normal text-gray-800 mb-2">{label}</p>
         {payload.map((entry: any, index: number) => (
           <div key={index} className="flex justify-between items-center mb-1 text-sm">
-            <span style={{ color: entry.color }} className="font-semibold">{entry.name}:</span>
-            <span className="font-bold text-gray-700 ml-4">
+            <span style={{ color: entry.color }} className="font-normal">{entry.name}:</span>
+            <span className="font-normal text-gray-700 ml-4">
               Rs {entry.value.toLocaleString()}
             </span>
           </div>
@@ -43,9 +43,13 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export const SalesPurchasesBarChart: React.FC = () => {
   const { charts, chartsLoading } = useDashboardStore();
 
+  const [isMounted, setIsMounted] = React.useState(false);
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const chartData = useMemo(() => {
     const raw = charts?.salesPurchases ?? [];
-    console.log('[SalesPurchasesBarChart] raw salesPurchases:', raw.length, 'points');
     if (!raw.length) return [];
     return raw.map(p => ({
       name: dayjs(p.label).isValid() ? dayjs(p.label).format('MMM DD') : p.label,
@@ -61,8 +65,8 @@ export const SalesPurchasesBarChart: React.FC = () => {
     >
       <div className="flex justify-between items-center mb-6">
         <div>
-          <Title level={5} style={{ margin: 0, fontWeight: 800 }}>Sales vs Purchases</Title>
-          <Text type="secondary" className="text-xs uppercase tracking-wider font-semibold">
+          <Title level={5} style={{ margin: 0, fontWeight: 400 }}>Sales vs Purchases</Title>
+          <Text type="secondary" className="text-xs uppercase tracking-wider font-normal">
             Comparative Volume
           </Text>
         </div>
@@ -73,24 +77,24 @@ export const SalesPurchasesBarChart: React.FC = () => {
         />
       </div>
 
-      <div style={{ width: '100%', height: 'calc(100% - 50px)', minHeight: 200 }}>
-        {chartsLoading ? (
+      <div style={{ width: '100%', height: 260, minWidth: 0 }}>
+        {chartsLoading || !isMounted ? (
             <Skeleton active paragraph={{ rows: 6 }} />
         ) : chartData.length > 0 ? (
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height={260}>
             <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
               <XAxis
                 dataKey="name"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: '#8c8c8c', fontSize: 11, fontWeight: 600 }}
+                tick={{ fill: '#8c8c8c', fontSize: 11, fontWeight: 400 }}
                 dy={10}
               />
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: '#8c8c8c', fontSize: 11, fontWeight: 600 }}
+                tick={{ fill: '#8c8c8c', fontSize: 11, fontWeight: 400 }}
                 tickFormatter={formatCurrency}
                 dx={-10}
               />
@@ -99,7 +103,7 @@ export const SalesPurchasesBarChart: React.FC = () => {
                 verticalAlign="bottom"
                 height={36}
                 iconType="circle"
-                wrapperStyle={{ fontSize: '12px', fontWeight: 600 }}
+                wrapperStyle={{ fontSize: '12px', fontWeight: 400 }}
               />
 
               <Bar

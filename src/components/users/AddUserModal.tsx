@@ -16,6 +16,7 @@ import { useUserStore } from '../../store/management/userStore';
 import { useRoleStore } from '../../store/management/roleStore';
 import { useWarehouseStore } from '../../store/management/warehouseStore';
 import type { UserFormData } from '../../types/entities/user.types';
+import ImageUpload from '../common/Upload/ImageUpload';
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -142,8 +143,8 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="profileImageUrl" label="Profile Image URL">
-              <Input placeholder="Enter profile image URL (optional)" />
+            <Form.Item name="profileImageUrl" label="Profile Image">
+              <ImageUpload placeholder="Click or drag to upload profile image" />
             </Form.Item>
           </Col>
         </Row>

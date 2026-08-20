@@ -25,8 +25,8 @@ const TopExpensesCard: React.FC = () => {
         >
             <div className="flex justify-between items-center mb-6">
                 <div>
-                    <Title level={5} style={{ margin: 0, fontWeight: 800 }}>Top Expenses</Title>
-                    <Text type="secondary" className="text-xs uppercase tracking-wider font-semibold">
+                    <Title level={5} style={{ margin: 0, fontWeight: 400 }}>Top Expenses</Title>
+                    <Text type="secondary" className="text-xs uppercase tracking-wider font-normal">
                         This Month's Spending
                     </Text>
                 </div>
@@ -42,8 +42,8 @@ const TopExpensesCard: React.FC = () => {
                             <List.Item style={{ border: 'none', padding: '12px 0' }}>
                                 <div style={{ width: '100%' }}>
                                     <div className="flex justify-between mb-1">
-                                        <Text strong>{item.label}</Text>
-                                        <Text strong>LKR {item.value.toLocaleString()}</Text>
+                                        <Text >{item.label}</Text>
+                                        <Text >LKR {item.value.toLocaleString()}</Text>
                                     </div>
                                     <Progress 
                                         percent={(item.value / maxAmount) * 100} 

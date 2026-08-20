@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Card, Row, Col, Select, AutoComplete, DatePicker, Input, Button, Space,
+  App, Card, Row, Col, Select, AutoComplete, DatePicker, Input, Button, Space,
   InputNumber, Checkbox, Modal, Form, message, Typography, Divider, Tag, Alert,
   Spin, Tooltip,
 } from 'antd';
@@ -110,6 +110,7 @@ const AddPurchasePage: React.FC = () => {
   const { id: editId } = useParams<{ id: string }>();
   const isEdit = Boolean(editId);
   const [messageApi, contextHolder] = message.useMessage();
+  const { modal } = App.useApp();
 
   const { createGRN, updateGRN, removeItem, completeGRN, getGRN } =
     usePurchaseStore();
@@ -149,6 +150,9 @@ const AddPurchasePage: React.FC = () => {
   const [hasSerialNumbers, setHasSerialNumbers] = useState(false);
   const [pendingSerials, setPendingSerials] = useState<string[]>([]);
   const [serialModalOpen, setSerialModalOpen] = useState(false);
+  // Item whose quantity is being changed via the items table; re-opens the
+  // serial modal so its serial count stays in sync with the new quantity.
+  const [editingSerialItem, setEditingSerialItem] = useState<GRNItemLocal | null>(null);
 
   // ── Items list ───────────────────────────────────────────
   const [items, setItems] = useState<GRNItemLocal[]>([]);
@@ -181,7 +185,12 @@ const AddPurchasePage: React.FC = () => {
         setPaymentMethod(grn.paymentMethod);
         setGrnDate(dayjs(grn.grnDate).format('YYYY-MM-DD'));
         setNotes(grn.notes || '');
-        if (grn.items.length > 0) setSupplierLocked(true);
+        // Do NOT lock supplier in edit mode — user should be able to change it
+
+        // Pre-populate supplier options so the Select shows the supplier name
+        if (grn.supplierId && grn.supplierName) {
+          setSupplierOptions([{ value: grn.supplierId, label: grn.supplierName }]);
+        }
 
         // Load supplier balance if supplier set
         if (grn.supplierId) {
@@ -228,7 +237,7 @@ const AddPurchasePage: React.FC = () => {
   // ── Product search ───────────────────────────────────────
   const handleProductSearch = useCallback(
     async (query: string) => {
-      if (!query || query.length < 2) {
+      if (!query || query.length < 1) {
         setProductOptions([]);
         return;
       }
@@ -334,6 +343,10 @@ const AddPurchasePage: React.FC = () => {
       messageApi.warning('Quantity must be greater than 0');
       return;
     }
+    if (!costPrice || costPrice <= 0) {
+      messageApi.warning('Cost price must be greater than 0');
+      return;
+    }
 
     if (hasSerialNumbers) {
       setSerialModalOpen(true);
@@ -424,6 +437,13 @@ const AddPurchasePage: React.FC = () => {
   };
 
   const handleQuantityChange = (localId: string, qty: number) => {
+    const target = items.find((i) => i.localId === localId);
+    if (target?.hasSerialNumbers) {
+      // Changing quantity changes how many serials are required — reopen the
+      // serial modal so the user reconciles the serial list before it commits.
+      setEditingSerialItem({ ...target, quantity: qty });
+      return;
+    }
     setItems((prev) =>
       prev.map((item) =>
         item.localId === localId
@@ -445,7 +465,16 @@ const AddPurchasePage: React.FC = () => {
   const validate = (doComplete: boolean): string | null => {
     if (!warehouseId) return 'Please select a warehouse';
     if (activeItems.length === 0) return 'Please add at least one item';
+    const zeroPrice = activeItems.find((i) => i.costPrice <= 0);
+    if (zeroPrice) return `"${zeroPrice.productName}" has an invalid cost price. All items must have a cost price greater than 0`;
+    const badSerial = activeItems.find(
+      (i) => i.hasSerialNumbers && i.serialNumbers.length !== Math.round(i.quantity)
+    );
+    if (badSerial) {
+      return `"${badSerial.productName}" requires ${Math.round(badSerial.quantity)} serial number(s), but ${badSerial.serialNumbers.length} ${badSerial.serialNumbers.length === 1 ? 'is' : 'are'} entered`;
+    }
     if (doComplete) {
+      if (paymentMethod === 'cheque' && !supplierId) return 'Cheque payment requires a supplier';
       if (paymentMethod === 'cheque' && !chequeNumber) return 'Cheque number is required';
       if (paymentMethod === 'credit' && !supplierId) return 'Credit payment requires a supplier';
       if (!supplierId && paymentMethod !== 'credit' && paidAmount !== netAmount && Math.abs(paidAmount - netAmount) > 0.01) {
@@ -482,9 +511,29 @@ const AddPurchasePage: React.FC = () => {
         // Handle item changes
         const toRemove = items.filter((i) => i.isDeleted && i.backendId);
         const toAdd = items.filter((i) => i.isNew && !i.isDeleted);
+        const toModify = items.filter((i) => i.isModified && !i.isNew && !i.isDeleted && i.backendId);
 
         for (const item of toRemove) {
           await removeItem(grnId, item.backendId!);
+        }
+        for (const item of toModify) {
+          await purchaseService.updateItem(grnId, item.backendId!, {
+            quantity: item.quantity,
+            costPrice: item.costPrice,
+            retailPrice: item.retailPrice,
+            wholesalePrice: item.wholesalePrice,
+            ourPrice: item.ourPrice,
+            manufactureDate: item.manufactureDate,
+            expiryDate: item.expiryDate,
+          });
+          // Quantity edits can change the serial list (see handleQuantityChange) —
+          // resync it with the backend, which was previously left stale.
+          if (item.hasSerialNumbers) {
+            await purchaseService.addSerialNumbers(grnId, {
+              grnItemId: item.backendId!,
+              serialNumbers: item.serialNumbers,
+            });
+          }
         }
         for (const item of toAdd) {
           const backendItem = await purchaseService.addItem(grnId, {
@@ -583,6 +632,11 @@ const AddPurchasePage: React.FC = () => {
 
       navigate('/purchases');
     } catch (error: any) {
+      // Clean up orphaned draft if item-addition failed mid-way
+      if (newlyCreatedGrnId) {
+        await purchaseService.deleteGRN(newlyCreatedGrnId).catch(() => {});
+        newlyCreatedGrnId = null;
+      }
       const errData = error.response?.data;
       const errMsg = errData?.error?.details || errData?.error?.message || errData?.message || 'An error occurred. Please try again.';
       messageApi.error(errMsg);
@@ -614,7 +668,7 @@ const AddPurchasePage: React.FC = () => {
     };
 
     if (activeItems.length > 0) {
-      Modal.confirm({
+      modal.confirm({
         title: 'Reset Form',
         icon: <ExclamationCircleOutlined />,
         content: 'This will clear all items and purchase information. Are you sure?',
@@ -787,141 +841,142 @@ const AddPurchasePage: React.FC = () => {
 
           {/* Product details display */}
           {selectedProduct && (
-            <>
-              <Col xs={24}>
-                <Divider style={{ margin: '8px 0' }}>Product Details</Divider>
-              </Col>
-              <Col xs={12} md={4}>
-                <div style={{ textAlign: 'center', padding: '8px', backgroundColor: '#fafafa', borderRadius: 4 }}>
-                  <div style={{ fontSize: 12, color: '#666' }}>Category</div>
-                  <div style={{ fontWeight: 600 }}>{selectedProduct.categoryName || '-'}</div>
-                </div>
-              </Col>
-              <Col xs={12} md={4}>
-                <div style={{ textAlign: 'center', padding: '8px', backgroundColor: '#fafafa', borderRadius: 4 }}>
-                  <div style={{ fontSize: 12, color: '#666' }}>Current Stock</div>
-                  <div style={{ fontWeight: 600, color: (selectedVariation?.currentStock ?? selectedProduct.currentStock) <= 0 ? '#ff4d4f' : '#52c41a' }}>
-                    {selectedVariation ? selectedVariation.currentStock : selectedProduct.currentStock}
-                    {selectedProduct.unitShortName && ` ${selectedProduct.unitShortName}`}
-                  </div>
-                </div>
-              </Col>
-              <Col xs={24} md={4}>
-                <Form.Item label="Quantity *" style={{ marginBottom: 0 }}>
-                  <InputNumber
-                    min={0.0001}
-                    value={quantity}
-                    onChange={(v) => setQuantity(v ?? 1)}
-                    precision={4}
-                    style={{ width: '100%' }}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={4}>
-                <Form.Item label="Cost Price *" style={{ marginBottom: 0 }}>
-                  <InputNumber
-                    min={0}
-                    value={costPrice}
-                    onChange={(v) => setCostPrice(v ?? 0)}
-                    precision={2}
-                    prefix="Rs."
-                    style={{ width: '100%' }}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={4}>
-                <Form.Item label="Retail Price" style={{ marginBottom: 0 }}>
-                  <InputNumber
-                    min={0}
-                    value={retailPrice}
-                    onChange={(v) => setRetailPrice(v ?? 0)}
-                    precision={2}
-                    prefix="Rs."
-                    style={{ width: '100%' }}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={4}>
-                <Form.Item label="Wholesale Price" style={{ marginBottom: 0 }}>
-                  <InputNumber
-                    min={0}
-                    value={wholesalePrice}
-                    onChange={(v) => setWholesalePrice(v ?? 0)}
-                    precision={2}
-                    prefix="Rs."
-                    style={{ width: '100%' }}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={4}>
-                <Form.Item label="Our Price" style={{ marginBottom: 0 }}>
-                  <InputNumber
-                    min={0}
-                    value={ourPrice}
-                    onChange={(v) => setOurPrice(v ?? 0)}
-                    precision={2}
-                    prefix="Rs."
-                    style={{ width: '100%' }}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={4}>
-                <Form.Item label="Net Price (auto)" style={{ marginBottom: 0 }}>
-                  <div
-                    style={{
-                      padding: '4px 11px',
-                      border: '1px solid #d9d9d9',
-                      borderRadius: 6,
-                      backgroundColor: '#fafafa',
-                      fontFamily: 'monospace',
-                      fontWeight: 600,
-                    }}
-                  >
-                    Rs. {netPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </div>
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={4}>
-                <Form.Item label="Manufacture Date" style={{ marginBottom: 0 }}>
-                  <DatePicker
-                    style={{ width: '100%' }}
-                    value={manufactureDate ? dayjs(manufactureDate) : null}
-                    onChange={(_, str) => setManufactureDate(str as string)}
-                    format="YYYY-MM-DD"
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={4}>
-                <Form.Item label="Expiry Date" style={{ marginBottom: 0 }}>
-                  <DatePicker
-                    style={{ width: '100%' }}
-                    value={expiryDate ? dayjs(expiryDate) : null}
-                    onChange={(_, str) => setExpiryDate(str as string)}
-                    format="YYYY-MM-DD"
-                    disabledDate={(d) => d.isBefore(dayjs())}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={4}>
-                <Form.Item label="Serial Numbers" style={{ marginBottom: 0 }}>
-                  <Checkbox
-                    checked={hasSerialNumbers}
-                    onChange={(e) => setHasSerialNumbers(e.target.checked)}
-                  >
-                    Requires S/N
-                  </Checkbox>
-                  {hasSerialNumbers && pendingSerials.length > 0 && (
-                    <Tag color="green">{pendingSerials.length} entered</Tag>
-                  )}
-                </Form.Item>
-              </Col>
-              <Col xs={24} style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                <Button onClick={resetProductForm}>Reset</Button>
-                <Button type="primary" icon={<PlusOutlined />} onClick={handleAddItem}>
-                  Add to List
-                </Button>
-              </Col>
-            </>
+            <Col xs={24}>
+              <Divider style={{ margin: '8px 0' }}>Product Details</Divider>
+
+              <Form layout="vertical">
+              <Row gutter={[16, 20]}>
+
+                {/* ── Row 1: Category | Current Stock (2 wide columns) ── */}
+                <Col xs={24} sm={12}>
+                  <Form.Item label="Category" style={{ marginBottom: 0 }}>
+                    <Input
+                      readOnly
+                      value={selectedProduct.categoryName || '—'}
+                      style={{ backgroundColor: '#fafafa', cursor: 'default', fontWeight: 600 }}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Form.Item label="Current Stock" style={{ marginBottom: 0 }}>
+                    <Input
+                      readOnly
+                      value={`${selectedVariation ? selectedVariation.currentStock : selectedProduct.currentStock}${selectedProduct.unitShortName ? ' ' + selectedProduct.unitShortName : ''}`}
+                      style={{
+                        backgroundColor: '#fafafa', cursor: 'default', fontWeight: 700,
+                        color: (selectedVariation?.currentStock ?? selectedProduct.currentStock) <= 0 ? '#ff4d4f' : '#52c41a',
+                      }}
+                    />
+                  </Form.Item>
+                </Col>
+
+                {/* ── Row 2: Quantity | Cost Price | Net Price (3 columns) ── */}
+                <Col xs={12} sm={8}>
+                  <Form.Item label="Quantity *" style={{ marginBottom: 0 }}>
+                    <InputNumber
+                      min={hasSerialNumbers ? 1 : 0.0001} value={quantity}
+                      onChange={(v) => setQuantity(v ?? 1)}
+                      precision={hasSerialNumbers ? 0 : 4} style={{ width: '100%' }}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={12} sm={8}>
+                  <Form.Item label="Cost Price *" style={{ marginBottom: 0 }}>
+                    <InputNumber
+                      min={0} value={costPrice}
+                      onChange={(v) => setCostPrice(v ?? 0)}
+                      precision={2} prefix="Rs." style={{ width: '100%' }}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={12} sm={8}>
+                  <Form.Item label="Net Price (auto)" style={{ marginBottom: 0 }}>
+                    <Input
+                      readOnly prefix="Rs."
+                      value={netPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      style={{ backgroundColor: '#fafafa', fontWeight: 700, cursor: 'default', color: '#222' }}
+                    />
+                  </Form.Item>
+                </Col>
+
+                {/* ── Row 3: Retail Price | Wholesale Price | Our Price (3 columns) ── */}
+                <Col xs={12} sm={8}>
+                  <Form.Item label="Retail Price" style={{ marginBottom: 0 }}>
+                    <InputNumber
+                      min={0} value={retailPrice}
+                      onChange={(v) => setRetailPrice(v ?? 0)}
+                      precision={2} prefix="Rs." style={{ width: '100%' }}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={12} sm={8}>
+                  <Form.Item label="Wholesale Price" style={{ marginBottom: 0 }}>
+                    <InputNumber
+                      min={0} value={wholesalePrice}
+                      onChange={(v) => setWholesalePrice(v ?? 0)}
+                      precision={2} prefix="Rs." style={{ width: '100%' }}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={12} sm={8}>
+                  <Form.Item label="Our Price" style={{ marginBottom: 0 }}>
+                    <InputNumber
+                      min={0} value={ourPrice}
+                      onChange={(v) => setOurPrice(v ?? 0)}
+                      precision={2} prefix="Rs." style={{ width: '100%' }}
+                    />
+                  </Form.Item>
+                </Col>
+
+                {/* ── Row 4: Manufacture Date | Expiry Date | Serial Numbers (3 columns) ── */}
+                <Col xs={12} sm={8}>
+                  <Form.Item label="Manufacture Date" style={{ marginBottom: 0 }}>
+                    <DatePicker
+                      style={{ width: '100%' }}
+                      value={manufactureDate ? dayjs(manufactureDate) : null}
+                      onChange={(_, str) => setManufactureDate(str as string)}
+                      format="YYYY-MM-DD"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={12} sm={8}>
+                  <Form.Item label="Expiry Date" style={{ marginBottom: 0 }}>
+                    <DatePicker
+                      style={{ width: '100%' }}
+                      value={expiryDate ? dayjs(expiryDate) : null}
+                      onChange={(_, str) => setExpiryDate(str as string)}
+                      format="YYYY-MM-DD"
+                      disabledDate={(d) => d.isBefore(dayjs())}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={12} sm={8}>
+                  <Form.Item label="Serial Numbers" style={{ marginBottom: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 32 }}>
+                      <Checkbox
+                        checked={hasSerialNumbers}
+                        onChange={(e) => setHasSerialNumbers(e.target.checked)}
+                      >
+                        Requires S/N
+                      </Checkbox>
+                      {hasSerialNumbers && pendingSerials.length > 0 && (
+                        <Tag color="green">{pendingSerials.length} entered</Tag>
+                      )}
+                    </div>
+                  </Form.Item>
+                </Col>
+
+                {/* ── Actions ── */}
+                <Col xs={24} style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                  <Button onClick={resetProductForm}>Reset</Button>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={handleAddItem}>
+                    Add to List
+                  </Button>
+                </Col>
+
+              </Row>
+              </Form>
+            </Col>
           )}
         </Row>
       </Card>
@@ -990,6 +1045,32 @@ const AddPurchasePage: React.FC = () => {
             doAddItem(serials);
           }}
           onCancel={() => setSerialModalOpen(false)}
+        />
+      )}
+
+      {editingSerialItem && (
+        <SerialNumberModal
+          open={Boolean(editingSerialItem)}
+          productName={editingSerialItem.productName}
+          quantity={Math.round(editingSerialItem.quantity)}
+          existing={editingSerialItem.serialNumbers}
+          onSave={(serials) => {
+            setItems((prev) =>
+              prev.map((item) =>
+                item.localId === editingSerialItem.localId
+                  ? {
+                      ...item,
+                      quantity: editingSerialItem.quantity,
+                      netPrice: editingSerialItem.quantity * item.costPrice,
+                      serialNumbers: serials,
+                      isModified: !item.isNew,
+                    }
+                  : item
+              )
+            );
+            setEditingSerialItem(null);
+          }}
+          onCancel={() => setEditingSerialItem(null)}
         />
       )}
     </div>

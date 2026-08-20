@@ -35,7 +35,7 @@ const HoldNoteModal: React.FC<HoldNoteModalProps> = ({ open, submitting, onConfi
         </Button>,
       ]}
       width={420}
-      destroyOnClose
+      destroyOnHidden
     >
       <div className="py-3">
         <p className="text-sm text-gray-500 mb-3">

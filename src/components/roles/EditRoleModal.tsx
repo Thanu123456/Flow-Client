@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Input, Switch, Spin, Alert, App } from 'antd';
 import { useRoleStore } from '../../store/management/roleStore';
+import { roleService } from '../../services/management/roleService';
 import PermissionTree from './PermissionTree';
 import type { Role, RoleFormData } from '../../types/entities/role.types';
 
@@ -29,14 +30,26 @@ const EditRoleModal: React.FC<EditRoleModalProps> = ({
   useEffect(() => {
     if (visible && role) {
       setLoadingPermissions(true);
-      getPermissionsByModule().finally(() => setLoadingPermissions(false));
 
       form.setFieldsValue({
         name: role.name,
         description: role.description || '',
         isActive: role.isActive,
       });
-      setSelectedPermissionIds(role.permissions.map(p => p.id));
+
+      // Fetch both permission modules and fresh role data in parallel
+      Promise.all([
+        getPermissionsByModule(),
+        roleService.getRoleById(role.id),
+      ])
+        .then(([, freshRole]) => {
+          setSelectedPermissionIds(freshRole.permissions.map((p) => p.id));
+        })
+        .catch(() => {
+          // Fall back to permissions from the list if fresh fetch fails
+          setSelectedPermissionIds(role.permissions.map((p) => p.id));
+        })
+        .finally(() => setLoadingPermissions(false));
     }
   }, [visible, role, getPermissionsByModule, form]);
 
@@ -92,10 +105,7 @@ const EditRoleModal: React.FC<EditRoleModalProps> = ({
         />
       )}
 
-      <Form
-        form={form}
-        layout="vertical"
-      >
+      <Form form={form} layout="vertical">
         <Form.Item
           name="name"
           label="Role Name"
@@ -125,11 +135,7 @@ const EditRoleModal: React.FC<EditRoleModalProps> = ({
           />
         </Form.Item>
 
-        <Form.Item
-          name="isActive"
-          label="Status"
-          valuePropName="checked"
-        >
+        <Form.Item name="isActive" label="Status" valuePropName="checked">
           <Switch />
         </Form.Item>
 

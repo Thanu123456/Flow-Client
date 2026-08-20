@@ -10,6 +10,7 @@ import type {
   Registration,
   Tenant,
   AuditLog,
+  SystemSettings,
   SqlNullString,
   SqlNullTime
 } from '../../types/auth/superadmin.types';
@@ -162,5 +163,16 @@ export const superAdminService = {
       logs: response.data.data,
       total: response.data.total
     };
+  },
+
+  // System Settings
+  async getSystemSettings(): Promise<SystemSettings> {
+    const response = await api.get<{ data: SystemSettings }>('/superadmin/settings');
+    return response.data.data;
+  },
+
+  async updateSystemSettings(settings: SystemSettings): Promise<SystemSettings> {
+    const response = await api.put<{ data: SystemSettings }>('/superadmin/settings', settings);
+    return response.data.data;
   }
 };

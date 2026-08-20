@@ -10,7 +10,6 @@ interface StockAlertItem {
     productID: string;
     productName: string;
     brandName: string;
-    variationType: string;
     unit: string;
     stock: number;
 }
@@ -18,34 +17,25 @@ interface StockAlertItem {
 const StockAlertTable: React.FC = () => {
     const { charts, chartsLoading } = useDashboardStore();
 
-    const data: StockAlertItem[] = React.useMemo(() => {
-        const raw = charts?.stockAlerts ?? [];
-        console.log('[StockAlertTable] raw stockAlerts:', raw.length, 'items', raw);
-        return raw;
-    }, [charts]);
+    const data: StockAlertItem[] = React.useMemo(() => charts?.stockAlerts ?? [], [charts]);
 
     const columns: ColumnsType<StockAlertItem> = [
         {
             title: 'PRODUCT ID',
             dataIndex: 'productID',
             key: 'productID',
-            className: 'text-xs font-bold text-gray-500',
+            className: 'text-xs font-normal text-gray-500',
         },
         {
             title: 'PRODUCT NAME',
             dataIndex: 'productName',
             key: 'productName',
-            className: 'font-semibold',
+            className: 'font-normal',
         },
         {
             title: 'BRAND NAME',
             dataIndex: 'brandName',
             key: 'brandName',
-        },
-        {
-            title: 'VARIATION',
-            dataIndex: 'variationType',
-            key: 'variationType',
         },
         {
             title: 'UNIT',
@@ -58,7 +48,7 @@ const StockAlertTable: React.FC = () => {
             key: 'stock',
             align: 'right',
             render: (stock: number) => (
-                <Text type="danger" style={{ fontWeight: 800 }}>{stock}</Text>
+                <Text type="danger" style={{ fontWeight: 400 }}>{stock}</Text>
             ),
         },
     ];
@@ -70,8 +60,8 @@ const StockAlertTable: React.FC = () => {
         >
             <div className="flex justify-between items-center mb-6">
                 <div>
-                    <Title level={5} style={{ margin: 0, fontWeight: 800 }}>Stock Alert</Title>
-                    <Text type="secondary" className="text-xs uppercase tracking-wider font-semibold">
+                    <Title level={5} style={{ margin: 0, fontWeight: 400 }}>Stock Alert</Title>
+                    <Text type="secondary" className="text-xs uppercase tracking-wider font-normal">
                         Low Inventory Warning
                     </Text>
                 </div>

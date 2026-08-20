@@ -65,7 +65,24 @@ const PurchasesPage: React.FC = () => {
     }
   }, [error]);
 
-  const handleRefresh = () => fetchGRNs(pagination.page, pagination.perPage);
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setSearchText('');
+    setPaymentFilter('');
+    setStatusFilter('');
+    setWarehouseFilter('');
+    setDateRange(null);
+    setRefreshing(true);
+    try {
+      // Fetch with explicitly cleared filters — fetchGRNs would still
+      // close over the previous filter values here.
+      await listGRNs({ page: 1, perPage: pagination.perPage });
+    } catch {
+      // error state handled in store
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleView = async (record: GRNListItem) => {
     setLoadingDetail(true);
@@ -78,6 +95,15 @@ const PurchasesPage: React.FC = () => {
     } finally {
       setLoadingDetail(false);
     }
+  };
+
+  // Navigate to the full edit form (AddPurchasePage in edit mode)
+  const handleEdit = (record: GRNListItem) => {
+    navigate(`/purchases/${record.id}/edit`);
+  };
+
+  const handleReturn = (record: GRNListItem) => {
+    navigate(`/purchase-returns/new/${record.id}`);
   };
 
   const buildExportParams = () => ({
@@ -121,105 +147,107 @@ const PurchasesPage: React.FC = () => {
 
   return (
     <>
-    {contextHolder}
-    <PageLayout
-      title="Purchases (GRN)"
-      actions={
-        <Space>
-          <CommonButton icon={<FilePdfOutlined style={{ color: "#FF0000" }} />} onClick={handleExportPDF} tooltip="Download PDF">PDF</CommonButton>
-          <CommonButton icon={<FileExcelOutlined style={{ color: "#107C41" }} />} onClick={handleExportExcel} tooltip="Download Excel">Excel</CommonButton>
-          <CommonButton icon={<ReloadOutlined style={{ color: "blue" }} />} onClick={handleRefresh}>Refresh</CommonButton>
-          <CommonButton type="primary" icon={<PlusOutlined />} onClick={() => navigate('/purchases/add')}>
-            Add Purchase
-          </CommonButton>
-        </Space>
-      }
-    >
-      <div style={{ marginBottom: 16 }}>
-        <Row gutter={[12, 12]} align="middle">
-          <Col xs={24} sm={12} md={6}>
-            <Search
-              placeholder="Search GRN number, supplier..."
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              allowClear
-            />
-          </Col>
-          <Col xs={12} sm={6} md={4}>
-            <Select
-              style={{ width: '100%' }}
-              placeholder="Payment"
-              value={paymentFilter || undefined}
-              onChange={setPaymentFilter}
-              allowClear
-              options={[
-                { value: 'cash', label: 'Cash' },
-                { value: 'cheque', label: 'Cheque' },
-                { value: 'credit', label: 'Credit' },
-              ]}
-            />
-          </Col>
-          <Col xs={12} sm={6} md={4}>
-            <Select
-              style={{ width: '100%' }}
-              placeholder="Status"
-              value={statusFilter || undefined}
-              onChange={setStatusFilter}
-              allowClear
-              options={[
-                { value: 'draft', label: 'Draft' },
-                { value: 'completed', label: 'Completed' },
-                { value: 'cancelled', label: 'Cancelled' },
-              ]}
-            />
-          </Col>
-          <Col xs={12} sm={6} md={4}>
-            <Select
-              style={{ width: '100%' }}
-              placeholder="Warehouse"
-              value={warehouseFilter || undefined}
-              onChange={setWarehouseFilter}
-              allowClear
-              options={warehouses.map((w) => ({ value: w.id, label: w.name }))}
-            />
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <RangePicker
-              style={{ width: '100%' }}
-              format="YYYY-MM-DD"
-              value={dateRange ? [dayjs(dateRange[0]), dayjs(dateRange[1])] : null}
-              onChange={(_, strings) => {
-                const [from, to] = strings as [string, string];
-                setDateRange(from && to ? [from, to] : null);
-              }}
-              allowClear
-            />
-          </Col>
-        </Row>
-      </div>
+      {contextHolder}
+      <PageLayout
+        title="Purchases (GRN)"
+        actions={
+          <Space>
+            <CommonButton icon={<FilePdfOutlined style={{ color: '#FF0000' }} />} onClick={handleExportPDF} tooltip="Download PDF">PDF</CommonButton>
+            <CommonButton icon={<FileExcelOutlined style={{ color: '#107C41' }} />} onClick={handleExportExcel} tooltip="Download Excel">Excel</CommonButton>
+            <CommonButton icon={<ReloadOutlined style={{ color: 'blue' }} />} onClick={handleRefresh} loading={refreshing}>Refresh</CommonButton>
+            <CommonButton type="primary" icon={<PlusOutlined />} onClick={() => navigate('/purchases/add')}>
+              Add Purchase
+            </CommonButton>
+          </Space>
+        }
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Row gutter={[12, 12]} align="middle">
+            <Col xs={24} sm={12} md={6}>
+              <Search
+                placeholder="Search GRN number, supplier..."
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                allowClear
+              />
+            </Col>
+            <Col xs={12} sm={6} md={4}>
+              <Select
+                style={{ width: '100%' }}
+                placeholder="Payment"
+                value={paymentFilter || undefined}
+                onChange={setPaymentFilter}
+                allowClear
+                options={[
+                  { value: 'cash', label: 'Cash' },
+                  { value: 'cheque', label: 'Cheque' },
+                  { value: 'credit', label: 'Credit' },
+                ]}
+              />
+            </Col>
+            <Col xs={12} sm={6} md={4}>
+              <Select
+                style={{ width: '100%' }}
+                placeholder="Status"
+                value={statusFilter || undefined}
+                onChange={setStatusFilter}
+                allowClear
+                options={[
+                  { value: 'draft', label: 'Draft' },
+                  { value: 'completed', label: 'Completed' },
+                  { value: 'cancelled', label: 'Cancelled' },
+                ]}
+              />
+            </Col>
+            <Col xs={12} sm={6} md={4}>
+              <Select
+                style={{ width: '100%' }}
+                placeholder="Warehouse"
+                value={warehouseFilter || undefined}
+                onChange={setWarehouseFilter}
+                allowClear
+                options={warehouses.map((w) => ({ value: w.id, label: w.name }))}
+              />
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <RangePicker
+                style={{ width: '100%' }}
+                format="YYYY-MM-DD"
+                value={dateRange ? [dayjs(dateRange[0]), dayjs(dateRange[1])] : null}
+                onChange={(_, strings) => {
+                  const [from, to] = strings as [string, string];
+                  setDateRange(from && to ? [from, to] : null);
+                }}
+                allowClear
+              />
+            </Col>
+          </Row>
+        </div>
 
-      <PurchasesTable
-        data={grns}
-        loading={loading || loadingDetail}
-        onView={handleView}
-        pagination={{
-          page: pagination.page,
-          perPage: pagination.perPage,
-          total: pagination.total,
-          totalPages: pagination.totalPages,
-        }}
-        onPageChange={(page, pageSize) => fetchGRNs(page, pageSize)}
-      />
+        <PurchasesTable
+          data={grns}
+          loading={loading || loadingDetail}
+          onView={handleView}
+          onEdit={handleEdit}
+          onReturn={handleReturn}
+          pagination={{
+            page: pagination.page,
+            perPage: pagination.perPage,
+            total: pagination.total,
+            totalPages: pagination.totalPages,
+          }}
+          onPageChange={(page, pageSize) => fetchGRNs(page, pageSize)}
+        />
 
-      <PurchaseDetailsModal
-        visible={viewModalVisible}
-        grn={selectedGRN}
-        onClose={() => {
-          setViewModalVisible(false);
-          setSelectedGRN(null);
-        }}
-      />
-    </PageLayout>
+        <PurchaseDetailsModal
+          visible={viewModalVisible}
+          grn={selectedGRN}
+          onClose={() => {
+            setViewModalVisible(false);
+            setSelectedGRN(null);
+          }}
+        />
+      </PageLayout>
     </>
   );
 };

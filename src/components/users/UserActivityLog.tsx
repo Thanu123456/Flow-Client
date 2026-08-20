@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Table, Tag, Empty, Spin, Typography, Space } from 'antd';
+import { Modal, Table, Tag, Empty, Spin, Typography, Space, Alert } from 'antd';
 import type { User } from '../../types/entities/user.types';
 import { userService } from '../../services/management/userService';
 import dayjs from 'dayjs';
@@ -28,6 +28,7 @@ const UserActivityLog: React.FC<UserActivityLogProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [activities, setActivities] = useState<ActivityLogEntry[]>([]);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
@@ -36,6 +37,8 @@ const UserActivityLog: React.FC<UserActivityLogProps> = ({
 
   useEffect(() => {
     if (visible && user) {
+      setActivities([]);
+      setFetchError(null);
       fetchActivities(1, 10);
     }
   }, [visible, user]);
@@ -55,9 +58,10 @@ const UserActivityLog: React.FC<UserActivityLogProps> = ({
         pageSize: response.limit,
         total: response.total,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch user activity:', error);
       setActivities([]);
+      setFetchError(error?.response?.data?.error?.message || 'Failed to load activity log');
     } finally {
       setLoading(false);
     }
@@ -141,8 +145,10 @@ const UserActivityLog: React.FC<UserActivityLogProps> = ({
         <div style={{ textAlign: 'center', padding: 40 }}>
           <Spin size="large" />
         </div>
+      ) : fetchError ? (
+        <Alert type="error" message={fetchError} style={{ margin: '16px 0' }} />
       ) : activities.length === 0 ? (
-        <Empty description="No activity logs found" />
+        <Empty description="No activity logs found for this user" />
       ) : (
         <Table
           columns={columns}

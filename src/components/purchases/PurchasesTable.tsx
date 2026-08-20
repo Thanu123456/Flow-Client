@@ -1,6 +1,6 @@
 import React from 'react';
-import { Tag, Tooltip } from 'antd';
-import { EyeOutlined } from '@ant-design/icons';
+import { Tag, Tooltip, Space } from 'antd';
+import { EyeOutlined, EditOutlined, RollbackOutlined } from '@ant-design/icons';
 import { CommonTable } from '../common/Table';
 import type { GRNListItem, GRNStatus, PaymentMethod } from '../../types/entities/purchase.types';
 import dayjs from 'dayjs';
@@ -9,6 +9,8 @@ interface Props {
   data: GRNListItem[];
   loading: boolean;
   onView: (grn: GRNListItem) => void;
+  onEdit: (grn: GRNListItem) => void;
+  onReturn: (grn: GRNListItem) => void;
   pagination: {
     page: number;
     perPage: number;
@@ -34,6 +36,8 @@ const PurchasesTable: React.FC<Props> = ({
   data,
   loading,
   onView,
+  onEdit,
+  onReturn,
   pagination,
   onPageChange,
 }) => {
@@ -112,14 +116,36 @@ const PurchasesTable: React.FC<Props> = ({
       key: 'actions',
       align: 'center' as const,
       render: (_: any, record: GRNListItem) => (
-        <Tooltip title="View Details">
-          <div
-            className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
-            onClick={() => onView(record)}
-          >
-            <EyeOutlined style={{ color: "black" }} />
-          </div>
-        </Tooltip>
+        <Space size={6}>
+          <Tooltip title="View Details">
+            <div
+              className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-blue-50"
+              onClick={() => onView(record)}
+            >
+              <EyeOutlined style={{ color: 'black' }} />
+            </div>
+          </Tooltip>
+          {record.status === 'draft' && (
+            <Tooltip title="Edit GRN">
+              <div
+                className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-orange-50"
+                onClick={() => onEdit(record)}
+              >
+                <EditOutlined style={{ color: '#fa8c16' }} />
+              </div>
+            </Tooltip>
+          )}
+          {record.status === 'completed' && record.supplierName && (
+            <Tooltip title="Create Return">
+              <div
+                className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-red-50"
+                onClick={() => onReturn(record)}
+              >
+                <RollbackOutlined style={{ color: '#f5222d' }} />
+              </div>
+            </Tooltip>
+          )}
+        </Space>
       ),
     },
   ];

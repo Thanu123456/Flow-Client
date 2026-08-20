@@ -25,4 +25,5 @@ export interface CommonTableProps<T>
   selectedDate?: Dayjs | null;
   onBulkDelete?: () => void;
   bulkDeleteText?: string;
+  simplePagination?: boolean;
 }

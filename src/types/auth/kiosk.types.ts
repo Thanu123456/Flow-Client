@@ -11,6 +11,7 @@ export interface KioskUserInfo {
   full_name: string;
   profile_image_url?: string;
   role?: string;
+  permissions?: string[];
 }
 
 export interface KioskLoginResponse {
@@ -25,9 +26,23 @@ export interface KioskLoginResponse {
 }
 
 export interface KioskEndShiftResponse {
+  session_id: string;
+  user_id: string;
+  shift_started_at: string;
+  shift_ended_at?: string;
   total_sales: number;
   total_transactions: number;
-  shift_duration: string;
-  shift_started: string;
-  shift_ended: string;
+  total_cash_sales: number;
+  total_card_sales: number;
+  total_refunds: number;
+}
+
+export interface KioskSessionInfo {
+  id: string;
+  user_id: string;
+  shift_started_at: string;
+  shift_ended_at?: string;
+  total_sales: number;
+  total_transactions: number;
+  is_active: boolean;
 }

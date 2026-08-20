@@ -70,7 +70,21 @@ const WarehousesPage: React.FC<WarehousesPageProps> = ({
     getWarehouses(params);
   };
 
-  const handleRefresh = () => getWarehouses(paginationParams);
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setSearchTerm("");
+    setStatusFilter(undefined);
+    const params = { ...paginationParams, page: 1, search: "", status: undefined };
+    setPaginationParams(params);
+    setRefreshing(true);
+    try {
+      await getWarehouses(params);
+    } catch {
+      // error state handled in store
+    } finally {
+      setRefreshing(false);
+    }
+  };
   const handleAddWarehouse = () => setAddModalVisible(true);
   const handleEditWarehouse = (warehouse: Warehouse) => {
     setSelectedWarehouse(warehouse);
@@ -165,6 +179,7 @@ const WarehousesPage: React.FC<WarehousesPageProps> = ({
             <CommonButton
               icon={<ReloadOutlined style={{ color: "blue" }} />}
               onClick={handleRefresh}
+              loading={refreshing}
             >
               Refresh
             </CommonButton>

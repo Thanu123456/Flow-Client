@@ -23,6 +23,7 @@ import KioskPOS from "../pages/kiosk/KioskPOS";
 
 // Admin Pages
 import Dashboard from "../pages/admin/Dashboard";
+import Profile from "../pages/admin/Profile";
 
 import Brands from "../pages/management/Brands";
 import Categories from "../pages/management/Categories";
@@ -34,17 +35,34 @@ import Users from "../pages/management/Users";
 import Variations from "../pages/management/Variations";
 import Customers from "../pages/management/Customers";
 import Suppliers from "../pages/management/Suppliers";
+import CreditSupplier from "../pages/management/CreditSupplier";
+import SupplierPayment from "../pages/management/SupplierPayment";
+import CreditCustomer from "../pages/management/CreditCustomer";
 import Warranties from "../pages/management/Warranties";
 import Products from "../pages/management/Products";
 import Stock from "../pages/management/Stock";
+import LowStock from "../pages/inventory/LowStock";
+import OutOfStock from "../pages/inventory/OutOfStock";
+import ExpiredProducts from "../pages/inventory/ExpiredProducts";
 import AddProduct from "../pages/management/AddProduct";
 import EditProduct from "../pages/management/EditProduct";
+import StockAdjustment from "../pages/management/StockAdjustment";
+import AddStockAdjustment from "../pages/management/AddStockAdjustment";
 
 // Transaction Pages
 import Purchases from "../pages/transactions/Purchases";
 import AddPurchase from "../pages/transactions/AddPurchase";
+import PurchaseReturns from "../pages/transactions/PurchaseReturns";
+import AddPurchaseReturn from "../pages/transactions/AddPurchaseReturn";
 import Sales from "../pages/transactions/Sales";
 import SalesReturns from "../pages/transactions/SalesReturns";
+import Reports from "../pages/reports/Reports";
+import SalesReports from "../pages/reports/SalesReports";
+import PurchaseReports from "../pages/reports/PurchaseReports";
+import FinancialReports from "../pages/reports/FinancialReports";
+import InventoryReports from "../pages/reports/InventoryReports";
+import LogHistoryReports from "../pages/reports/LogHistoryReports";
+import TopSellingReports from "../pages/reports/TopSellingReports";
 import ProcessRefund from "../pages/transactions/ProcessRefund";
 import HoldBills from "../pages/transactions/HoldBills";
 
@@ -82,6 +100,7 @@ const AppRoutes: React.FC = () => {
       <Route element={<PrivateRoutes />}>
         <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/profile" element={<Profile />} />
 
         {/* Product Management Routes */}
         <Route
@@ -91,6 +110,9 @@ const AppRoutes: React.FC = () => {
         >
           <Route path="/products" element={<Products />} />
           <Route path="/inventory" element={<Stock />} />
+          <Route path="/inventory/low-stock" element={<LowStock />} />
+          <Route path="/inventory/out-of-stock" element={<OutOfStock />} />
+          <Route path="/inventory/expired" element={<ExpiredProducts />} />
         </Route>
         <Route
           element={
@@ -113,6 +135,16 @@ const AppRoutes: React.FC = () => {
         <Route path="/units" element={<Units />} />
         <Route path="/warehouses" element={<Warehouses />} />
         <Route path="/variations" element={<Variations />} />
+
+        {/* Stock Adjustment Routes */}
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.INVENTORY_ADJUST} />
+          }
+        >
+          <Route path="/adjustments" element={<StockAdjustment />} />
+          <Route path="/adjustments/add" element={<AddStockAdjustment />} />
+        </Route>
 
         {/* Management Routes with Permission Guards */}
         <Route
@@ -147,6 +179,21 @@ const AppRoutes: React.FC = () => {
         >
           <Route path="/suppliers" element={<Suppliers />} />
         </Route>
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.SUPPLIERS_CREDIT} />
+          }
+        >
+          <Route path="/credit-supplier" element={<CreditSupplier />} />
+          <Route path="/credit-supplier/payment" element={<SupplierPayment />} />
+        </Route>
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.CUSTOMERS_CREDIT} />
+          }
+        >
+          <Route path="/credit-customer" element={<CreditCustomer />} />
+        </Route>
 
         {/* Warranty Management Routes */}
         <Route
@@ -173,6 +220,17 @@ const AppRoutes: React.FC = () => {
           <Route path="/purchases/add" element={<AddPurchase />} />
           <Route path="/purchases/:id/edit" element={<AddPurchase />} />
         </Route>
+
+        {/* Purchase Returns Routes */}
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.PURCHASES_RETURNS} />
+          }
+        >
+          <Route path="/purchase-returns" element={<PurchaseReturns />} />
+          <Route path="/purchase-returns/new/:grnId" element={<AddPurchaseReturn />} />
+        </Route>
+
         <Route path="/pos" element={<POS />} />
 
         {/* Hold Bills Route */}
@@ -202,6 +260,45 @@ const AppRoutes: React.FC = () => {
           <Route path="/sales-returns" element={<SalesReturns />} />
           <Route path="/sales-returns/new" element={<ProcessRefund />} />
           <Route path="/sales-returns/new/:saleId" element={<ProcessRefund />} />
+        </Route>
+
+        {/* Reports Routes */}
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.REPORTS_SALES} />
+          }
+        >
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/reports/sales" element={<SalesReports />} />
+          <Route path="/reports/top-selling" element={<TopSellingReports />} />
+        </Route>
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.REPORTS_PURCHASES} />
+          }
+        >
+          <Route path="/reports/purchases" element={<PurchaseReports />} />
+        </Route>
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.REPORTS_INVENTORY} />
+          }
+        >
+          <Route path="/reports/inventory" element={<InventoryReports />} />
+        </Route>
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.REPORTS_FINANCIAL} />
+          }
+        >
+          <Route path="/reports/financial" element={<FinancialReports />} />
+        </Route>
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.REPORTS_LOG_HISTORY} />
+          }
+        >
+          <Route path="/reports/log-history" element={<LogHistoryReports />} />
         </Route>
       </Route>
 

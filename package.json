@@ -18,6 +18,8 @@
     "classnames": "^2.5.1",
     "cors": "^2.8.5",
     "dayjs": "^1.11.20",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.555.0",
     "moment": "^2.30.1",

@@ -49,12 +49,22 @@ const CustomersPage: React.FC = () => {
     fetchCustomers(page, pageSize);
   };
 
-  const handleRefresh = () => {
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
     setSearchTerm('');
     setTypeFilter(undefined);
     setStatusFilter(undefined);
     setSelectedRowKeys([]);
-    fetchCustomers(1, pagination.limit);
+    setRefreshing(true);
+    try {
+      // Fetch with explicitly cleared filters — fetchCustomers would
+      // still close over the previous search/filter values here.
+      await getCustomers({ page: 1, limit: pagination.limit, includeInactive: false });
+    } catch {
+      // error state handled in store
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleEdit = (customer: Customer) => {
@@ -189,6 +199,7 @@ const CustomersPage: React.FC = () => {
             <CommonButton
               icon={<ReloadOutlined style={{ color: "blue" }} />}
               onClick={handleRefresh}
+              loading={refreshing}
             >
               Refresh
             </CommonButton>

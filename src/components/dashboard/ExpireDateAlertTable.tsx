@@ -9,7 +9,6 @@ interface ExpireAlertItem {
     id: string;
     productID: string;
     productName: string;
-    variationType: string;
     purchaseDate: string;
     expiryDate: string;
 }
@@ -17,29 +16,20 @@ interface ExpireAlertItem {
 const ExpireDateAlertTable: React.FC = () => {
     const { charts, chartsLoading } = useDashboardStore();
 
-    const data: ExpireAlertItem[] = React.useMemo(() => {
-        const raw = charts?.expireAlerts ?? [];
-        console.log('[ExpireDateAlertTable] raw expireAlerts:', raw.length, 'items', raw);
-        return raw;
-    }, [charts]);
+    const data: ExpireAlertItem[] = React.useMemo(() => charts?.expireAlerts ?? [], [charts]);
 
     const columns: ColumnsType<ExpireAlertItem> = [
         {
             title: 'PRODUCT ID',
             dataIndex: 'productID',
             key: 'productID',
-            className: 'text-xs font-bold text-gray-500',
+            className: 'text-xs font-normal text-gray-500',
         },
         {
             title: 'PRODUCT NAME',
             dataIndex: 'productName',
             key: 'productName',
-            render: (text) => <span className="font-semibold">{text}</span>
-        },
-        {
-            title: 'VARIATION',
-            dataIndex: 'variationType',
-            key: 'variationType',
+            render: (text) => <span className="font-normal">{text}</span>
         },
         {
             title: 'PURCHASED',
@@ -50,7 +40,7 @@ const ExpireDateAlertTable: React.FC = () => {
             title: 'EXPIRY',
             dataIndex: 'expiryDate',
             key: 'expiryDate',
-            render: (text) => <span className="text-red-500 font-bold">{text}</span>
+            render: (text) => <span className="text-red-500 font-normal">{text}</span>
         },
     ];
 
@@ -61,8 +51,8 @@ const ExpireDateAlertTable: React.FC = () => {
         >
             <div className="flex justify-between items-center mb-6">
                 <div>
-                    <Title level={5} style={{ margin: 0, fontWeight: 800 }}>Expire Date Alert</Title>
-                    <Text type="secondary" className="text-xs uppercase tracking-wider font-semibold">
+                    <Title level={5} style={{ margin: 0, fontWeight: 400 }}>Expire Date Alert</Title>
+                    <Text type="secondary" className="text-xs uppercase tracking-wider font-normal">
                         Expiry Risk Monitoring
                     </Text>
                 </div>

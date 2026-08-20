@@ -1,9 +1,10 @@
 import React, { useRef } from 'react';
 import { Modal, Descriptions, Tag, Table, Divider, Button, Space, Typography, Card, Row, Col, Tooltip } from 'antd';
-import { PrinterOutlined, FileTextOutlined, ShopOutlined, UserOutlined, CalendarOutlined, BankOutlined } from '@ant-design/icons';
+import { PrinterOutlined, FileTextOutlined, ShopOutlined, UserOutlined, CalendarOutlined, BankOutlined, RollbackOutlined } from '@ant-design/icons';
 import type { GRN, GRNItem, GRNStatus, PaymentMethod } from '../../types/entities/purchase.types';
 import dayjs from 'dayjs';
 import PrintGRN from './PrintGRN';
+import { useNavigate } from 'react-router-dom';
 
 const { Text, Title } = Typography;
 
@@ -30,8 +31,13 @@ const fmt = (n: number) =>
 
 const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose }) => {
   const printRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   if (!grn) return null;
+
+  const isFullyReturned =
+    grn.items.length > 0 &&
+    grn.items.every((item) => item.returnedQty >= item.quantity);
 
   const handlePrint = () => {
     if (!printRef.current) return;
@@ -208,6 +214,15 @@ const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose }) => {
           <div key="footer-content" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
             <Text type="secondary" style={{ fontSize: '12px' }}>Generated on {dayjs(grn.createdAt).format('DD MMM YYYY HH:mm')}</Text>
             <Space>
+              {grn.status === 'completed' && grn.supplierId && !isFullyReturned && (
+                <Button
+                  icon={<RollbackOutlined />}
+                  danger
+                  onClick={() => { onClose(); navigate(`/purchase-returns/new/${grn.id}`); }}
+                >
+                  Create Return
+                </Button>
+              )}
               <Button icon={<PrinterOutlined />} onClick={handlePrint}>
                 Print GRN
               </Button>
@@ -221,7 +236,7 @@ const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose }) => {
         {/* Info Stack */}
         <Space direction="vertical" size={24} style={{ width: '100%' }}>
           {/* Section 1: General Details */}
-          <Card size="small" title={<Space><ShopOutlined /> General Details</Space>} headStyle={{ backgroundColor: '#fafafa' }}>
+          <Card size="small" title={<Space><ShopOutlined /> General Details</Space>} styles={{ header: { backgroundColor: '#fafafa' } }}>
             <Descriptions size="small" column={{ xs: 1, sm: 2, md: 3 }} bordered>
               <Descriptions.Item label="GRN Date">
                 <Space><CalendarOutlined style={{ color: '#8c8c8c' }} /> {dayjs(grn.grnDate).format('DD MMM YYYY')}</Space>
@@ -260,23 +275,27 @@ const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose }) => {
               size="small"
               bordered
               scroll={{ x: 800 }}
-              expandable={{
-                expandedRowRender: (record: GRNItem) =>
-                  record.hasSerialNumbers && record.serialNumbers && record.serialNumbers.length > 0 ? (
-                    <div style={{ padding: '12px 24px', backgroundColor: '#fafafa', borderRadius: '4px' }}>
-                      <div style={{ marginBottom: 8, fontWeight: 600 }}>Serial Numbers</div>
-                      <Space wrap>
-                        {record.serialNumbers.map((sn) => (
-                          <Tag key={sn} color="blue" style={{ borderRadius: '4px' }}>
-                            {sn}
-                          </Tag>
-                        ))}
-                      </Space>
-                    </div>
-                  ) : null,
-                rowExpandable: (record: GRNItem) =>
-                  record.hasSerialNumbers && (record.serialNumbers?.length ?? 0) > 0,
-              }}
+              expandable={
+                grn.items.some((i) => i.hasSerialNumbers && (i.serialNumbers?.length ?? 0) > 0)
+                  ? {
+                      expandedRowRender: (record: GRNItem) =>
+                        record.hasSerialNumbers && record.serialNumbers && record.serialNumbers.length > 0 ? (
+                          <div style={{ padding: '12px 24px', backgroundColor: '#fafafa', borderRadius: '4px' }}>
+                            <div style={{ marginBottom: 8, fontWeight: 600 }}>Serial Numbers</div>
+                            <Space wrap>
+                              {record.serialNumbers.map((sn) => (
+                                <Tag key={sn} color="blue" style={{ borderRadius: '4px' }}>
+                                  {sn}
+                                </Tag>
+                              ))}
+                            </Space>
+                          </div>
+                        ) : null,
+                      rowExpandable: (record: GRNItem) =>
+                        record.hasSerialNumbers && (record.serialNumbers?.length ?? 0) > 0,
+                    }
+                  : undefined
+              }
             />
           </div>
 
@@ -293,7 +312,7 @@ const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose }) => {
               )}
             </Col>
             <Col xs={24} md={12}>
-              <Card size="small" title={<Space><BankOutlined /> Payment Summary</Space>} headStyle={{ backgroundColor: '#f6f6f6' }}>
+              <Card size="small" title={<Space><BankOutlined /> Payment Summary</Space>} styles={{ header: { backgroundColor: '#f6f6f6' } }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ display: 'flex', justifySelf: 'flex-end', justifyContent: 'space-between' }}>
                     <Text type="secondary">Sub Total</Text>
@@ -334,7 +353,7 @@ const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose }) => {
               </Card>
 
               {grn.paymentMethod === 'cheque' && grn.chequeNumber && (
-                <Card size="small" title={<Space><BankOutlined /> Cheque Details</Space>} headStyle={{ backgroundColor: '#f6f6f6' }} style={{ marginTop: 16 }}>
+                <Card size="small" title={<Space><BankOutlined /> Cheque Details</Space>} styles={{ header: { backgroundColor: '#f6f6f6' } }} style={{ marginTop: 16 }}>
                   <Descriptions size="small" column={1}>
                     <Descriptions.Item label="Number"><Text strong>{grn.chequeNumber}</Text></Descriptions.Item>
                     <Descriptions.Item label="Date">{dayjs(grn.chequeDate).format('DD MMM YYYY')}</Descriptions.Item>

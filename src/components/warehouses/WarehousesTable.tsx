@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import { Space, Tooltip, message, Badge } from "antd";
+import { Space, Tooltip, Badge } from "antd";
 import {
   EditOutlined,
   DeleteOutlined,
   EyeOutlined,
   WarningOutlined
 } from "@ant-design/icons";
-import { Modal } from "antd";
+import { Modal, App } from "antd";
 import { useTableSelection } from "../../hooks/useTableSelection";
 import type { Warehouse } from "../../types/entities/warehouse.types";
 import { useWarehouseStore } from "../../store/management/warehouseStore";
@@ -46,6 +46,7 @@ const WarehousesTable: React.FC<WarehousesTableProps> = ({
   const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(null);
   const { selectedRowKeys, rowSelection, clearSelection } = useTableSelection<Warehouse>();
   const { deleteWarehouse, error, clearError } = useWarehouseStore();
+  const { message } = App.useApp();
 
   const handleView = (warehouse: Warehouse) => {
     setSelectedWarehouse(warehouse);
