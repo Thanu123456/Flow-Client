@@ -21,14 +21,22 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
+type Range = 'Week' | 'Month';
+
 export const TopProductsPieChart: React.FC = () => {
-  const { charts, chartsLoading } = useDashboardStore();
-  
+  const { topProducts, topProductsLoading, fetchTopProducts } = useDashboardStore();
+  const [range, setRange] = React.useState<Range>('Week');
+
+  React.useEffect(() => {
+    fetchTopProducts(range.toLowerCase());
+  }, [range, fetchTopProducts]);
+
   const data = React.useMemo(() => {
-    const raw = charts?.topProducts ?? [];
-    console.log('[TopProductsPieChart] raw topProducts:', raw.length, 'items', raw);
+    const raw = topProducts ?? [];
     return raw.map(p => ({ name: p.label, value: p.value }));
-  }, [charts]);
+  }, [topProducts]);
+
+  const chartsLoading = topProductsLoading;
 
   return (
     <Card 
@@ -44,8 +52,9 @@ export const TopProductsPieChart: React.FC = () => {
         </div>
         <Segmented
           options={['Week', 'Month']}
-          disabled
-          className="bg-gray-100 p-1 rounded-xl shadow-inner font-medium text-xs opacity-50"
+          value={range}
+          onChange={(val) => setRange(val as Range)}
+          className="bg-gray-100 p-1 rounded-xl shadow-inner font-medium text-xs"
         />
       </div>
 

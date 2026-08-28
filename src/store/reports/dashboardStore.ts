@@ -111,8 +111,11 @@ interface DashboardState {
     loading: boolean;
     chartsLoading: boolean;
     error: string | null;
+    topProducts: ChartPoint[] | null;
+    topProductsLoading: boolean;
     fetchDashboardData: (period?: string) => Promise<void>;
     fetchDashboardCharts: (period?: string) => Promise<void>;
+    fetchTopProducts: (period?: string, limit?: number) => Promise<void>;
 }
 
 export const useDashboardStore = create<DashboardState>((set) => ({
@@ -121,6 +124,8 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     loading: false,
     chartsLoading: false,
     error: null,
+    topProducts: null,
+    topProductsLoading: false,
     fetchDashboardData: async (period = 'today') => {
         set({ loading: true, error: null });
         try {
@@ -145,6 +150,15 @@ export const useDashboardStore = create<DashboardState>((set) => ({
             }
         } catch (error: any) {
             set({ error: error.message || 'Failed to fetch dashboard charts', chartsLoading: false });
+        }
+    },
+    fetchTopProducts: async (period = 'week', limit = 5) => {
+        set({ topProductsLoading: true });
+        try {
+            const response = await api.get(`/admin/dashboard/top-products?period=${period}&limit=${limit}`);
+            set({ topProducts: response.data?.data ?? [], topProductsLoading: false });
+        } catch (error: any) {
+            set({ error: error.message || 'Failed to fetch top products', topProductsLoading: false });
         }
     },
 }));

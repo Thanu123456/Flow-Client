@@ -10,13 +10,18 @@ const HourlySalesPeakChart: React.FC = () => {
 
   const data = React.useMemo(() => {
     const raw = charts?.hourlySales ?? [];
-    console.log('[HourlySalesPeakChart] raw hourlySales:', raw.length, 'points', raw);
     if (!raw.length) return [];
     return raw.map(p => ({
         hour: p.label,
         sales: p.value
     }));
   }, [charts]);
+
+  const peak = React.useMemo(() => {
+    if (!data.length) return null;
+    const top = data.reduce((a, b) => (b.sales > a.sales ? b : a));
+    return top.sales > 0 ? top : null;
+  }, [data]);
 
   return (
     <Card 
@@ -27,9 +32,19 @@ const HourlySalesPeakChart: React.FC = () => {
         <div>
           <Title level={5} style={{ margin: 0, fontWeight: 400 }}>Hourly Sales Peak</Title>
           <Text type="secondary" className="text-xs uppercase tracking-wider font-normal">
-            Today's Transaction Volume
+            All-Time Transaction Volume by Hour
           </Text>
         </div>
+        {peak && (
+          <div className="text-right">
+            <Text type="secondary" className="text-xs uppercase tracking-wider font-normal block">
+              Peak Hour
+            </Text>
+            <Text strong style={{ color: '#1890ff' }}>
+              {peak.hour} · LKR {peak.sales.toLocaleString()}
+            </Text>
+          </div>
+        )}
       </div>
 
       <div style={{ width: '100%', height: 300, minWidth: 0 }}>
@@ -45,10 +60,11 @@ const HourlySalesPeakChart: React.FC = () => {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-              <XAxis 
-                dataKey="hour" 
-                axisLine={false} 
-                tickLine={false} 
+              <XAxis
+                dataKey="hour"
+                axisLine={false}
+                tickLine={false}
+                interval={2}
                 tick={{ fontSize: 11, fill: '#8c8c8c' }}
               />
               <YAxis 
@@ -77,7 +93,7 @@ const HourlySalesPeakChart: React.FC = () => {
           </ResponsiveContainer>
         ) : (
           <div className="flex flex-col items-center justify-center h-full">
-            <Empty description="No transaction volume today" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            <Empty description="No transaction volume recorded yet" image={Empty.PRESENTED_IMAGE_SIMPLE} />
           </div>
         )}
       </div>
