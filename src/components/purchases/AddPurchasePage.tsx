@@ -150,6 +150,11 @@ const AddPurchasePage: React.FC = () => {
   const [hasSerialNumbers, setHasSerialNumbers] = useState(false);
   const [pendingSerials, setPendingSerials] = useState<string[]>([]);
   const [serialModalOpen, setSerialModalOpen] = useState(false);
+  // Ref to the product search box (barcode-scanner throughput: keep it focused).
+  const productSearchRef = useRef<React.ComponentRef<typeof AutoComplete>>(null);
+  // Set right before a programmatic productSearch change so the debounced effect
+  // doesn't fire a redundant search for the name we just filled in.
+  const skipNextSearchRef = useRef(false);
   // Item whose quantity is being changed via the items table; re-opens the
   // serial modal so its serial count stays in sync with the new quantity.
   const [editingSerialItem, setEditingSerialItem] = useState<GRNItemLocal | null>(null);
@@ -234,6 +239,72 @@ const AddPurchasePage: React.FC = () => {
     }
   }, [editId]);
 
+  // ── Product form helpers ─────────────────────────────────
+  const resetProductForm = useCallback(() => {
+    setSelectedProduct(null);
+    setSelectedVariation(null);
+    setProductSearch('');
+    setQuantity(1);
+    setCostPrice(0);
+    setRetailPrice(0);
+    setWholesalePrice(0);
+    setOurPrice(0);
+    setManufactureDate('');
+    setExpiryDate('');
+    setHasSerialNumbers(false);
+    setPendingSerials([]);
+  }, []);
+
+  const focusProductSearch = useCallback(() => {
+    setTimeout(() => productSearchRef.current?.focus(), 50);
+  }, []);
+
+  const handleSelectProduct = useCallback((product: ProductSearchResult) => {
+    skipNextSearchRef.current = true; // don't re-search the name we just filled in
+    setSelectedProduct(product);
+    setSelectedVariation(null);
+    setCostPrice(product.costPrice);
+    setRetailPrice(product.retailPrice);
+    setWholesalePrice(product.wholesalePrice);
+    setOurPrice(product.ourPrice);
+    setHasSerialNumbers(product.hasSerialNumbers);
+    setPendingSerials([]);
+    setProductSearch(`${product.sku ? product.sku + ' - ' : ''}${product.name}`);
+    setProductOptions([]);
+  }, []);
+
+  // Add a plain (non-variable, non-serial) product straight to the list at its
+  // default prices — the barcode-scanner fast path.
+  const quickAddProduct = useCallback((product: ProductSearchResult) => {
+    setItems((prev) => {
+      const idx = prev.findIndex(
+        (i) => !i.isDeleted && i.productId === product.id && !i.variationId
+      );
+      if (idx >= 0) {
+        return prev.map((it, i) =>
+          i === idx
+            ? { ...it, quantity: it.quantity + 1, netPrice: (it.quantity + 1) * it.costPrice, isModified: !it.isNew }
+            : it
+        );
+      }
+      const newItem: GRNItemLocal = {
+        localId: newLocalId(), isNew: true, isModified: false, isDeleted: false,
+        productId: product.id, productName: product.name, productSKU: product.sku,
+        productImage: product.imageUrl, quantity: 1,
+        unitId: product.unitId, unitName: product.unitName, unitShortName: product.unitShortName,
+        costPrice: product.costPrice, retailPrice: product.retailPrice,
+        wholesalePrice: product.wholesalePrice, ourPrice: product.ourPrice,
+        netPrice: product.costPrice, hasSerialNumbers: false, serialNumbers: [],
+        currentStock: product.currentStock,
+      };
+      return [...prev, newItem];
+    });
+    setSupplierLocked(true);
+    resetProductForm();
+    messageApi.success({ content: `Added ${product.name}`, duration: 1.2 });
+    focusProductSearch();
+  }, [messageApi, resetProductForm, focusProductSearch]);
+
   // ── Product search ───────────────────────────────────────
   const handleProductSearch = useCallback(
     async (query: string) => {
@@ -247,6 +318,24 @@ const AddPurchasePage: React.FC = () => {
       try {
         const results = await purchaseService.searchProducts(query, warehouseId || undefined);
         if (requestId !== searchRequestRef.current) return; // stale response
+
+        // Barcode-scanner fast path: a single exact barcode/SKU hit is added
+        // (or just selected, if it needs a variation or serial numbers) hands-free.
+        const q = query.trim().toLowerCase();
+        const exact =
+          q.length >= 4 &&
+          results.length === 1 &&
+          ((results[0].barcode ?? '').toLowerCase() === q ||
+            (results[0].sku ?? '').toLowerCase() === q);
+        if (exact) {
+          const p = results[0];
+          if (p.productType !== 'variable' && !p.hasSerialNumbers && p.costPrice > 0) {
+            quickAddProduct(p);
+          } else {
+            handleSelectProduct(p);
+          }
+          return;
+        }
         setProductOptions(results);
       } catch {
         if (requestId !== searchRequestRef.current) return;
@@ -255,29 +344,43 @@ const AddPurchasePage: React.FC = () => {
         if (requestId === searchRequestRef.current) setSearchingProducts(false);
       }
     },
-    [warehouseId]
+    [warehouseId, quickAddProduct, handleSelectProduct]
   );
 
   // Debounced product search — depends on handleProductSearch so it re-fires
   // automatically when the warehouse changes (which recreates handleProductSearch)
   useEffect(() => {
+    if (skipNextSearchRef.current) {
+      skipNextSearchRef.current = false;
+      return;
+    }
     const timer = setTimeout(() => {
       if (productSearch) handleProductSearch(productSearch);
-    }, 300);
+    }, 200);
     return () => clearTimeout(timer);
   }, [productSearch, handleProductSearch]);
 
-  const handleSelectProduct = (product: ProductSearchResult) => {
-    setSelectedProduct(product);
-    setSelectedVariation(null);
-    setCostPrice(product.costPrice);
-    setRetailPrice(product.retailPrice);
-    setWholesalePrice(product.wholesalePrice);
-    setOurPrice(product.ourPrice);
-    setHasSerialNumbers(product.hasSerialNumbers);
-    setPendingSerials([]);
-    setProductSearch(`${product.sku ? product.sku + ' - ' : ''}${product.name}`);
-    setProductOptions([]);
+  // Focus the search box on load so a scan works immediately (new GRN only).
+  useEffect(() => {
+    if (!isEdit) focusProductSearch();
+  }, [isEdit, focusProductSearch]);
+
+  // Enter / Escape handling for the product search box.
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      if (productOptions.length === 0 && selectedProduct) {
+        e.preventDefault();
+        handleAddItem();
+      } else if (productOptions.length === 0 && !selectedProduct && productSearch.trim()) {
+        // Scanner sent Enter before the debounce fired — resolve now.
+        e.preventDefault();
+        handleProductSearch(productSearch);
+      }
+    } else if (e.key === 'Escape' && (selectedProduct || productSearch)) {
+      e.preventDefault();
+      resetProductForm();
+      focusProductSearch();
+    }
   };
 
   const handleSelectVariation = (variationId: string) => {
@@ -419,21 +522,7 @@ const AddPurchasePage: React.FC = () => {
 
     resetProductForm();
     setSerialModalOpen(false);
-  };
-
-  const resetProductForm = () => {
-    setSelectedProduct(null);
-    setSelectedVariation(null);
-    setProductSearch('');
-    setQuantity(1);
-    setCostPrice(0);
-    setRetailPrice(0);
-    setWholesalePrice(0);
-    setOurPrice(0);
-    setManufactureDate('');
-    setExpiryDate('');
-    setHasSerialNumbers(false);
-    setPendingSerials([]);
+    focusProductSearch();
   };
 
   const handleQuantityChange = (localId: string, qty: number) => {
@@ -459,6 +548,9 @@ const AddPurchasePage: React.FC = () => {
         item.localId === localId ? { ...item, isDeleted: true } : item
       )
     );
+    // Releasing the last item unlocks the supplier again.
+    const remaining = items.filter((i) => !i.isDeleted && i.localId !== localId);
+    if (remaining.length === 0) setSupplierLocked(false);
   };
 
   // ── Validate before submit ────────────────────────────────
@@ -787,8 +879,14 @@ const AddPurchasePage: React.FC = () => {
         {/* Product Search */}
         <Row gutter={[16, 12]}>
           <Col xs={24} md={12}>
-            <Form.Item label="Search Product" style={{ marginBottom: 0 }}>
+            <Form.Item
+              label="Search Product"
+              style={{ marginBottom: 0 }}
+              extra={<Text type="secondary" style={{ fontSize: 11 }}>Scan or type · Enter to add · Esc to clear</Text>}
+            >
+              <div onKeyDown={handleSearchKeyDown}>
               <AutoComplete
+                ref={productSearchRef}
                 value={productSearch}
                 options={productOptions.map((p) => ({
                   value: p.id,
@@ -818,6 +916,7 @@ const AddPurchasePage: React.FC = () => {
                 notFoundContent={searchingProducts ? <Spin /> : 'No products found'}
                 style={{ width: '100%' }}
               />
+              </div>
             </Form.Item>
           </Col>
 
@@ -876,6 +975,7 @@ const AddPurchasePage: React.FC = () => {
                     <InputNumber
                       min={hasSerialNumbers ? 1 : 0.0001} value={quantity}
                       onChange={(v) => setQuantity(v ?? 1)}
+                      onPressEnter={handleAddItem}
                       precision={hasSerialNumbers ? 0 : 4} style={{ width: '100%' }}
                     />
                   </Form.Item>
@@ -885,6 +985,7 @@ const AddPurchasePage: React.FC = () => {
                     <InputNumber
                       min={0} value={costPrice}
                       onChange={(v) => setCostPrice(v ?? 0)}
+                      onPressEnter={handleAddItem}
                       precision={2} prefix="Rs." style={{ width: '100%' }}
                     />
                   </Form.Item>
