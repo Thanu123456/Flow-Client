@@ -5,6 +5,8 @@ export * from './brand.types';
 export * from './category.types';
 export * from './subcategory.types';
 export * from './unit.types';
+export * from './expense.types';
+export * from './cheque.types';
 export * from './warehouse.types';
 export * from './warranty.types';
 export * from './variation.types';

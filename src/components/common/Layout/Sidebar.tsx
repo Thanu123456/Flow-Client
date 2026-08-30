@@ -314,6 +314,10 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     if (p.startsWith("/pos")) return "pos";
     if (p.startsWith("/purchase-returns")) return "purchase-returns";
     if (p.startsWith("/purchases")) return "purchases";
+    if (p.startsWith("/expense-categories")) return "expense-categories";
+    if (p.startsWith("/expenses")) return "expenses";
+    if (p.startsWith("/cheque-returns")) return "cheque-returns";
+    if (p.startsWith("/cheques")) return "cheques";
     if (p.startsWith("/suppliers")) return "suppliers";
     if (p.startsWith("/credit-supplier")) return "credit-supplier";
     if (p.startsWith("/customers")) return "customers";
@@ -335,7 +339,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     const p = location.pathname;
     const next = new Set<string>();
     if (["/brands", "/categories", "/subcategories", "/units", "/products", "/inventory", "/adjustments", "/stock-takes", "/warehouses", "/variations", "/warranties"].some((s) => p.startsWith(s))) next.add("inventory");
-    if (["/sales", "/pos", "/purchases", "/sales-returns", "/purchase-returns"].some((s) => p.startsWith(s))) next.add("transactions");
+    if (["/sales", "/pos", "/purchases", "/sales-returns", "/purchase-returns", "/expenses", "/expense-categories", "/cheques", "/cheque-returns"].some((s) => p.startsWith(s))) next.add("transactions");
     if (["/customers", "/suppliers", "/credit-supplier"].some((s) => p.startsWith(s))) next.add("contacts");
     if (["/users", "/roles"].some((s) => p.startsWith(s))) next.add("team");
     setExpandedKeys(next);
@@ -428,6 +432,10 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       txItems.push({ key: "purchases", label: "GRN", icon: <FileTextOutlined />, path: "/purchases" });
     if (isOwner || hasPermission(PERMISSIONS.PURCHASES_RETURNS))
       txItems.push({ key: "purchase-returns", label: "Purchase Returns", icon: <RollbackOutlined />, path: "/purchase-returns" });
+    if (isOwner || hasPermission(PERMISSIONS.EXPENSES_VIEW))
+      txItems.push({ key: "expenses", label: "Expenses", icon: <DollarOutlined />, path: "/expenses" });
+    if (isOwner || hasPermission(PERMISSIONS.CHEQUES_VIEW))
+      txItems.push({ key: "cheques", label: "Cheques", icon: <FileTextOutlined />, path: "/cheques" });
     if (txItems.length > 0) {
       groups.push({
         title: "Transactions",

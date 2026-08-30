@@ -86,11 +86,16 @@ const PurchaseSummary: React.FC<Props> = ({
   };
 
   const handleSaveCheque = () => {
-    if (!tempChequeNumber.trim()) {
+    const num = tempChequeNumber.trim();
+    if (!num) {
       setChequeNumberError('Cheque number is required');
       return;
     }
-    onChequeNumberChange(tempChequeNumber.trim());
+    if (!/^\d+$/.test(num)) {
+      setChequeNumberError('Cheque number can only contain digits');
+      return;
+    }
+    onChequeNumberChange(num);
     onChequeDateChange(tempChequeDate);
     onChequeNoteChange(tempChequeNote);
     setChequeNumberError('');
@@ -287,8 +292,10 @@ const PurchaseSummary: React.FC<Props> = ({
           >
             <Input
               value={tempChequeNumber}
+              inputMode="numeric"
               onChange={(e) => {
-                setTempChequeNumber(e.target.value);
+                // Digits only — mirrors the desktop ChequeDetails dialog.
+                setTempChequeNumber(e.target.value.replace(/\D/g, ''));
                 setChequeNumberError('');
               }}
               placeholder="Enter cheque number"

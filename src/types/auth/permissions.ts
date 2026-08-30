@@ -49,6 +49,16 @@ export const PERMISSIONS = {
   WARRANTIES_EDIT: 'warranties.edit',
   WARRANTIES_DELETE: 'warranties.delete',
 
+  // Expenses
+  EXPENSES_VIEW: 'expenses.view',
+  EXPENSES_CREATE: 'expenses.create',
+  EXPENSES_EDIT: 'expenses.edit',
+  EXPENSES_DELETE: 'expenses.delete',
+
+  // Cheques
+  CHEQUES_VIEW: 'cheques.view',
+  CHEQUES_MANAGE: 'cheques.manage',
+
   // Reports
   REPORTS_SALES: 'reports.sales',
   REPORTS_INVENTORY: 'reports.inventory',

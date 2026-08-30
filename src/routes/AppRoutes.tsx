@@ -61,6 +61,10 @@ import PurchaseReturns from "../pages/transactions/PurchaseReturns";
 import AddPurchaseReturn from "../pages/transactions/AddPurchaseReturn";
 import Sales from "../pages/transactions/Sales";
 import SalesReturns from "../pages/transactions/SalesReturns";
+import Expenses from "../pages/transactions/Expenses";
+import ExpenseCategories from "../pages/transactions/ExpenseCategories";
+import Cheques from "../pages/transactions/Cheques";
+import ChequeReturns from "../pages/transactions/ChequeReturns";
 import Reports from "../pages/reports/Reports";
 import SalesReports from "../pages/reports/SalesReports";
 import PurchaseReports from "../pages/reports/PurchaseReports";
@@ -247,6 +251,26 @@ const AppRoutes: React.FC = () => {
         >
           <Route path="/purchase-returns" element={<PurchaseReturns />} />
           <Route path="/purchase-returns/new/:grnId" element={<AddPurchaseReturn />} />
+        </Route>
+
+        {/* Expenses Routes */}
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.EXPENSES_VIEW} />
+          }
+        >
+          <Route path="/expenses" element={<Expenses />} />
+          <Route path="/expense-categories" element={<ExpenseCategories />} />
+        </Route>
+
+        {/* Cheque Register Routes */}
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.CHEQUES_VIEW} />
+          }
+        >
+          <Route path="/cheques" element={<Cheques />} />
+          <Route path="/cheque-returns" element={<ChequeReturns />} />
         </Route>
 
         <Route path="/pos" element={<POS />} />
