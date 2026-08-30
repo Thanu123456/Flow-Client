@@ -13,7 +13,7 @@ import dayjs from 'dayjs';
 import { useSaleReturnStore } from '../../store/transactions/saleReturnStore';
 import type { OriginalSaleItem } from '../../types/entities/saleReturn.types';
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 const { TextArea } = Input;
 
 const PAYMENT_METHODS = [

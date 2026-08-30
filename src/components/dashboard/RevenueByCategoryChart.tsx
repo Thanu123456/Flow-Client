@@ -26,7 +26,6 @@ const RevenueByCategoryChart: React.FC = () => {
     
     const data = React.useMemo(() => {
         const raw = charts?.revenueByCategory ?? [];
-        console.log('[RevenueByCategoryChart] raw revenueByCategory:', raw.length, 'items', raw);
         return raw.map(p => ({ name: p.label, value: p.value }));
     }, [charts]);
 

@@ -21,7 +21,6 @@ const InventoryTurnoverChart: React.FC = () => {
 
   const data = React.useMemo(() => {
       const raw = charts?.inventoryTurnover ?? [];
-      console.log('[InventoryTurnoverChart] raw inventoryTurnover:', raw.length, 'items', raw);
       return raw.map(p => ({ item: p.item, days: p.days }));
   }, [charts]);
 

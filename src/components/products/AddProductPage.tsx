@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Form, Button, message, Space, Breadcrumb, Divider } from "antd";
+import { Form, Button, message, Space, Breadcrumb, Divider, Tooltip } from "antd";
 import { useNavigate } from "react-router-dom";
 import {
     PlusOutlined,
@@ -8,6 +8,8 @@ import {
     SaveOutlined
 } from "@ant-design/icons";
 import { useProductStore } from "../../store/inventory/productStore";
+import { useFormShortcuts } from "../../hooks/ui/useFormShortcuts";
+import { useFormSubmittable } from "../../hooks/ui/useFormSubmittable";
 import BasicDetailsForm from "./BasicDetailsForm";
 import SingleProductForm from "./SingleProductForm";
 import VariableProductForm from "./VariableProductForm";
@@ -19,6 +21,9 @@ const AddProductPage: React.FC = () => {
     const [messageApi, contextHolder] = message.useMessage();
     const { createProduct, loading } = useProductStore();
     const [productType, setProductType] = useState<"single" | "variable">("single");
+    const { submittable, issues, summary } = useFormSubmittable(form);
+
+    useFormShortcuts(form, () => navigate("/products"));
 
     const handleValuesChange = (changedValues: any) => {
         if (changedValues.product_type) {
@@ -120,15 +125,18 @@ const AddProductPage: React.FC = () => {
                         >
                             Cancel
                         </Button>
-                        <Button
-                            type="primary"
-                            icon={<SaveOutlined />}
-                            onClick={() => form.submit()}
-                            loading={loading}
-                            className="bg-blue-600 hover:bg-blue-700 h-10 px-6 font-normal flex items-center"
-                        >
-                            Create Product
-                        </Button>
+                        <Tooltip title={summary} placement="bottomRight">
+                            <Button
+                                type="primary"
+                                icon={<SaveOutlined />}
+                                onClick={() => form.submit()}
+                                loading={loading}
+                                disabled={!submittable}
+                                className="bg-blue-600 hover:bg-blue-700 h-10 px-6 font-normal flex items-center"
+                            >
+                                Create Product{!submittable && issues.length ? ` (${issues.length})` : ""}
+                            </Button>
+                        </Tooltip>
                     </Space>
                 </div>
             </div>
@@ -137,6 +145,7 @@ const AddProductPage: React.FC = () => {
                 <Form
                     form={form}
                     layout="vertical"
+                    autoComplete="off"
                     onFinish={onFinish}
                     onValuesChange={handleValuesChange}
                     initialValues={{ product_type: "single", quantity_alert: 10 }}
@@ -164,15 +173,18 @@ const AddProductPage: React.FC = () => {
                             >
                                 Back to List
                             </Button>
-                            <Button
-                                type="primary"
-                                icon={<PlusOutlined />}
-                                onClick={() => form.submit()}
-                                loading={loading}
-                                className="bg-blue-600 hover:bg-blue-700 h-12 px-10 font-normal text-lg shadow-lg hover:shadow-blue-200"
-                            >
-                                Save Product
-                            </Button>
+                            <Tooltip title={summary} placement="topRight">
+                                <Button
+                                    type="primary"
+                                    icon={<PlusOutlined />}
+                                    onClick={() => form.submit()}
+                                    loading={loading}
+                                    disabled={!submittable}
+                                    className="bg-blue-600 hover:bg-blue-700 h-12 px-10 font-normal text-lg shadow-lg hover:shadow-blue-200"
+                                >
+                                    Save Product{!submittable && issues.length ? ` (${issues.length})` : ""}
+                                </Button>
+                            </Tooltip>
                         </Space>
                     </div>
                 </Form>

@@ -9,7 +9,6 @@ const TopExpensesCard: React.FC = () => {
 
     const data = React.useMemo(() => {
         const raw = charts?.topExpenses ?? [];
-        console.log('[TopExpensesCard] raw topExpenses:', raw.length, 'items', raw);
         return raw;
     }, [charts]);
 

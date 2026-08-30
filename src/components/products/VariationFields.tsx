@@ -11,6 +11,7 @@ import PricingFields from "./PricingFields";
 import DiscountFields from "./DiscountFields";
 import ImageUpload from "../common/Upload/ImageUpload";
 import { generateBarcode } from "../../utils/helpers/barcode";
+import { createBarcodeValidator } from "../../utils/validators/barcodeValidator";
 import { productService } from "../../services/inventory/productService";
 
 const { Panel } = Collapse;
@@ -20,9 +21,10 @@ interface VariationFieldsProps {
     name: number;
     remove: (index: number) => void;
     optionLabel?: string;
+    editProductId?: string;
 }
 
-const VariationFields: React.FC<VariationFieldsProps> = ({ name, remove, optionLabel }) => {
+const VariationFields: React.FC<VariationFieldsProps> = ({ name, remove, optionLabel, editProductId }) => {
     const form = Form.useFormInstance();
     const [messageApi, contextHolder] = message.useMessage();
     const prefix: (string | number)[] = [name]; // Fix: items must be relative to the index within Form.List
@@ -149,6 +151,8 @@ const VariationFields: React.FC<VariationFieldsProps> = ({ name, remove, optionL
                                         <BarcodeOutlined className="text-slate-400" /> Barcode
                                     </span>
                                 }
+                                validateTrigger={["onBlur"]}
+                                rules={[createBarcodeValidator(editProductId)]}
                             >
                                 <Input
                                     placeholder="Leave blank to auto-generate (999...)"
@@ -157,9 +161,13 @@ const VariationFields: React.FC<VariationFieldsProps> = ({ name, remove, optionL
                                         <Button
                                             type="text"
                                             size="small"
-                                            onClick={() => {
-                                                const newBarcodeValue = generateBarcode();
-                                                console.log(`Manually generated Barcode for variation #${name}:`, newBarcodeValue);
+                                            onClick={async () => {
+                                                let newBarcodeValue: string;
+                                                try {
+                                                    newBarcodeValue = await productService.generateBarcode();
+                                                } catch {
+                                                    newBarcodeValue = generateBarcode();
+                                                }
                                                 form.setFields([
                                                     {
                                                         name: [...fullPrefix, "barcode"],

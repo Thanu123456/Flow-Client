@@ -19,7 +19,6 @@ export const CreditCustomersList: React.FC = () => {
 
     const data = React.useMemo(() => {
         const raw = charts?.creditCustomers ?? [];
-        console.log('[CreditCustomersList] raw creditCustomers:', raw.length, 'items', raw);
         return raw;
     }, [charts]);
 

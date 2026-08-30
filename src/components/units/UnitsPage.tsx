@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import { message, Space } from "antd";
 import {
-  PlusOutlined,
   ReloadOutlined,
   FilePdfOutlined,
   FileExcelOutlined,
@@ -71,12 +70,6 @@ const UnitsPage: React.FC<UnitsPageProps> = ({
     getUnits(params);
   }, [debouncedSearchTerm, statusFilter, getUnits]);
 
-  const handlePageChange = (page: number, pageSize: number) => {
-    const params = { ...paginationParams, page, limit: pageSize };
-    setPaginationParams(params);
-    getUnits(params);
-  };
-
   const [refreshing, setRefreshing] = useState(false);
   const handleRefresh = async () => {
     setSearchTerm("");
@@ -92,7 +85,6 @@ const UnitsPage: React.FC<UnitsPageProps> = ({
       setRefreshing(false);
     }
   };
-  const handleAddUnit = () => setAddModalVisible(true);
   const handleEditUnit = (unit: Unit) => {
     setSelectedUnit(unit);
     setEditModalVisible(true);

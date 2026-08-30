@@ -5,7 +5,7 @@ import {
 } from 'antd';
 import {
   ArrowLeftOutlined, RollbackOutlined, ShopOutlined, CalendarOutlined,
-  UserOutlined, WarningOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -15,7 +15,7 @@ import type { GRN, GRNItem } from '../../types/entities/purchase.types';
 import type { CreatePurchaseReturnItemRequest } from '../../types/entities/purchaseReturn.types';
 import PageLayout from '../common/PageLayout/PageLayout';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 const { TextArea } = Input;
 
 interface ReturnLine {

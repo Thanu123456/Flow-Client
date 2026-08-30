@@ -2,10 +2,8 @@ import React, { useEffect, useState } from 'react';
 import {
     Button,
     Typography,
-    Card,
     theme,
     Spin,
-    Modal,
     Avatar,
     Row,
     Col,
@@ -14,21 +12,12 @@ import {
 import {
     ReloadOutlined,
     UserOutlined,
-    DashboardOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 
 // Stores
-import { useProductStore } from '../../store/inventory/productStore';
-import { useCategoryStore } from '../../store/management/categoryStore';
-import { useSubcategoryStore } from '../../store/management/subCategoryStore';
-import { useBrandStore } from '../../store/management/brandStore';
-import { useUnitStore } from '../../store/management/unitStore';
-import { useWarehouseStore } from '../../store/management/warehouseStore';
-import { useWarrantyStore } from '../../store/management/warrantyStore';
-import { useVariationStore } from '../../store/management/variationStore';
 import { useDashboardStore } from '../../store/reports/dashboardStore';
+import { useAdminDashboard } from '../../hooks/data/useAdminDashboard';
 import {
     SalesPurchasesChart,
     SummaryCards,
@@ -55,16 +44,18 @@ import {
 const { Title, Text } = Typography;
 
 const Dashboard: React.FC = () => {
-    const { logout, user, tenant } = useAuth();
+    const { user, tenant } = useAuth();
     const { token } = theme.useToken();
-    const navigate = useNavigate();
     const { notification } = App.useApp();
 
-    const [loading, setLoading] = useState(true);
     const [period, setPeriod] = useState('today');
     const [showAlert, setShowAlert] = useState(true);
 
-    const { fetchDashboardData: fetchAnalytics, fetchDashboardCharts, charts } = useDashboardStore();
+    const charts = useDashboardStore((s) => s.charts);
+
+    // Analytics + charts, React Query-cached per period. Switching to a period you
+    // already viewed (within 2 min) is instant and makes no request.
+    const { isFetching: loading, refetch: refetchDashboard } = useAdminDashboard(period);
 
     const showInsightNotification = () => {
         notification.destroy(); // Clear existing to prevent stacking
@@ -94,57 +85,18 @@ const Dashboard: React.FC = () => {
         return () => clearInterval(insightInterval);
     }, []);
 
-    const { getProducts } = useProductStore();
-    const { getCategories } = useCategoryStore();
-    const { getSubcategories } = useSubcategoryStore();
-    const { getBrands } = useBrandStore();
-    const { getUnits } = useUnitStore();
-    const { getWarehouses } = useWarehouseStore();
-    const { getWarranties } = useWarrantyStore();
-    const { getVariations } = useVariationStore();
-
-    const fetchDashboardData = async (selectedPeriod = period) => {
-        setLoading(true);
-        // Show insight when syncing data manually
+    // Manual "Sync Data": refetch the current period and re-show the insight toast.
+    const fetchDashboardData = () => {
         showInsightNotification();
-        try {
-            // Fetch dashboard analytics first — these are the only requests that
-            // gate the loading spinner. Running them alone avoids competing with
-            // 8 background store requests for DB connections on cold start.
-            await Promise.allSettled([
-                fetchAnalytics(selectedPeriod),
-                fetchDashboardCharts(selectedPeriod)
-            ]);
-        } finally {
-            setLoading(false);
-        }
-
-        // Pre-warm supporting stores in the background after the dashboard is
-        // already visible. Staggered to avoid exhausting the DB connection pool
-        // when all requests hit simultaneously on cold start.
-        const params = { page: 1, limit: 1 };
-        const prewarmFns = [
-            () => getProducts(params),
-            () => getCategories(params),
-            () => getSubcategories(params),
-            () => getBrands(params),
-            () => getUnits(params),
-            () => getWarehouses(params),
-            () => getWarranties(params),
-            () => getVariations(params),
-        ];
-        (async () => {
-            for (const fn of prewarmFns) {
-                fn().catch(() => {});
-                await new Promise(r => setTimeout(r, 300));
-            }
-        })();
+        refetchDashboard();
     };
 
-    useEffect(() => {
-        fetchDashboardData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    // Period switch: React Query refetches automatically off the `period` key
+    // (and serves cached data instantly for a period already viewed).
+    const handlePeriodChange = (next: string) => {
+        setPeriod(next);
+        showInsightNotification();
+    };
 
 
 
@@ -203,7 +155,7 @@ const Dashboard: React.FC = () => {
 
                         <Button
                             icon={<ReloadOutlined style={{ color: "blue" }} />}
-                            onClick={() => fetchDashboardData(period)}
+                            onClick={() => fetchDashboardData()}
                             loading={loading}
                             style={{
                                 backgroundColor: token.colorPrimaryBg,
@@ -226,28 +178,28 @@ const Dashboard: React.FC = () => {
                     <div className="flex gap-2">
                         <Button
                             type={period === 'today' ? 'primary' : 'default'}
-                            onClick={() => { setPeriod('today'); fetchDashboardData('today'); }}
+                            onClick={() => handlePeriodChange('today')}
                             className={`${period === 'today' ? 'bg-indigo-900 border-indigo-900' : 'border-gray-200'} rounded-md px-6 font-normal h-10`}
                         >
                             TODAY
                         </Button>
                         <Button
                             type={period === 'week' ? 'primary' : 'default'}
-                            onClick={() => { setPeriod('week'); fetchDashboardData('week'); }}
+                            onClick={() => handlePeriodChange('week')}
                             className={`${period === 'week' ? 'bg-indigo-900 border-indigo-900' : 'border-gray-200'} rounded-md px-4 font-normal h-10`}
                         >
                             THIS WEEK
                         </Button>
                         <Button
                             type={period === 'month' ? 'primary' : 'default'}
-                            onClick={() => { setPeriod('month'); fetchDashboardData('month'); }}
+                            onClick={() => handlePeriodChange('month')}
                             className={`${period === 'month' ? 'bg-indigo-900 border-indigo-900' : 'border-gray-200'} rounded-md px-4 font-normal h-10`}
                         >
                             THIS MONTH
                         </Button>
                         <Button
                             type={period === 'year' ? 'primary' : 'default'}
-                            onClick={() => { setPeriod('year'); fetchDashboardData('year'); }}
+                            onClick={() => handlePeriodChange('year')}
                             className={`${period === 'year' ? 'bg-indigo-900 border-indigo-900' : 'border-gray-200'} rounded-md px-4 font-normal h-10`}
                         >
                             THIS YEAR

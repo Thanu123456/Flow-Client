@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Form, Button, message, Space, Breadcrumb, Divider, Spin } from "antd";
+import { Form, Button, message, Space, Breadcrumb, Divider, Spin, Tooltip } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import {
     ArrowLeftOutlined,
@@ -7,13 +7,9 @@ import {
     EditOutlined
 } from "@ant-design/icons";
 import { useProductStore } from "../../store/inventory/productStore";
-import { useCategoryStore } from "../../store/management/categoryStore";
-import { useSubcategoryStore } from "../../store/management/subCategoryStore";
-import { useBrandStore } from "../../store/management/brandStore";
-import { useUnitStore } from "../../store/management/unitStore";
-import { useWarehouseStore } from "../../store/management/warehouseStore";
-import { useWarrantyStore } from "../../store/management/warrantyStore";
-import { useVariationStore } from "../../store/management/variationStore";
+import { useFormShortcuts } from "../../hooks/ui/useFormShortcuts";
+import { useFormSubmittable } from "../../hooks/ui/useFormSubmittable";
+import { useLookupsBundle } from "../../hooks/data/useLookupsBundle";
 import type { Product } from "../../types/entities/product.types";
 import BasicDetailsForm from "./BasicDetailsForm";
 import SingleProductForm from "./SingleProductForm";
@@ -24,17 +20,15 @@ const EditProductPage: React.FC = () => {
     const navigate = useNavigate();
     const [form] = Form.useForm();
     const { getProductById, updateProduct, loading } = useProductStore();
-    // Use selectors to avoid re-rendering when unrelated store state changes
-    const getAllCategories = useCategoryStore(s => s.getAllCategories);
-    const getSubcategoriesByCategory = useSubcategoryStore(s => s.getSubcategoriesByCategory);
-    const getAllBrands = useBrandStore(s => s.getAllBrands);
-    const getAllUnits = useUnitStore(s => s.getAllUnits);
-    const getAllWarehouses = useWarehouseStore(s => s.getAllWarehouses);
-    const getAllWarranties = useWarrantyStore(s => s.getAllWarranties);
-    const getAllVariations = useVariationStore(s => s.getAllVariations);
+    // One request loads every dropdown dataset and hydrates the management stores
+    // that BasicDetailsForm / VariableProductForm read from.
+    useLookupsBundle();
     const [fetching, setFetching] = useState(true);
     const [productType, setProductType] = useState<"single" | "variable">("single");
     const [editProduct, setEditProduct] = useState<Product | null>(null);
+    const { submittable, issues, summary } = useFormSubmittable(form);
+
+    useFormShortcuts(form, () => navigate("/products"));
 
     useEffect(() => {
         let cancelled = false;
@@ -42,30 +36,11 @@ const EditProductPage: React.FC = () => {
         const fetchProduct = async () => {
             if (!id) return;
             try {
-                // Start loading dropdown data in parallel (failures won't block the page)
-                const dropdownsPromise = Promise.allSettled([
-                    getAllCategories(),
-                    getAllBrands(),
-                    getAllUnits(),
-                    getAllWarehouses(),
-                    getAllWarranties(),
-                    getAllVariations(),
-                ]);
-
-                // Fetch product data (this is the only critical call)
+                // Dropdown data is loaded by useLookupsBundle() above; the only
+                // critical call here is the product itself.
                 const product = await getProductById(id);
 
                 // Abort if the effect was cleaned up (React StrictMode double-invocation)
-                if (cancelled) return;
-
-                // Wait for dropdowns to finish loading
-                await dropdownsPromise;
-                if (cancelled) return;
-
-                // Load subcategories for the product's category before rendering
-                if (product.categoryId) {
-                    await getSubcategoriesByCategory(product.categoryId).catch(() => {});
-                }
                 if (cancelled) return;
 
                 setEditProduct(product);
@@ -265,15 +240,18 @@ const EditProductPage: React.FC = () => {
                         >
                             Back
                         </Button>
-                        <Button
-                            type="primary"
-                            icon={<SaveOutlined />}
-                            onClick={() => form.submit()}
-                            loading={loading}
-                            className="bg-blue-600 hover:bg-blue-700 h-10 px-6 font-normal flex items-center"
-                        >
-                            Update Product
-                        </Button>
+                        <Tooltip title={summary} placement="bottomRight">
+                            <Button
+                                type="primary"
+                                icon={<SaveOutlined />}
+                                onClick={() => form.submit()}
+                                loading={loading}
+                                disabled={!submittable}
+                                className="bg-blue-600 hover:bg-blue-700 h-10 px-6 font-normal flex items-center"
+                            >
+                                Update Product{!submittable && issues.length ? ` (${issues.length})` : ""}
+                            </Button>
+                        </Tooltip>
                     </Space>
                 </div>
             </div>
@@ -282,6 +260,7 @@ const EditProductPage: React.FC = () => {
                 <Form
                     form={form}
                     layout="vertical"
+                    autoComplete="off"
                     onFinish={onFinish}
                     onValuesChange={handleValuesChange}
                     size="large"
@@ -295,7 +274,7 @@ const EditProductPage: React.FC = () => {
                     </div>
 
                     {productType === "single" ? (
-                        <SingleProductForm />
+                        <SingleProductForm editProductId={editProduct?.id} />
                     ) : (
                         <VariableProductForm editProduct={editProduct} />
                     )}
@@ -308,15 +287,18 @@ const EditProductPage: React.FC = () => {
                             >
                                 Cancel
                             </Button>
-                            <Button
-                                type="primary"
-                                icon={<SaveOutlined />}
-                                onClick={() => form.submit()}
-                                loading={loading}
-                                className="bg-blue-600 hover:bg-blue-700 h-12 px-10 font-normal text-lg shadow-lg hover:shadow-blue-200"
-                            >
-                                Save Changes
-                            </Button>
+                            <Tooltip title={summary} placement="topRight">
+                                <Button
+                                    type="primary"
+                                    icon={<SaveOutlined />}
+                                    onClick={() => form.submit()}
+                                    loading={loading}
+                                    disabled={!submittable}
+                                    className="bg-blue-600 hover:bg-blue-700 h-12 px-10 font-normal text-lg shadow-lg hover:shadow-blue-200"
+                                >
+                                    Save Changes{!submittable && issues.length ? ` (${issues.length})` : ""}
+                                </Button>
+                            </Tooltip>
                         </Space>
                     </div>
                 </Form>

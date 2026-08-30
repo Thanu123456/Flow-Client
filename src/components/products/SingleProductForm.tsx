@@ -11,10 +11,15 @@ import DiscountFields from "./DiscountFields";
 
 import { productService } from "../../services/inventory/productService";
 import { generateBarcode } from "../../utils/helpers/barcode";
+import { createBarcodeValidator } from "../../utils/validators/barcodeValidator";
 
 const { Text: AntText } = Typography;
 
-const SingleProductForm: React.FC = () => {
+interface SingleProductFormProps {
+    editProductId?: string;
+}
+
+const SingleProductForm: React.FC<SingleProductFormProps> = ({ editProductId }) => {
     const prefix = ["single_product"];
     const form = Form.useFormInstance();
     const [messageApi, contextHolder] = message.useMessage();
@@ -119,6 +124,8 @@ const SingleProductForm: React.FC = () => {
                                         <BarcodeOutlined className="text-slate-400" /> Barcode
                                     </span>
                                 }
+                                validateTrigger={["onBlur"]}
+                                rules={[createBarcodeValidator(editProductId)]}
                             >
                                 <Input
                                     placeholder="Leave blank to auto-generate (999...)"
@@ -127,9 +134,13 @@ const SingleProductForm: React.FC = () => {
                                         <Button
                                             type="text"
                                             size="small"
-                                            onClick={() => {
-                                                const newBarcodeValue = generateBarcode();
-                                                console.log("Manually generated Barcode for single product:", newBarcodeValue);
+                                            onClick={async () => {
+                                                let newBarcodeValue: string;
+                                                try {
+                                                    newBarcodeValue = await productService.generateBarcode();
+                                                } catch {
+                                                    newBarcodeValue = generateBarcode();
+                                                }
                                                 form.setFields([
                                                     {
                                                         name: [...prefix, "barcode"],

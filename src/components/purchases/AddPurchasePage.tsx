@@ -12,7 +12,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 
 import { usePurchaseStore } from '../../store/transactions/purchaseStore';
-import { useWarehouseStore } from '../../store/management/warehouseStore';
+import { useAllWarehouses } from '../../hooks/data/useAllWarehouses';
 import { useSupplierStore } from '../../store/management/supplierStore';
 import { purchaseService } from '../../services/transactions/purchaseService';
 import type {
@@ -115,7 +115,7 @@ const AddPurchasePage: React.FC = () => {
   const { createGRN, updateGRN, removeItem, completeGRN, getGRN } =
     usePurchaseStore();
   const [saving, setSaving] = useState(false);
-  const { getAllWarehouses } = useWarehouseStore();
+  const { warehouses } = useAllWarehouses();
   const { searchSuppliers } = useSupplierStore();
 
   // ── Header state ────────────────────────────────────────
@@ -129,7 +129,6 @@ const AddPurchasePage: React.FC = () => {
   const [supplierLocked, setSupplierLocked] = useState(false);
 
   // ── Data lists ───────────────────────────────────────────
-  const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([]);
   const [supplierOptions, setSupplierOptions] = useState<{ value: string; label: string }[]>([]);
   const [_searchingSuppliers, setSearchingSuppliers] = useState(false);
 
@@ -175,10 +174,7 @@ const AddPurchasePage: React.FC = () => {
   const totalAmount = activeItems.reduce((s, i) => s + i.netPrice, 0);
   const netAmount = Math.max(0, totalAmount - discountAmount);
 
-  // ── Load warehouses ──────────────────────────────────────
-  useEffect(() => {
-    getAllWarehouses().then((whs) => setWarehouses(whs));
-  }, []);
+  // Warehouses load via useAllWarehouses() (React Query-cached).
 
   // ── Load existing GRN if editing ─────────────────────────
   useEffect(() => {

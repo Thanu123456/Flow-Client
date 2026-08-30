@@ -27,7 +27,6 @@ const formatCurrency = (value: number) => {
 
 export const SummaryCards: React.FC = () => {
   const { data, loading } = useDashboardStore();
-  console.log('[SummaryCards] data:', data?.summary);
 
   const sales = data?.summary?.sales;
   const purchases = data?.summary?.purchases;
@@ -137,7 +136,6 @@ export const SummaryCards: React.FC = () => {
 
 export const SecondarySummaryCards: React.FC = () => {
   const { data, loading } = useDashboardStore();
-  console.log('[SecondarySummaryCards] data:', data?.secondarySummary);
 
   const stats = [
     {
@@ -178,11 +176,6 @@ export const SecondarySummaryCards: React.FC = () => {
                 <Text type="secondary" className="text-[10px] font-normal uppercase tracking-wider block" style={{ color: stat.color !== 'blue' ? stat.color : '#4338ca' }}>
                   {stat.title}
                 </Text>
-                {stat.subtitle && (
-                  <Text className="text-[10px] block font-normal" style={{ color: stat.color }}>
-                    {stat.subtitle}
-                  </Text>
-                )}
                 <div className="mt-2 flex items-center gap-1">
                   <Text  className="text-xs">LKR:</Text>
                   <Title level={4} style={{ margin: 0, fontWeight: 400, fontSize: '18px' }}>

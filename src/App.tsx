@@ -1,6 +1,8 @@
 import React from "react";
 import { ConfigProvider, App as AntdApp } from "antd";
 import { BrowserRouter } from "react-router-dom";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./services/api/queryClient";
 import { customTheme } from "./config/theme.config";
 import { AuthProvider } from "./contexts/AuthContext";
 import { PermissionProvider } from "./contexts/PermissionContext";
@@ -11,21 +13,23 @@ import IdleTimeoutHandler from "./components/auth/IdleTimeoutHandler";
 
 const App: React.FC = () => {
   return (
-    <ConfigProvider theme={customTheme}>
-      <AntdApp>
-        <BrowserRouter>
-          <AuthProvider>
-            <TenantProvider>
-              <PermissionProvider>
-                <SessionExpiredHandler />
-                <IdleTimeoutHandler />
-                <AppRoutes />
-              </PermissionProvider>
-            </TenantProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </AntdApp>
-    </ConfigProvider>
+    <QueryClientProvider client={queryClient}>
+      <ConfigProvider theme={customTheme}>
+        <AntdApp>
+          <BrowserRouter>
+            <AuthProvider>
+              <TenantProvider>
+                <PermissionProvider>
+                  <SessionExpiredHandler />
+                  <IdleTimeoutHandler />
+                  <AppRoutes />
+                </PermissionProvider>
+              </TenantProvider>
+            </AuthProvider>
+          </BrowserRouter>
+        </AntdApp>
+      </ConfigProvider>
+    </QueryClientProvider>
   );
 };
 

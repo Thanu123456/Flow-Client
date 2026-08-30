@@ -26,7 +26,6 @@ const TopCustomersPieChart: React.FC = () => {
 
     const data = React.useMemo(() => {
         const raw = charts?.topCustomers ?? [];
-        console.log('[TopCustomersPieChart] raw topCustomers:', raw.length, 'items', raw);
         return raw.map(p => ({ name: p.label, value: p.value }));
     }, [charts]);
 

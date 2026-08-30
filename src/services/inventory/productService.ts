@@ -144,6 +144,24 @@ export const productService = {
         return response.data.sku || response.data.data?.sku;
     },
 
+    // Generate a fresh, unique in-house EAN-13 barcode from the server
+    generateBarcode: async (): Promise<string> => {
+        const response = await axiosInstance.get("/admin/products/generate-barcode");
+        return response.data.barcode || response.data.data?.barcode;
+    },
+
+    // Check whether a barcode is free to use (for inline form validation)
+    checkBarcode: async (
+        barcode: string,
+        excludeId?: string
+    ): Promise<{ available: boolean; valid: boolean }> => {
+        const response = await axiosInstance.get("/admin/products/check-barcode", {
+            params: { barcode, exclude_id: excludeId || undefined },
+        });
+        const d = response.data.data ?? response.data;
+        return { available: d.available ?? true, valid: d.valid ?? true };
+    },
+
     // Download the bulk-import Excel template
     downloadTemplate: async (): Promise<Blob> => {
         const response = await axiosInstance.get("/admin/products/template", {

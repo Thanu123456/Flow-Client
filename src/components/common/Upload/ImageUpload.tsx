@@ -8,9 +8,12 @@ interface ImageUploadProps {
     value?: string;
     onChange?: (value: string | undefined) => void;
     placeholder?: string;
+    /** Forwarded by antd Form.Item so the field's <label htmlFor> has a real target. */
+    id?: string;
+    name?: string;
 }
 
-const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange, placeholder }) => {
+const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange, placeholder, id, name }) => {
     const [loading, setLoading] = useState(false);
 
     const fileToBase64 = (file: File): Promise<string> => {
@@ -69,6 +72,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange, placeholder 
     return (
         <div className="image-upload-container">
             <Dragger
+                id={id}
+                name={name || id || "file"}
                 multiple={false}
                 showUploadList={false}
                 beforeUpload={beforeUpload}

@@ -3,6 +3,7 @@ import { Modal, Descriptions, Image, Table, Typography, Space, Row, Col, Tag } f
 import { ShoppingOutlined, PicCenterOutlined, HistoryOutlined, TagsOutlined } from "@ant-design/icons";
 import type { Product } from "../../types/entities/product.types";
 import dayjs from "dayjs";
+import { PLACEHOLDER_IMAGE } from "../../utils/constants/placeholderImage";
 
 const { Title, Text } = Typography;
 
@@ -103,7 +104,8 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({ visible, prod
                 <Row gutter={24}>
                     <Col span={6}>
                         <Image
-                            src={product.imageUrl || "https://via.placeholder.com/200"}
+                            src={product.imageUrl || PLACEHOLDER_IMAGE}
+                            fallback={PLACEHOLDER_IMAGE}
                             width="100%"
                             style={{ objectFit: "cover", borderRadius: 12, border: '1px solid #f0f0f0' }}
                         />

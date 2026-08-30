@@ -7,6 +7,7 @@ import { CommonTable } from "../common/Table";
 import { useProductStore } from "../../store/inventory/productStore";
 import { useDebounce } from "../../hooks/ui/useDebounce";
 import type { Product, ProductType } from "../../types/entities/product.types";
+import { PLACEHOLDER_IMAGE } from "../../utils/constants/placeholderImage";
 
 type StockFilter = "all" | "in_stock" | "low_stock" | "out_of_stock";
 
@@ -84,7 +85,8 @@ const StockPage: React.FC = () => {
             render: (record: Product) => (
                 <Space>
                     <Image
-                        src={record.imageUrl || "https://via.placeholder.com/40"}
+                        src={record.imageUrl || PLACEHOLDER_IMAGE}
+                        fallback={PLACEHOLDER_IMAGE}
                         alt={record.name}
                         width={40}
                         height={40}

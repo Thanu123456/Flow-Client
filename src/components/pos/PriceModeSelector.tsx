@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Radio, Divider, Tag, Typography } from 'antd';
+import { Modal, Tag, Typography } from 'antd';
 import { 
     ShoppingOutlined, 
     GlobalOutlined, 
@@ -7,7 +7,7 @@ import {
     CheckCircleFilled 
 } from '@ant-design/icons';
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 interface PriceModeSelectorProps {
     visible: boolean;

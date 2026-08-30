@@ -13,6 +13,33 @@ const splitValueString = (val: any): string[] => {
   return val.split(",").map((s) => s.trim()).filter(Boolean);
 };
 
+// Maps one item from GET /admin/variations/all (or the /admin/lookups bundle)
+// into the frontend Variation shape. The backend returns each variation with an
+// `options` array of proper option UUIDs.
+export const transformVariationListItem = (v: any): Variation => {
+  const values: VariationValue[] = [];
+  const options = v.options || v.Options || [];
+
+  options.forEach((opt: any) => {
+    values.push({
+      id: String(opt.id || opt.ID),
+      value: String(opt.value || opt.Value || opt.name || opt.Name || ""),
+      createdAt: opt.created_at || opt.createdAt || "",
+      updatedAt: opt.updated_at || opt.updatedAt || "",
+    });
+  });
+
+  return {
+    id: String(v.id || v.ID || ""),
+    name: String(v.name || v.Name || "Unnamed Variation"),
+    values: values,
+    valuesCount: values.length,
+    status: (v.is_active === true || v.is_active === "true" || v.status === "active") ? "active" : "inactive",
+    createdAt: v.created_at || v.createdAt || "",
+    updatedAt: v.updated_at || v.updatedAt || "",
+  };
+};
+
 // Helper to transform backend variation value to frontend type
 const transformVariationValue = (v: any): VariationValue[] => {
   // If v is a string (comma-separated values without proper IDs), we have a problem
@@ -206,30 +233,7 @@ export const variationService = {
     const items = Array.isArray(variationsData) ? variationsData : [variationsData];
 
     // The backend now returns variations with options array containing proper UUIDs
-    return items.map((v: any) => {
-      // Transform options to values with proper IDs
-      const values: VariationValue[] = [];
-      const options = v.options || v.Options || [];
-
-      options.forEach((opt: any) => {
-        values.push({
-          id: String(opt.id || opt.ID),
-          value: String(opt.value || opt.Value || opt.name || opt.Name || ""),
-          createdAt: opt.created_at || opt.createdAt || "",
-          updatedAt: opt.updated_at || opt.updatedAt || "",
-        });
-      });
-
-      return {
-        id: String(v.id || v.ID || ""),
-        name: String(v.name || v.Name || "Unnamed Variation"),
-        values: values,
-        valuesCount: values.length,
-        status: (v.is_active === true || v.is_active === "true" || v.status === "active") ? "active" : "inactive",
-        createdAt: v.created_at || v.createdAt || "",
-        updatedAt: v.updated_at || v.updatedAt || "",
-      };
-    });
+    return items.map(transformVariationListItem);
   },
 
 

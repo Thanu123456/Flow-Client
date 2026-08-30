@@ -21,7 +21,6 @@ const RecentSalesTable: React.FC = () => {
 
     const data: RecentSaleItem[] = React.useMemo(() => {
         const raw = charts?.recentSales ?? [];
-        console.log('[RecentSalesTable] raw recentSales:', raw.length, 'items', raw);
         return raw.map(item => ({
             id: item.id,
             referenceNo: item.referenceNo,

@@ -121,8 +121,10 @@ interface DashboardState {
 export const useDashboardStore = create<DashboardState>((set) => ({
     data: null,
     charts: null,
-    loading: false,
-    chartsLoading: false,
+    // Start truthy: the dashboard always fetches on mount, so components should
+    // show skeletons on the first paint rather than a flash of empty/zero state.
+    loading: true,
+    chartsLoading: true,
     error: null,
     topProducts: null,
     topProductsLoading: false,

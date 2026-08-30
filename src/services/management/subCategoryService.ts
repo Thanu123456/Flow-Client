@@ -7,7 +7,7 @@ import type {
 } from "../../types/entities/subcategory.types";
 
 // Helper to transform backend subcategory response to frontend Subcategory type
-const transformSubcategory = (s: any): Subcategory => ({
+export const transformSubcategory = (s: any): Subcategory => ({
   id: s.id,
   categoryId: s.category_id,
   categoryName: s.category_name || undefined,

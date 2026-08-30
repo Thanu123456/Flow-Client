@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Input, DatePicker, Space, Row, Col, message, Table, Tag, Tooltip, Typography } from 'antd';
+import { Input, DatePicker, Space, Row, Col, message, Tag, Tooltip, Typography } from 'antd';
 import { EyeOutlined, ReloadOutlined } from '@ant-design/icons';
 import { usePurchaseReturnStore } from '../../store/transactions/purchaseReturnStore';
 import type { PurchaseReturn, PurchaseReturnListItem } from '../../types/entities/purchaseReturn.types';

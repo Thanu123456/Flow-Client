@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Input, Select, Modal, Radio, Checkbox, Typography, Spin, Empty, message, AutoComplete, Avatar, Dropdown, Tooltip, InputNumber } from 'antd';
+import { Button, Input, Select, Modal, Radio, Checkbox, Typography, Spin, Empty, message, Avatar, Dropdown, Tooltip, InputNumber } from 'antd';
 import type { MenuProps } from 'antd';
 import { SearchOutlined, UserOutlined, SettingOutlined, DeleteOutlined, CloseOutlined, PlusOutlined, MinusOutlined, ShoppingOutlined, DashboardOutlined, KeyOutlined, LogoutOutlined, BarcodeOutlined } from '@ant-design/icons';
 import { FaCcVisa, FaCcMastercard, FaCcDiscover } from 'react-icons/fa';
 import { SiAmericanexpress } from 'react-icons/si';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { useProductStore } from '../../store/inventory/productStore';
 import { useCategoryStore } from '../../store/management/categoryStore';
 import { usePOSStore } from '../../store/transactions/posStore';
 import { useCustomerStore } from '../../store/management/customerStore';
+import { usePOSBootstrap } from '../../hooks/data/usePOSBootstrap';
+import { usePOSProducts } from '../../hooks/data/usePOSProducts';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePermissions } from '../../hooks/auth/usePermissions';
 import { PERMISSIONS } from '../../types/auth/permissions';
@@ -93,9 +94,10 @@ const POS: React.FC = () => {
     const [printBill, setPrintBill] = useState(true);
     const [trackingNumber, setTrackingNumber] = useState('');
 
-    // Stores
-    const { products, loading: productsLoading, getProducts } = useProductStore();
-    const { allCategories, allCategoriesLoading: categoriesLoading, getAllCategories } = useCategoryStore();
+    // Stores + query-backed data
+    const { products, productsLoading, refetchProducts } = usePOSProducts(selectedCategory);
+    const { isLoading: categoriesLoading } = usePOSBootstrap();
+    const allCategories = useCategoryStore((s) => s.allCategories);
     const {
         cart, loading: posLoading, paymentMethod, isRefundMode,
         discountType, discountValue, deliveryCharge,
@@ -109,7 +111,7 @@ const POS: React.FC = () => {
         checkout,
         holdBill, resumeHoldBill,
     } = usePOSStore();
-    const { searchCustomers, allCustomers, getAllCustomers } = useCustomerStore();
+    const { allCustomers } = useCustomerStore();
 
     // ── Customer Display Name (Derived dynamically) ────────────────────
     const selectedCustomer = allCustomers.find(c => c.id === customerId);
@@ -134,17 +136,8 @@ const POS: React.FC = () => {
         return () => clearInterval(timer);
     }, []);
 
-    // ─── Load categories, products & customers ───────────────────────
-    useEffect(() => { getAllCategories(); getAllCustomers(); }, [getAllCategories, getAllCustomers]);
-
-    useEffect(() => {
-        getProducts({
-            page: 1,
-            limit: 1000,
-            categoryId: selectedCategory === 'All Categories' ? undefined : selectedCategory,
-            status: 'active',
-        });
-    }, [selectedCategory, getProducts]);
+    // Categories + customers load via usePOSBootstrap(); the product grid loads
+    // via usePOSProducts(selectedCategory). Both are React Query-cached.
 
     // ─── Feature #8 – Load POS Settings ──────────────────────────────
     useEffect(() => {
@@ -502,7 +495,7 @@ const POS: React.FC = () => {
             setCardBank(''); setCardFirstDigit(''); setCardLastFour(''); setCardType('');
             // Generate fresh bill number for the next transaction
             setBillNumber(generateBillNumber(priceMode, paymentMethod, isRefundMode));
-            getProducts({ page: 1, limit: 1000, categoryId: selectedCategory === 'All Categories' ? undefined : selectedCategory, status: 'active' });
+            refetchProducts();
         } catch (error) {
             message.error('Failed to complete checkout.');
         }
@@ -922,7 +915,7 @@ const POS: React.FC = () => {
                                     allowClear
                                     onClear={() => setCustomer(null)}
                                     filterOption={(input, option) =>
-                                        (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                                        String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
                                     }
                                 >
                                     {allCustomers.map(c => (

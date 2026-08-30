@@ -7,7 +7,7 @@ import type {
 } from "../../types/entities/category.types";
 
 // Helper to transform backend category response to frontend Category type
-const transformCategory = (c: any): Category => ({
+export const transformCategory = (c: any): Category => ({
   id: c.id,
   name: c.name,
   code: c.code || c.name.substring(0, 3).toUpperCase() + "-" + c.id.toString().substring(0, 4),

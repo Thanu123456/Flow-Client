@@ -17,7 +17,6 @@ const LeastSellingItemsTable: React.FC = () => {
 
     const data: ProductStatsItem[] = React.useMemo(() => {
         const raw = charts?.leastSellingItems ?? [];
-        console.log('[LeastSellingItemsTable] raw leastSellingItems:', raw.length, 'items', raw);
         return raw.map(item => ({
             no: item.no,
             productName: item.productName,

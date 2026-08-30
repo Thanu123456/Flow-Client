@@ -7,7 +7,7 @@ import type {
 } from "../../types/entities/unit.types";
 
 // Helper to transform backend unit response to frontend Unit type
-const transformUnit = (u: any): Unit => ({
+export const transformUnit = (u: any): Unit => ({
   id: u.id,
   name: u.name,
   shortName: u.short_name || u.shortName || "",

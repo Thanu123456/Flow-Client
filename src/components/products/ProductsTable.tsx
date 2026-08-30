@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import ProductDetailsModal from "./ProductDetailsModal";
 import { CommonTable } from "../common/Table";
 import { useTableSelection } from "../../hooks/useTableSelection";
+import { PLACEHOLDER_IMAGE } from "../../utils/constants/placeholderImage";
 
 interface ProductsTableProps {
     products: Product[];
@@ -67,7 +68,8 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
             render: (record: Product) => (
                 <Space>
                     <Image
-                        src={record.imageUrl || "https://via.placeholder.com/40"}
+                        src={record.imageUrl || PLACEHOLDER_IMAGE}
+                        fallback={PLACEHOLDER_IMAGE}
                         alt={record.name}
                         width={40}
                         height={40}

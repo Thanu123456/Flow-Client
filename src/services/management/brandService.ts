@@ -7,7 +7,7 @@ import type {
 } from "../../types/entities/brand.types";
 
 // Helper to transform backend brand response to frontend Brand type
-const transformBrand = (b: any): Brand => ({
+export const transformBrand = (b: any): Brand => ({
   id: b.id,
   name: b.name,
   description: b.description || undefined,

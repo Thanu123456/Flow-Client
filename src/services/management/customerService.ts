@@ -32,7 +32,7 @@ const transformCustomer = (c: any): Customer => ({
 });
 
 // Helper to transform customer summary
-const transformCustomerSummary = (c: any): CustomerSummary => ({
+export const transformCustomerSummary = (c: any): CustomerSummary => ({
   id: c.id,
   fullName: c.full_name,
   phone: c.phone,

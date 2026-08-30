@@ -7,7 +7,7 @@ import type {
 } from "../../types/entities/warehouse.types";
 
 // Helper to transform backend warehouse response to frontend Warehouse type
-const transformWarehouse = (w: any): Warehouse => ({
+export const transformWarehouse = (w: any): Warehouse => ({
   id: w.id,
   name: w.name,
   contactPerson: w.contact_person || undefined,

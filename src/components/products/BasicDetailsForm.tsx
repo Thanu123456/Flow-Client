@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Form, Input, Select, Row, Col, Radio, Card, Typography, Spin } from "antd";
 import {
     InfoCircleOutlined,
@@ -9,6 +9,8 @@ import {
     PictureOutlined
 } from "@ant-design/icons";
 import ImageUpload from "../common/Upload/ImageUpload";
+import { toTitleCase } from "../../utils/helpers/stringHelpers";
+import { useLookupsBundle } from "../../hooks/data/useLookupsBundle";
 import { useCategoryStore } from "../../store/management/categoryStore";
 import { useSubcategoryStore } from "../../store/management/subCategoryStore";
 import { useBrandStore } from "../../store/management/brandStore";
@@ -26,48 +28,27 @@ interface BasicDetailsFormProps {
 }
 
 const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form, editProduct }) => {
-    // Read from the dedicated *dropdown* fields, not the paginated table fields
-    const { allCategories, getAllCategories } = useCategoryStore();
-    const { allSubcategories, getSubcategoriesByCategory } = useSubcategoryStore();
-    const { allBrands, getAllBrands } = useBrandStore();
-    const { allUnits, getAllUnits } = useUnitStore();
-    const { allWarehouses, getAllWarehouses } = useWarehouseStore();
-    const { allWarranties, getAllWarranties } = useWarrantyStore();
-    const [loading, setLoading] = useState(true);
+    // One request pulls every dropdown dataset (categories, subcategories, brands,
+    // units, warehouses, warranties) and hydrates the stores below. React Query
+    // caches it, so re-opening the form within 5 min hits no network.
+    const { isLoading: loading } = useLookupsBundle();
 
-    useEffect(() => {
-        const loadDropdownData = async () => {
-            setLoading(true);
-            try {
-                await Promise.allSettled([
-                    getAllCategories(),
-                    getAllBrands(),
-                    getAllUnits(),
-                    getAllWarehouses(),
-                    getAllWarranties()
-                ]);
-            } catch (error) {
-                console.error("Error loading dropdown data:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        loadDropdownData();
-    }, [getAllCategories, getAllBrands, getAllUnits, getAllWarehouses, getAllWarranties]);
+    // Read the hydrated dropdown lists from their stores.
+    const allCategories = useCategoryStore((s) => s.allCategories);
+    const allSubcategories = useSubcategoryStore((s) => s.allSubcategories);
+    const allBrands = useBrandStore((s) => s.allBrands);
+    const allUnits = useUnitStore((s) => s.allUnits);
+    const allWarehouses = useWarehouseStore((s) => s.allWarehouses);
+    const allWarranties = useWarrantyStore((s) => s.allWarranties);
 
-    // Auto-load subcategories if a category is already selected (e.g., when editing)
-    useEffect(() => {
-        const categoryId = form.getFieldValue("category_id");
-        if (categoryId && allSubcategories.length === 0) {
-            getSubcategoriesByCategory(categoryId);
-        }
-    }, [form, getSubcategoriesByCategory, allSubcategories.length]);
+    // The bundle carries every subcategory; scope the dropdown to the chosen category.
+    const selectedCategoryId = Form.useWatch("category_id", form);
+    const subcategoryOptions = selectedCategoryId
+        ? allSubcategories.filter((s) => s.categoryId === selectedCategoryId)
+        : [];
 
-    const handleCategoryChange = (categoryId: string) => {
+    const handleCategoryChange = () => {
         form.setFieldValue("subcategory_id", undefined);
-        if (categoryId) {
-            getSubcategoriesByCategory(categoryId);
-        }
     };
 
 
@@ -98,7 +79,16 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form, editProduct }
                                         { min: 2, message: "Name must be at least 2 characters" },
                                     ]}
                                 >
-                                    <Input placeholder="e.g. Premium Cotton T-Shirt" className="rounded-lg h-11" />
+                                    <Input
+                                    placeholder="e.g. Premium Cotton T-Shirt"
+                                    className="rounded-lg h-11"
+                                    onBlur={(e) => {
+                                        const titled = toTitleCase(e.target.value);
+                                        if (titled && titled !== e.target.value) {
+                                            form.setFieldValue("name", titled);
+                                        }
+                                    }}
+                                />
                                 </Form.Item>
                             </Col>
                             <Col span={8}>
@@ -195,12 +185,12 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form, editProduct }
                                         optionFilterProp="children"
                                         size="large"
                                     >
-                                        {editProduct?.subcategoryId && !allSubcategories.some(s => s.id === editProduct.subcategoryId) && (
+                                        {editProduct?.subcategoryId && !subcategoryOptions.some(s => s.id === editProduct.subcategoryId) && (
                                             <Select.Option key={editProduct.subcategoryId} value={editProduct.subcategoryId}>
                                                 {editProduct.subcategoryName}
                                             </Select.Option>
                                         )}
-                                        {allSubcategories.map((sub) => (
+                                        {subcategoryOptions.map((sub) => (
                                             <Select.Option key={sub.id} value={sub.id}>
                                                 {sub.name}
                                             </Select.Option>

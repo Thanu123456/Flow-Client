@@ -6,7 +6,7 @@ import type {
   WarrantyResponse,
 } from "../../types/entities/warranty.types";
 
-const transformWarranty = (data: any): Warranty => ({
+export const transformWarranty = (data: any): Warranty => ({
   id: data.id,
   name: data.name,
   description: data.description,
