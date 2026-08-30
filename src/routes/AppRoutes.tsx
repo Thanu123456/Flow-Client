@@ -24,6 +24,7 @@ import KioskPOS from "../pages/kiosk/KioskPOS";
 // Admin Pages
 import Dashboard from "../pages/admin/Dashboard";
 import Profile from "../pages/admin/Profile";
+import AdminSettings from "../pages/admin/Settings";
 
 import Brands from "../pages/management/Brands";
 import Categories from "../pages/management/Categories";
@@ -341,6 +342,15 @@ const AppRoutes: React.FC = () => {
           }
         >
           <Route path="/reports/log-history" element={<LogHistoryReports />} />
+        </Route>
+
+        {/* Settings */}
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.SETTINGS_SYSTEM} />
+          }
+        >
+          <Route path="/settings" element={<AdminSettings />} />
         </Route>
       </Route>
 
