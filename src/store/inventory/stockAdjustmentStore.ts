@@ -20,6 +20,9 @@ interface AdjustmentState {
   getAdjustment: (id: string) => Promise<void>;
   createAdjustment: (req: CreateAdjustmentRequest) => Promise<Adjustment>;
   deleteAdjustment: (id: string) => Promise<void>;
+  approveAdjustment: (id: string) => Promise<void>;
+  rejectAdjustment: (id: string, reason: string) => Promise<void>;
+  reverseAdjustment: (id: string, notes?: string) => Promise<Adjustment>;
   clearSelected: () => void;
   clearError: () => void;
 }
@@ -90,6 +93,50 @@ export const useStockAdjustmentStore = create<AdjustmentState>()(
           }));
         } catch (err: any) {
           const msg = err?.response?.data?.error?.message ?? "Failed to delete adjustment";
+          set({ submitting: false, error: msg });
+          throw new Error(msg);
+        }
+      },
+
+      approveAdjustment: async (id: string) => {
+        set({ submitting: true, error: null });
+        try {
+          const adj = await stockAdjustmentService.approveAdjustment(id);
+          set((s) => ({
+            submitting: false,
+            selectedAdjustment: s.selectedAdjustment?.id === id ? adj : s.selectedAdjustment,
+            adjustments: s.adjustments.map((a) => (a.id === id ? { ...a, status: "posted" } : a)),
+          }));
+        } catch (err: any) {
+          const msg = err?.response?.data?.error?.message ?? "Failed to approve adjustment";
+          set({ submitting: false, error: msg });
+          throw new Error(msg);
+        }
+      },
+
+      rejectAdjustment: async (id: string, reason: string) => {
+        set({ submitting: true, error: null });
+        try {
+          await stockAdjustmentService.rejectAdjustment(id, reason);
+          set((s) => ({
+            submitting: false,
+            adjustments: s.adjustments.map((a) => (a.id === id ? { ...a, status: "rejected" } : a)),
+          }));
+        } catch (err: any) {
+          const msg = err?.response?.data?.error?.message ?? "Failed to reject adjustment";
+          set({ submitting: false, error: msg });
+          throw new Error(msg);
+        }
+      },
+
+      reverseAdjustment: async (id: string, notes?: string) => {
+        set({ submitting: true, error: null });
+        try {
+          const rev = await stockAdjustmentService.reverseAdjustment(id, notes);
+          set({ submitting: false });
+          return rev;
+        } catch (err: any) {
+          const msg = err?.response?.data?.error?.message ?? "Failed to reverse adjustment";
           set({ submitting: false, error: msg });
           throw new Error(msg);
         }

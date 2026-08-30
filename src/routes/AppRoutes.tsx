@@ -48,6 +48,11 @@ import AddProduct from "../pages/management/AddProduct";
 import EditProduct from "../pages/management/EditProduct";
 import StockAdjustment from "../pages/management/StockAdjustment";
 import AddStockAdjustment from "../pages/management/AddStockAdjustment";
+import WriteOffExpiredStock from "../pages/management/WriteOffExpiredStock";
+import AdjustmentReasons from "../pages/management/AdjustmentReasons";
+import StockReconcile from "../pages/management/StockReconcile";
+import StockTakes from "../pages/management/StockTakes";
+import StockTakeDetail from "../pages/management/StockTakeDetail";
 
 // Transaction Pages
 import Purchases from "../pages/transactions/Purchases";
@@ -144,6 +149,19 @@ const AppRoutes: React.FC = () => {
         >
           <Route path="/adjustments" element={<StockAdjustment />} />
           <Route path="/adjustments/add" element={<AddStockAdjustment />} />
+          <Route path="/adjustments/write-off-expired" element={<WriteOffExpiredStock />} />
+          <Route path="/adjustments/reasons" element={<AdjustmentReasons />} />
+          <Route path="/adjustments/reconcile" element={<StockReconcile />} />
+        </Route>
+
+        {/* Stock Take Routes */}
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.INVENTORY_STOCKTAKE} />
+          }
+        >
+          <Route path="/stock-takes" element={<StockTakes />} />
+          <Route path="/stock-takes/:id" element={<StockTakeDetail />} />
         </Route>
 
         {/* Management Routes with Permission Guards */}

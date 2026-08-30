@@ -15,6 +15,8 @@ export const PERMISSIONS = {
   INVENTORY_EDIT: 'inventory.edit',
   INVENTORY_DELETE: 'inventory.delete',
   INVENTORY_ADJUST: 'inventory.adjust',
+  INVENTORY_ADJUST_APPROVE: 'inventory.adjust.approve',
+  INVENTORY_STOCKTAKE: 'inventory.stocktake',
 
   // Sales
   SALES_VIEW: 'sales.view',

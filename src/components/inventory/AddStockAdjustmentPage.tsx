@@ -1,21 +1,24 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   Form, Select, Input, Button, Table, InputNumber, Typography,
   Space, Tag, Divider, Alert, AutoComplete, message, Card, Radio,
-  Tooltip,
+  Tooltip, DatePicker,
 } from "antd";
 import {
   ArrowUpOutlined, ArrowDownOutlined, DeleteOutlined,
   SearchOutlined, PlusOutlined, SaveOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import dayjs, { type Dayjs } from "dayjs";
 import { axiosInstance } from "../../services/api/axiosInstance";
+import { stockAdjustmentService } from "../../services/inventory/stockAdjustmentService";
 import { useStockAdjustmentStore } from "../../store/inventory/stockAdjustmentStore";
 import { useWarehouseStore } from "../../store/management/warehouseStore";
 import type {
   AdjustmentMovementType,
   AdjustmentReferenceType,
   AdjustmentItemLocal,
+  AdjustmentReason,
   CreateAdjustmentRequest,
 } from "../../types/entities/stockAdjustment.types";
 
@@ -45,6 +48,12 @@ const REFERENCE_OPTIONS: { value: AdjustmentReferenceType; label: string; forMov
   { value: "expiry",   label: "Expiry",   forMovement: ["out"] },
 ];
 
+// Units that are measured continuously and may carry a fractional quantity.
+// Everything else (piece, box, pack…) must be a whole number.
+const DECIMAL_UNITS = new Set(["kilogram", "kg", "liter", "litre", "l", "meter", "metre", "m", "gram", "milliliter", "millilitre"]);
+const allowsDecimal = (unitName?: string) =>
+  !!unitName && DECIMAL_UNITS.has(unitName.trim().toLowerCase());
+
 const AddStockAdjustmentPage: React.FC = () => {
   const navigate = useNavigate();
   const { createAdjustment, submitting } = useStockAdjustmentStore();
@@ -59,12 +68,23 @@ const AddStockAdjustmentPage: React.FC = () => {
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>("");
   const [itemQty, setItemQty] = useState<number>(1);
   const [itemReason, setItemReason] = useState<string>("");
+  const [itemExpiry, setItemExpiry] = useState<Dayjs | null>(null);
+  const [itemUnitCost, setItemUnitCost] = useState<number | null>(null);
+  const [nextNumber, setNextNumber] = useState<string>("");
+  const [reasons, setReasons] = useState<AdjustmentReason[]>([]);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchInputRef = useRef<any>(null);
 
-  // Load warehouses once
-  React.useEffect(() => {
+  // Load warehouses + preview the number this adjustment will get + reason codes
+  useEffect(() => {
     if (!warehouses.length) getAllWarehouses();
+    stockAdjustmentService.getNextNumber().then(setNextNumber).catch(() => {});
+    stockAdjustmentService.listReasons(true).then(setReasons).catch(() => {});
   }, []);
+
+  const availableReasons = reasons.filter(
+    (r) => r.movementScope === "both" || r.movementScope === movementType
+  );
 
   const searchProducts = useCallback(async (query: string) => {
     if (!query.trim()) { setProductOptions([]); return; }
@@ -110,6 +130,11 @@ const AddStockAdjustmentPage: React.FC = () => {
     if (!selectedWarehouseId) { message.warning("Select a warehouse"); return; }
     if (!itemQty || itemQty <= 0) { message.warning("Enter a valid quantity"); return; }
 
+    if (!allowsDecimal(selectedProduct.unitName) && !Number.isInteger(itemQty)) {
+      message.error(`"${selectedProduct.unitName ?? "This unit"}" only allows whole-number quantities`);
+      return;
+    }
+
     const warehouse = warehouses.find((w) => w.id === selectedWarehouseId);
 
     // Validate stock for 'out' movements
@@ -120,8 +145,10 @@ const AddStockAdjustmentPage: React.FC = () => {
       return;
     }
 
-    // Merge duplicate lines
-    const key = `${selectedProduct.productId}::${selectedProduct.variationId ?? ""}::${selectedWarehouseId}`;
+    const expiryStr = movementType === "in" && itemExpiry ? itemExpiry.format("YYYY-MM-DD") : undefined;
+
+    // Merge duplicate lines — same product + variation + warehouse + expiry batch
+    const key = `${selectedProduct.productId}::${selectedProduct.variationId ?? ""}::${selectedWarehouseId}::${expiryStr ?? ""}`;
     const existing = items.find((i) => i.key === key);
     if (existing) {
       setItems((prev) =>
@@ -142,6 +169,8 @@ const AddStockAdjustmentPage: React.FC = () => {
           unitName: selectedProduct.unitName,
           currentStock: selectedProduct.currentStock,
           quantity: itemQty,
+          unitCost: itemUnitCost ?? undefined,
+          expiryDate: expiryStr,
           reason: itemReason || undefined,
         },
       ]);
@@ -151,8 +180,11 @@ const AddStockAdjustmentPage: React.FC = () => {
     setSelectedProduct(null);
     setItemQty(1);
     setItemReason("");
+    setItemExpiry(null);
+    setItemUnitCost(null);
     setProductOptions([]);
     form.setFieldValue("productSearch", "");
+    searchInputRef.current?.focus?.();
   };
 
   const handleRemoveItem = (key: string) => {
@@ -172,6 +204,7 @@ const AddStockAdjustmentPage: React.FC = () => {
       movement_type: movementType,
       reference_type: values.referenceType,
       priority: movementType === "in" ? values.priority : undefined,
+      reason_code_id: values.reasonCodeId || undefined,
       reason: values.reason || undefined,
       notes: values.notes || undefined,
       items: items.map((i) => ({
@@ -179,18 +212,42 @@ const AddStockAdjustmentPage: React.FC = () => {
         warehouse_id: i.warehouseId,
         variation_id: i.variationId || undefined,
         quantity: i.quantity,
+        unit_cost: i.unitCost,
+        expiry_date: movementType === "in" ? i.expiryDate : undefined,
         reason: i.reason || undefined,
       })),
     };
 
     try {
-      await createAdjustment(req);
-      message.success("Adjustment created successfully");
+      const created = await createAdjustment(req);
+      if (created.status === "pending_approval") {
+        message.warning("Adjustment created and sent for approval — stock is unchanged until approved");
+      } else {
+        message.success("Adjustment created and posted");
+      }
       navigate("/adjustments");
     } catch (err: any) {
       message.error(err?.message ?? "Failed to create adjustment");
     }
   };
+
+  // ── Keyboard shortcuts (parity with the desktop POS) ──
+  //   Enter  → add the current line (handled on the entry fields)
+  //   Esc    → cancel / back to list
+  //   Alt+P  → focus the product search box
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        navigate("/adjustments");
+      } else if (e.altKey && (e.key === "p" || e.key === "P")) {
+        e.preventDefault();
+        searchInputRef.current?.focus?.();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const itemColumns = [
     {
@@ -227,21 +284,28 @@ const AddStockAdjustmentPage: React.FC = () => {
       align: "center" as const,
       render: (v: number, row: AdjustmentItemLocal) => (
         <InputNumber
-          min={0.01}
+          min={allowsDecimal(row.unitName) ? 0.01 : 1}
+          step={allowsDecimal(row.unitName) ? 0.1 : 1}
+          precision={allowsDecimal(row.unitName) ? undefined : 0}
           value={v}
           onChange={(val) =>
             setItems((prev) => prev.map((i) => i.key === row.key ? { ...i, quantity: val ?? v } : i))
           }
-          style={{ width: 90 }}
+          addonAfter={row.unitName ?? undefined}
+          style={{ width: 130 }}
         />
       ),
     },
-    {
-      title: "Unit",
-      dataIndex: "unitName",
-      key: "unit",
-      render: (v: string) => v || "—",
-    },
+    ...(movementType === "in"
+      ? [{
+          title: "Expiry",
+          dataIndex: "expiryDate",
+          key: "expiryDate",
+          align: "center" as const,
+          render: (v: string | undefined) =>
+            v ? dayjs(v).format("YYYY-MM-DD") : <span style={{ color: "#9ca3af" }}>1 yr default</span>,
+        }]
+      : []),
     {
       title: "",
       key: "del",
@@ -258,12 +322,23 @@ const AddStockAdjustmentPage: React.FC = () => {
   ];
 
   const availableRefOptions = REFERENCE_OPTIONS.filter((r) => r.forMovement.includes(movementType));
+  const qtyDecimal = allowsDecimal(selectedProduct?.unitName);
+  const addGridColumns = movementType === "in"
+    ? "minmax(0, 1.6fr) 1fr 1fr 1fr 1fr 1fr auto"
+    : "minmax(0, 1.8fr) 1fr 1fr 1fr 1fr auto";
 
   return (
     <div style={{ padding: "24px", maxWidth: 1100, margin: "0 auto" }}>
-      <div style={{ marginBottom: 20 }}>
-        <Typography.Title level={4} style={{ margin: 0 }}>New Stock Adjustment</Typography.Title>
-        <Typography.Text type="secondary">Adjust inventory levels with priority-based batch tracking</Typography.Text>
+      <div style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div>
+          <Typography.Title level={4} style={{ margin: 0 }}>New Stock Adjustment</Typography.Title>
+          <Typography.Text type="secondary">Adjust inventory levels with priority-based batch tracking</Typography.Text>
+        </div>
+        {nextNumber && (
+          <Tag color="blue" style={{ fontFamily: "monospace", fontSize: 13, padding: "4px 10px" }}>
+            {nextNumber}
+          </Tag>
+        )}
       </div>
 
       <Form form={form} layout="vertical">
@@ -278,9 +353,13 @@ const AddStockAdjustmentPage: React.FC = () => {
               onChange={(e) => {
                 setMovementType(e.target.value);
                 form.resetFields(["referenceType", "priority"]);
-                setItems([]);
+                setSelectedProduct(null);
+                setProductOptions([]);
+                setItemExpiry(null);
+                form.setFieldValue("productSearch", "");
               }}
               buttonStyle="solid"
+              disabled={items.length > 0}
             >
               <Radio.Button value="in" style={{ height: 40, lineHeight: "38px", minWidth: 120, textAlign: "center" }}>
                 <ArrowUpOutlined /> &nbsp; Stock In
@@ -289,6 +368,11 @@ const AddStockAdjustmentPage: React.FC = () => {
                 <ArrowDownOutlined /> &nbsp; Stock Out
               </Radio.Button>
             </Radio.Group>
+            {items.length > 0 && (
+              <Typography.Text type="secondary" style={{ display: "block", marginTop: 8, fontSize: 12 }}>
+                Remove all items to switch movement type — every line in one adjustment shares it.
+              </Typography.Text>
+            )}
           </Form.Item>
         </Card>
 
@@ -306,6 +390,26 @@ const AddStockAdjustmentPage: React.FC = () => {
               <Select placeholder="Select reference type">
                 {availableRefOptions.map((r) => (
                   <Option key={r.value} value={r.value}>{r.label}</Option>
+                ))}
+              </Select>
+            </Form.Item>
+
+            <Form.Item
+              label={
+                <span>
+                  Reason Code{" "}
+                  <Tooltip title="Configurable reason codes route the adjustment to an expense account and can require approval.">
+                    <span style={{ color: "#6366f1", cursor: "help", fontSize: 12 }}>(?)</span>
+                  </Tooltip>
+                </span>
+              }
+              name="reasonCodeId"
+            >
+              <Select placeholder="Optional reason code" allowClear showSearch optionFilterProp="label">
+                {availableReasons.map((r) => (
+                  <Option key={r.id} value={r.id} label={r.label}>
+                    {r.label}{r.requiresApproval ? <Tag color="gold" style={{ marginLeft: 6 }}>needs approval</Tag> : null}
+                  </Option>
                 ))}
               </Select>
             </Form.Item>
@@ -347,10 +451,15 @@ const AddStockAdjustmentPage: React.FC = () => {
         {/* ── Add item section ── */}
         <Card
           title={<strong>Add Items</strong>}
+          extra={
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              <kbd>Enter</kbd> add · <kbd>Alt</kbd>+<kbd>P</kbd> search · <kbd>Esc</kbd> cancel
+            </Typography.Text>
+          }
           style={{ borderRadius: 12, marginBottom: 16, border: "1px solid #f0f0f0" }}
           bodyStyle={{ padding: "20px 24px" }}
         >
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr auto", gap: 12, alignItems: "flex-end" }}>
+          <div style={{ display: "grid", gridTemplateColumns: addGridColumns, gap: 12, alignItems: "flex-end" }}>
             <Form.Item label="Product Search" name="productSearch" style={{ marginBottom: 0 }}>
               <AutoComplete
                 options={productOptions}
@@ -359,8 +468,10 @@ const AddStockAdjustmentPage: React.FC = () => {
                 notFoundContent={searching ? "Searching..." : "No products found"}
               >
                 <Input
+                  ref={searchInputRef}
                   prefix={<SearchOutlined style={{ color: "#9ca3af" }} />}
                   placeholder="Search by name, SKU or barcode..."
+                  onPressEnter={() => { if (selectedProduct) handleAddItem(); }}
                 />
               </AutoComplete>
             </Form.Item>
@@ -381,20 +492,69 @@ const AddStockAdjustmentPage: React.FC = () => {
               </Select>
             </Form.Item>
 
-            <Form.Item label="Quantity" style={{ marginBottom: 0 }}>
+            <Form.Item
+              label={`Quantity${selectedProduct?.unitName ? ` (${selectedProduct.unitName})` : ""}`}
+              style={{ marginBottom: 0 }}
+            >
               <InputNumber
-                min={0.01}
+                min={qtyDecimal ? 0.01 : 1}
+                step={qtyDecimal ? 0.1 : 1}
+                precision={qtyDecimal ? undefined : 0}
                 value={itemQty}
                 onChange={(v) => setItemQty(v ?? 1)}
+                onPressEnter={() => { if (selectedProduct) handleAddItem(); }}
                 style={{ width: "100%" }}
                 placeholder="Qty"
               />
             </Form.Item>
 
+            <Form.Item
+              label={
+                <span>
+                  Unit Cost{" "}
+                  <Tooltip title="Leave empty to use the product's current cost. Set a value for 'found' stock at a known cost.">
+                    <span style={{ color: "#6366f1", cursor: "help", fontSize: 12 }}>(?)</span>
+                  </Tooltip>
+                </span>
+              }
+              style={{ marginBottom: 0 }}
+            >
+              <InputNumber
+                min={0}
+                value={itemUnitCost ?? undefined}
+                onChange={(v) => setItemUnitCost(v ?? null)}
+                onPressEnter={() => { if (selectedProduct) handleAddItem(); }}
+                style={{ width: "100%" }}
+                placeholder="Rs. (auto)"
+              />
+            </Form.Item>
+
+            {movementType === "in" && (
+              <Form.Item
+                label={
+                  <span>
+                    Expiry{" "}
+                    <Tooltip title="Leave empty to default to 1 year. A past date records the goods as already expired (not sellable).">
+                      <span style={{ color: "#6366f1", cursor: "help", fontSize: 12 }}>(?)</span>
+                    </Tooltip>
+                  </span>
+                }
+                style={{ marginBottom: 0 }}
+              >
+                <DatePicker
+                  value={itemExpiry}
+                  onChange={setItemExpiry}
+                  style={{ width: "100%" }}
+                  placeholder="1 yr default"
+                />
+              </Form.Item>
+            )}
+
             <Form.Item label="Item Reason" style={{ marginBottom: 0 }}>
               <Input
                 value={itemReason}
                 onChange={(e) => setItemReason(e.target.value)}
+                onPressEnter={() => { if (selectedProduct) handleAddItem(); }}
                 placeholder="Optional"
               />
             </Form.Item>
@@ -469,6 +629,10 @@ const AddStockAdjustmentPage: React.FC = () => {
 
       <style>{`
         .row-error td { background: #fff1f0 !important; }
+        kbd {
+          background: #f3f4f6; border: 1px solid #d1d5db; border-bottom-width: 2px;
+          border-radius: 4px; padding: 0 4px; font-size: 11px; font-family: inherit;
+        }
       `}</style>
     </div>
   );
