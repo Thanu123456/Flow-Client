@@ -2,6 +2,7 @@ import { axiosInstance } from "../api/axiosInstance";
 import type {
   BusinessProfile,
   BusinessProfileUpdate,
+  EffectiveSettings,
   PosSettings,
   PosSettingsUpdate,
 } from "../../types/entities/settings.types";
@@ -33,6 +34,7 @@ const transformSettings = (s: any): PosSettings => ({
   receiptFooterText: s.receipt_footer_text || "",
   receiptCopies: toNum(s.receipt_copies, 1),
   updatedAt: s.updated_at,
+  updatedByName: s.updated_by_name || "",
 });
 
 const settingsPayload = (u: PosSettingsUpdate): Record<string, any> => {
@@ -78,6 +80,7 @@ const transformProfile = (t: any): BusinessProfile => ({
   timezone: t.timezone || "Asia/Colombo",
   language: t.language || "en",
   logoUrl: t.logo_url || "",
+  updatedAt: t.updated_at,
 });
 
 const profilePayload = (p: BusinessProfileUpdate): Record<string, any> => ({
@@ -107,6 +110,22 @@ export const settingsService = {
   updateSettings: async (update: PosSettingsUpdate): Promise<PosSettings> => {
     const res = await axiosInstance.patch("/admin/settings", settingsPayload(update));
     return transformSettings(unwrap(res));
+  },
+
+  getEffectiveSettings: async (): Promise<EffectiveSettings> => {
+    const res = await axiosInstance.get("/admin/settings/effective");
+    const d = unwrap(res);
+    return {
+      settings: transformSettings(d.settings ?? {}),
+      business: {
+        shopName: d.business?.shop_name || "",
+        address: d.business?.address || "",
+        phone: d.business?.phone || "",
+        email: d.business?.email || "",
+        logoUrl: d.business?.logo_url || "",
+        currency: d.business?.currency || "LKR",
+      },
+    };
   },
 
   getBusinessProfile: async (): Promise<BusinessProfile> => {

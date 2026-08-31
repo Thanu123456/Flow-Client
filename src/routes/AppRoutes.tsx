@@ -351,6 +351,7 @@ const AppRoutes: React.FC = () => {
           }
         >
           <Route path="/settings" element={<AdminSettings />} />
+          <Route path="/settings/:section" element={<AdminSettings />} />
         </Route>
       </Route>
 

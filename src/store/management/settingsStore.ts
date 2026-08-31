@@ -11,15 +11,19 @@ import type {
 interface SettingsState {
   settings: PosSettings | null;
   businessProfile: BusinessProfile | null;
-  loading: boolean;
+
+  // POS settings and business profile load independently — one failing
+  // must not blank the other.
+  settingsLoading: boolean;
+  settingsError: string | null;
+  profileLoading: boolean;
+  profileError: string | null;
   saving: boolean;
-  error: string | null;
 
   fetchSettings: () => Promise<void>;
   saveSettings: (update: PosSettingsUpdate) => Promise<void>;
   fetchBusinessProfile: () => Promise<void>;
   saveBusinessProfile: (update: BusinessProfileUpdate) => Promise<void>;
-  clearError: () => void;
 }
 
 const msg = (e: any, fallback: string) =>
@@ -33,53 +37,53 @@ export const useSettingsStore = create<SettingsState>()(
     (set) => ({
       settings: null,
       businessProfile: null,
-      loading: false,
+      settingsLoading: false,
+      settingsError: null,
+      profileLoading: false,
+      profileError: null,
       saving: false,
-      error: null,
 
       fetchSettings: async () => {
-        set({ loading: true, error: null });
+        set({ settingsLoading: true, settingsError: null });
         try {
           const settings = await settingsService.getSettings();
-          set({ settings, loading: false });
+          set({ settings, settingsLoading: false });
         } catch (e: any) {
-          set({ error: msg(e, "Failed to load settings"), loading: false });
+          set({ settingsError: msg(e, "Failed to load settings"), settingsLoading: false });
         }
       },
 
       saveSettings: async (update) => {
-        set({ saving: true, error: null });
+        set({ saving: true });
         try {
           const settings = await settingsService.updateSettings(update);
           set({ settings, saving: false });
         } catch (e: any) {
-          set({ error: msg(e, "Failed to save settings"), saving: false });
+          set({ saving: false });
           throw e;
         }
       },
 
       fetchBusinessProfile: async () => {
-        set({ loading: true, error: null });
+        set({ profileLoading: true, profileError: null });
         try {
           const businessProfile = await settingsService.getBusinessProfile();
-          set({ businessProfile, loading: false });
+          set({ businessProfile, profileLoading: false });
         } catch (e: any) {
-          set({ error: msg(e, "Failed to load business profile"), loading: false });
+          set({ profileError: msg(e, "Failed to load business profile"), profileLoading: false });
         }
       },
 
       saveBusinessProfile: async (update) => {
-        set({ saving: true, error: null });
+        set({ saving: true });
         try {
           const businessProfile = await settingsService.updateBusinessProfile(update);
           set({ businessProfile, saving: false });
         } catch (e: any) {
-          set({ error: msg(e, "Failed to save business profile"), saving: false });
+          set({ saving: false });
           throw e;
         }
       },
-
-      clearError: () => set({ error: null }),
     }),
     { name: "settings-store" }
   )

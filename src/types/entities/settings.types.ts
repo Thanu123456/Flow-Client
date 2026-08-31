@@ -38,11 +38,12 @@ export interface PosSettings {
   receiptCopies: number;
 
   updatedAt?: string;
+  updatedByName?: string;
 }
 
 // Partial update payload — only send what changed.
 export type PosSettingsUpdate = Partial<
-  Omit<PosSettings, "id" | "tenantId" | "updatedAt">
+  Omit<PosSettings, "id" | "tenantId" | "updatedAt" | "updatedByName">
 >;
 
 export interface BusinessProfile {
@@ -62,6 +63,20 @@ export interface BusinessProfile {
   timezone: string;
   language: string;
   logoUrl: string;
+  updatedAt?: string;
 }
 
-export type BusinessProfileUpdate = Omit<BusinessProfile, "id">;
+export type BusinessProfileUpdate = Omit<BusinessProfile, "id" | "updatedAt">;
+
+// Resolved config for the POS client — GET /admin/settings/effective
+export interface EffectiveSettings {
+  settings: PosSettings;
+  business: {
+    shopName: string;
+    address: string;
+    phone: string;
+    email: string;
+    logoUrl: string;
+    currency: string;
+  };
+}

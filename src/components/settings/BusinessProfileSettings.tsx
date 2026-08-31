@@ -4,6 +4,8 @@ import { useSettingsStore } from "../../store/management/settingsStore";
 import ImageUpload from "../common/Upload/ImageUpload";
 import SettingsSection from "./SettingsSection";
 import FieldGroup from "./FieldGroup";
+import SettingField from "./SettingField";
+import { SettingsSkeleton, SettingsLoadError } from "./SettingsSkeleton";
 import { useDirtyForm } from "./useDirtyForm";
 import type { BusinessProfileUpdate } from "../../types/entities/settings.types";
 
@@ -32,14 +34,19 @@ const LANGUAGES = [
 const col = { xs: 24, sm: 12, lg: 8 };
 
 const BusinessProfileSettings: React.FC<Props> = ({ onDirtyChange }) => {
-  const { businessProfile, saving, saveBusinessProfile } = useSettingsStore();
+  const {
+    businessProfile,
+    profileLoading,
+    profileError,
+    saving,
+    saveBusinessProfile,
+    fetchBusinessProfile,
+  } = useSettingsStore();
   const [form] = Form.useForm();
 
-  const { dirty, handleValuesChange, reset, markSaved } = useDirtyForm(
-    form,
-    businessProfile,
-    onDirtyChange
-  );
+  const { dirty, dirtyFields, dirtyCount, handleValuesChange, reset, markSaved } =
+    useDirtyForm(form, businessProfile, onDirtyChange);
+  const d = (name: string) => dirtyFields.has(name);
 
   const handleSave = async () => {
     try {
@@ -53,14 +60,24 @@ const BusinessProfileSettings: React.FC<Props> = ({ onDirtyChange }) => {
     }
   };
 
+  if (!businessProfile) {
+    return profileError ? (
+      <SettingsLoadError message={profileError} onRetry={fetchBusinessProfile} />
+    ) : (
+      <SettingsSkeleton groups={3} />
+    );
+  }
+
   return (
     <SettingsSection
       title="Business Profile"
       description="Your shop's identity — used on receipts, reports and the storefront."
       dirty={dirty}
-      saving={saving}
+      dirtyCount={dirtyCount}
+      saving={saving && !profileLoading}
       onSave={handleSave}
       onReset={reset}
+      updatedAt={businessProfile.updatedAt}
     >
       <Form form={form} layout="vertical" onValuesChange={handleValuesChange} requiredMark="optional">
         <FieldGroup title="Identity">
@@ -68,43 +85,66 @@ const BusinessProfileSettings: React.FC<Props> = ({ onDirtyChange }) => {
             <Col xs={24} md={16}>
               <Row gutter={[20, 0]}>
                 <Col xs={24} sm={14}>
-                  <Form.Item
+                  <SettingField
                     name="shopName"
                     label="Shop name"
+                    dirty={d("shopName")}
+                    description="Printed at the top of every receipt."
                     rules={[
                       { required: true, message: "Shop name is required" },
                       { min: 2, message: "At least 2 characters" },
                     ]}
                   >
                     <Input placeholder="Aruna Super Center" />
-                  </Form.Item>
+                  </SettingField>
                 </Col>
                 <Col xs={24} sm={10}>
-                  <Form.Item name="businessType" label="Business type" rules={[{ required: true }]}>
+                  <SettingField
+                    name="businessType"
+                    label="Business type"
+                    dirty={d("businessType")}
+                    description="Tunes defaults and reporting."
+                    rules={[{ required: true }]}
+                  >
                     <Select
                       options={BUSINESS_TYPES.map((v) => ({
                         value: v,
                         label: v[0].toUpperCase() + v.slice(1),
                       }))}
                     />
-                  </Form.Item>
+                  </SettingField>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <Form.Item name="businessRegistrationNumber" label="Business reg. number">
+                  <SettingField
+                    name="businessRegistrationNumber"
+                    label="Business reg. number"
+                    dirty={d("businessRegistrationNumber")}
+                    description="Optional. Shown on tax invoices."
+                  >
                     <Input placeholder="Optional" />
-                  </Form.Item>
+                  </SettingField>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <Form.Item name="taxVatNumber" label="Tax / VAT number">
+                  <SettingField
+                    name="taxVatNumber"
+                    label="Tax / VAT number"
+                    dirty={d("taxVatNumber")}
+                    description="Optional. Shown on tax invoices."
+                  >
                     <Input placeholder="Optional" />
-                  </Form.Item>
+                  </SettingField>
                 </Col>
               </Row>
             </Col>
             <Col xs={24} md={8}>
-              <Form.Item name="logoUrl" label="Logo" tooltip="Shown on receipts and reports. JPEG or PNG, up to 2 MB.">
+              <SettingField
+                name="logoUrl"
+                label="Logo"
+                dirty={d("logoUrl")}
+                description="Shown on receipts and reports. JPEG or PNG, up to 2 MB."
+              >
                 <ImageUpload placeholder="Upload shop logo" />
-              </Form.Item>
+              </SettingField>
             </Col>
           </Row>
         </FieldGroup>
@@ -112,33 +152,39 @@ const BusinessProfileSettings: React.FC<Props> = ({ onDirtyChange }) => {
         <FieldGroup title="Address">
           <Row gutter={[20, 0]}>
             <Col xs={24} md={12}>
-              <Form.Item
+              <SettingField
                 name="addressLine1"
                 label="Address line 1"
+                dirty={d("addressLine1")}
                 rules={[{ required: true, message: "Address is required" }]}
               >
                 <Input />
-              </Form.Item>
+              </SettingField>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="addressLine2" label="Address line 2">
+              <SettingField name="addressLine2" label="Address line 2" dirty={d("addressLine2")}>
                 <Input placeholder="Optional" />
-              </Form.Item>
+              </SettingField>
             </Col>
             <Col {...col}>
-              <Form.Item name="city" label="City" rules={[{ required: true }]}>
+              <SettingField name="city" label="City" dirty={d("city")} rules={[{ required: true }]}>
                 <Input />
-              </Form.Item>
+              </SettingField>
             </Col>
             <Col {...col}>
-              <Form.Item name="postalCode" label="Postal code">
+              <SettingField name="postalCode" label="Postal code" dirty={d("postalCode")}>
                 <Input />
-              </Form.Item>
+              </SettingField>
             </Col>
             <Col {...col}>
-              <Form.Item name="country" label="Country" rules={[{ required: true }]}>
+              <SettingField
+                name="country"
+                label="Country"
+                dirty={d("country")}
+                rules={[{ required: true }]}
+              >
                 <Input />
-              </Form.Item>
+              </SettingField>
             </Col>
           </Row>
         </FieldGroup>
@@ -146,33 +192,56 @@ const BusinessProfileSettings: React.FC<Props> = ({ onDirtyChange }) => {
         <FieldGroup title="Contact & locale" last>
           <Row gutter={[20, 0]}>
             <Col {...col}>
-              <Form.Item name="phone" label="Phone">
+              <SettingField
+                name="phone"
+                label="Phone"
+                dirty={d("phone")}
+                description="Shown on the receipt header."
+              >
                 <Input placeholder="011 234 5678" />
-              </Form.Item>
+              </SettingField>
             </Col>
             <Col {...col}>
-              <Form.Item
+              <SettingField
                 name="email"
                 label="Email"
+                dirty={d("email")}
                 rules={[{ type: "email", message: "Enter a valid email" }]}
               >
                 <Input placeholder="shop@example.com" />
-              </Form.Item>
+              </SettingField>
             </Col>
             <Col {...col}>
-              <Form.Item name="currency" label="Currency" rules={[{ required: true }]}>
+              <SettingField
+                name="currency"
+                label="Currency"
+                dirty={d("currency")}
+                description="Used across the POS and reports."
+                rules={[{ required: true }]}
+              >
                 <Select options={CURRENCIES.map((v) => ({ value: v, label: v }))} />
-              </Form.Item>
+              </SettingField>
             </Col>
             <Col {...col}>
-              <Form.Item name="timezone" label="Timezone" rules={[{ required: true }]}>
+              <SettingField
+                name="timezone"
+                label="Timezone"
+                dirty={d("timezone")}
+                description="Timestamps on sales and shifts."
+                rules={[{ required: true }]}
+              >
                 <Select showSearch options={TIMEZONES.map((v) => ({ value: v, label: v }))} />
-              </Form.Item>
+              </SettingField>
             </Col>
             <Col {...col}>
-              <Form.Item name="language" label="Language" rules={[{ required: true }]}>
+              <SettingField
+                name="language"
+                label="Language"
+                dirty={d("language")}
+                rules={[{ required: true }]}
+              >
                 <Select options={LANGUAGES} />
-              </Form.Item>
+              </SettingField>
             </Col>
           </Row>
         </FieldGroup>

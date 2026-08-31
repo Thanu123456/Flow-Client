@@ -3,7 +3,10 @@ import { Col, Form, InputNumber, Row, Select, Switch, message } from "antd";
 import { useSettingsStore } from "../../store/management/settingsStore";
 import SettingsSection from "./SettingsSection";
 import FieldGroup from "./FieldGroup";
+import SettingField from "./SettingField";
+import { SettingsSkeleton, SettingsLoadError } from "./SettingsSkeleton";
 import { useDirtyForm } from "./useDirtyForm";
+import { SALES_DEFAULTS } from "./settingsDefaults";
 import type { PosSettingsUpdate } from "../../types/entities/settings.types";
 
 interface Props {
@@ -13,7 +16,8 @@ interface Props {
 const col = { xs: 24, sm: 12, lg: 8 };
 
 const SalesSettings: React.FC<Props> = ({ onDirtyChange }) => {
-  const { settings, saving, saveSettings } = useSettingsStore();
+  const { settings, settingsLoading, settingsError, saving, saveSettings, fetchSettings } =
+    useSettingsStore();
   const [form] = Form.useForm();
 
   const initial = React.useMemo(
@@ -30,11 +34,14 @@ const SalesSettings: React.FC<Props> = ({ onDirtyChange }) => {
     [settings]
   );
 
-  const { dirty, handleValuesChange, reset, markSaved } = useDirtyForm(
-    form,
-    initial,
-    onDirtyChange
-  );
+  const { dirty, dirtyFields, dirtyCount, handleValuesChange, reset, markSaved } =
+    useDirtyForm(form, initial, onDirtyChange);
+  const d = (name: string) => dirtyFields.has(name);
+
+  const resetToDefaults = () => {
+    form.setFieldsValue(SALES_DEFAULTS);
+    handleValuesChange();
+  };
 
   const handleSave = async () => {
     try {
@@ -48,23 +55,36 @@ const SalesSettings: React.FC<Props> = ({ onDirtyChange }) => {
     }
   };
 
+  if (!settings) {
+    return settingsError ? (
+      <SettingsLoadError message={settingsError} onRetry={fetchSettings} />
+    ) : (
+      <SettingsSkeleton groups={2} />
+    );
+  }
+
   return (
     <SettingsSection
       title="Sales & Checkout"
       description="Defaults and guardrails applied at the point of sale."
       dirty={dirty}
-      saving={saving}
+      dirtyCount={dirtyCount}
+      saving={saving && !settingsLoading}
       onSave={handleSave}
       onReset={reset}
+      onResetDefaults={resetToDefaults}
+      updatedAt={settings.updatedAt}
+      updatedByName={settings.updatedByName}
     >
       <Form form={form} layout="vertical" onValuesChange={handleValuesChange} style={{ maxWidth: 760 }}>
         <FieldGroup title="Pricing">
           <Row gutter={[20, 0]}>
             <Col {...col}>
-              <Form.Item
+              <SettingField
                 name="defaultPriceMode"
                 label="Default price mode"
-                tooltip="Which price list the POS opens on for a new sale."
+                dirty={d("defaultPriceMode")}
+                description="Which price list a new sale opens on. Affects POS checkout."
               >
                 <Select
                   options={[
@@ -73,27 +93,29 @@ const SalesSettings: React.FC<Props> = ({ onDirtyChange }) => {
                     { value: "our", label: "Our price" },
                   ]}
                 />
-              </Form.Item>
+              </SettingField>
             </Col>
             <Col {...col}>
-              <Form.Item
+              <SettingField
                 name="salesMaxDiscountPct"
-                label="Max discount without approval (%)"
-                tooltip="A cashier can apply up to this percentage. Higher discounts will require approval once that flow ships."
+                label="Max discount without approval"
+                dirty={d("salesMaxDiscountPct")}
+                description="Cashiers can apply up to this much; more will need approval once that ships."
                 rules={[{ type: "number", min: 0, max: 100 }]}
               >
                 <InputNumber min={0} max={100} step={0.5} style={{ width: "100%" }} addonAfter="%" />
-              </Form.Item>
+              </SettingField>
             </Col>
             <Col {...col}>
-              <Form.Item
+              <SettingField
                 name="salesHoldExpiryHours"
                 label="Held bill expiry"
-                tooltip="Parked / held sales older than this are cleaned up automatically."
+                dirty={d("salesHoldExpiryHours")}
+                description="Parked sales older than this are cleared automatically."
                 rules={[{ type: "number", min: 1, max: 720 }]}
               >
                 <InputNumber min={1} max={720} style={{ width: "100%" }} addonAfter="hrs" />
-              </Form.Item>
+              </SettingField>
             </Col>
           </Row>
         </FieldGroup>
@@ -101,24 +123,26 @@ const SalesSettings: React.FC<Props> = ({ onDirtyChange }) => {
         <FieldGroup title="Checkout behaviour" last>
           <Row gutter={[20, 0]}>
             <Col xs={24} sm={12}>
-              <Form.Item
+              <SettingField
                 name="allowNoStockBills"
                 label="Allow selling out-of-stock items"
-                tooltip="Permits a sale to proceed when on-hand stock is insufficient (stock can go negative)."
                 valuePropName="checked"
+                dirty={d("allowNoStockBills")}
+                description="Lets a sale proceed when on-hand stock is insufficient (stock can go negative)."
               >
                 <Switch />
-              </Form.Item>
+              </SettingField>
             </Col>
             <Col xs={24} sm={12}>
-              <Form.Item
+              <SettingField
                 name="cashDrawerEnabled"
                 label="Cash drawer integration"
-                tooltip="Send an open-drawer signal to a connected receipt printer on cash sales."
                 valuePropName="checked"
+                dirty={d("cashDrawerEnabled")}
+                description="Sends an open-drawer signal to a connected receipt printer on cash sales."
               >
                 <Switch />
-              </Form.Item>
+              </SettingField>
             </Col>
           </Row>
         </FieldGroup>

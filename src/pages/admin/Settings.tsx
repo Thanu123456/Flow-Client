@@ -1,5 +1,6 @@
 import React from "react";
-import { Card, Grid, Menu, Modal, Result, Spin, Typography, theme } from "antd";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { AutoComplete, Card, Grid, Input, Menu, Modal, Typography } from "antd";
 import {
   ShopOutlined,
   PrinterOutlined,
@@ -7,9 +8,12 @@ import {
   PercentageOutlined,
   CreditCardOutlined,
   BellOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
 import { useSettingsStore } from "../../store/management/settingsStore";
 import { useUnloadGuard } from "../../components/settings/useDirtyForm";
+import { searchSettings } from "../../components/settings/settingsIndex";
+import SetupChecklist from "../../components/settings/SetupChecklist";
 import BusinessProfileSettings from "../../components/settings/BusinessProfileSettings";
 import ReceiptSettings from "../../components/settings/ReceiptSettings";
 import SalesSettings from "../../components/settings/SalesSettings";
@@ -18,6 +22,7 @@ const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
 
 type SectionKey = "business-profile" | "receipt" | "sales";
+const DEFAULT_SECTION: SectionKey = "business-profile";
 
 const SECTIONS: {
   key: SectionKey;
@@ -52,21 +57,23 @@ const COMING_SOON = [
 ];
 
 const Settings: React.FC = () => {
-  const { token } = theme.useToken();
   const screens = useBreakpoint();
   const isMobile = !screens.lg;
+  const navigate = useNavigate();
+  const { section } = useParams<{ section: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const {
-    settings,
-    businessProfile,
-    loading,
-    error,
-    fetchSettings,
-    fetchBusinessProfile,
-  } = useSettingsStore();
+  const { fetchSettings, fetchBusinessProfile } = useSettingsStore();
 
-  const [active, setActive] = React.useState<SectionKey>("business-profile");
+  const active: SectionKey =
+    SECTIONS.find((s) => s.key === section)?.key ?? DEFAULT_SECTION;
+
   const [dirty, setDirty] = React.useState(false);
+  const [searchValue, setSearchValue] = React.useState("");
+
+  React.useEffect(() => {
+    if (section !== active) navigate(`/settings/${active}`, { replace: true });
+  }, [section, active, navigate]);
 
   React.useEffect(() => {
     fetchSettings();
@@ -75,9 +82,32 @@ const Settings: React.FC = () => {
 
   useUnloadGuard(dirty);
 
-  const switchTo = (key: SectionKey) => {
-    if (key === active) return;
-    if (dirty) {
+  // Scroll to a specific field when arriving via ?field= (search box / checklist).
+  const scrollField = searchParams.get("field");
+  React.useEffect(() => {
+    if (!scrollField) return;
+    let raf = 0;
+    let tries = 0;
+    const tick = () => {
+      const el = document.getElementById(`setting-${scrollField}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        (el.querySelector("input, textarea, button, [role='switch']") as HTMLElement | null)?.focus?.();
+        const next = new URLSearchParams(searchParams);
+        next.delete("field");
+        setSearchParams(next, { replace: true });
+        return;
+      }
+      if (tries++ < 30) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [scrollField, active, searchParams, setSearchParams]);
+
+  const goToField = (sectionKey: SectionKey, field: string) => {
+    setSearchValue("");
+    const run = () => navigate(`/settings/${sectionKey}?field=${field}`);
+    if (dirty && sectionKey !== active) {
       Modal.confirm({
         title: "Discard unsaved changes?",
         content: "You have edits in this section that haven't been saved.",
@@ -87,31 +117,83 @@ const Settings: React.FC = () => {
         centered: true,
         onOk: () => {
           setDirty(false);
-          setActive(key);
+          run();
         },
       });
       return;
     }
-    setActive(key);
+    run();
   };
 
+  const switchTo = (key: SectionKey) => {
+    if (key === active) return;
+    const go = () => {
+      setDirty(false);
+      navigate(`/settings/${key}`);
+    };
+    if (dirty) {
+      Modal.confirm({
+        title: "Discard unsaved changes?",
+        content: "You have edits in this section that haven't been saved.",
+        okText: "Discard",
+        okType: "danger",
+        cancelText: "Stay",
+        centered: true,
+        onOk: go,
+      });
+      return;
+    }
+    go();
+  };
+
+  const results = searchSettings(searchValue);
   const current = SECTIONS.find((s) => s.key === active)!;
-  const firstLoad = loading && !settings && !businessProfile;
 
   return (
     <div style={{ padding: isMobile ? 16 : "28px 32px", maxWidth: 1320, margin: "0 auto" }}>
-      <div style={{ marginBottom: 24 }}>
-        <Title level={3} style={{ margin: 0 }}>
-          Settings
-        </Title>
-        <Text type="secondary">Configure how your shop and point of sale behave.</Text>
+      <div
+        style={{
+          marginBottom: 24,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+          gap: 16,
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <Title level={3} style={{ margin: 0 }}>
+            Settings
+          </Title>
+          <Text type="secondary">Configure how your shop and point of sale behave.</Text>
+        </div>
+        <AutoComplete
+          value={searchValue}
+          onChange={setSearchValue}
+          style={{ width: isMobile ? "100%" : 300 }}
+          options={results.map((r) => ({
+            value: `${r.section}:${r.field}`,
+            label: (
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                <span>{r.label}</span>
+                <span style={{ opacity: 0.55, fontSize: 12 }}>{r.sectionLabel}</span>
+              </div>
+            ),
+          }))}
+          onSelect={(v: string) => {
+            const [sec, field] = v.split(":");
+            goToField(sec as SectionKey, field);
+          }}
+        >
+          <Input
+            allowClear
+            prefix={<SearchOutlined style={{ opacity: 0.45 }} />}
+            placeholder="Search settings…"
+          />
+        </AutoComplete>
       </div>
 
-      {error && !firstLoad && settings && (
-        <Card size="small" style={{ marginBottom: 16, borderColor: token.colorErrorBorder }}>
-          <Text type="danger">{error}</Text>
-        </Card>
-      )}
+      <SetupChecklist />
 
       <div
         style={{
@@ -161,15 +243,7 @@ const Settings: React.FC = () => {
           style={{ flex: 1, width: isMobile ? "100%" : undefined, minWidth: 0 }}
           styles={{ body: { padding: isMobile ? 20 : "28px 32px" } }}
         >
-          {firstLoad ? (
-            <div style={{ padding: 64, textAlign: "center" }}>
-              <Spin />
-            </div>
-          ) : error && !settings && !businessProfile ? (
-            <Result status="warning" title="Couldn't load settings" subTitle={error} />
-          ) : (
-            current.render(setDirty)
-          )}
+          <React.Fragment key={active}>{current.render(setDirty)}</React.Fragment>
         </Card>
       </div>
     </div>
