@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { authService } from '../services/auth/authService';
+import { googleAuthService } from '../services/auth/googleAuthService';
 import type {
   LoginRequest,
   RegisterRequest,
@@ -37,6 +38,7 @@ interface AuthState {
 
 interface AuthContextType extends AuthState {
   login: (data: LoginRequest) => Promise<LoginResponse | void>;
+  googleLogin: (code: string) => Promise<LoginResponse>;
   register: (data: RegisterRequest) => Promise<void>;
   superAdminLogin: (data: SuperAdminLoginRequest) => Promise<void>;
   kioskLogin: (data: KioskLoginRequest) => Promise<void>;
@@ -178,6 +180,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return response;
       }
 
+      handleLoginSuccess(response);
+      return response;
+    } catch (error) {
+      throw error;
+    } finally {
+      setState(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  const googleLogin = async (code: string): Promise<LoginResponse> => {
+    setState(prev => ({ ...prev, isLoading: true }));
+    try {
+      const response = await googleAuthService.exchangeCode(code);
       handleLoginSuccess(response);
       return response;
     } catch (error) {
@@ -427,6 +442,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider value={{
       ...state,
       login,
+      googleLogin,
       register,
       superAdminLogin,
       kioskLogin,

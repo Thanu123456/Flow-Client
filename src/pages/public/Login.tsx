@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { message } from 'antd';
 import { Zap, Users, TrendingUp, ArrowLeft, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import type { LoginRequest, AccountStatus } from '../../types/auth/auth.types';
-import { API_URL } from '../../utils/api';
+import { googleAuthService } from '../../services/auth/googleAuthService';
 import { useApiError } from '../../hooks/useApiError';
 import LoginForm from '../../components/auth/LoginForm';
 import { MfaVerification } from '../../components/auth';
@@ -36,11 +36,25 @@ const STATUS_MESSAGES: Record<AccountStatus, { type: 'warning' | 'error' | 'info
 const Login: React.FC = () => {
     const { login, mfaRequired, verifyMfaLogin, cancelMfaLogin } = useAuth();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [loading, setLoading] = useState(false);
     const [messageApi, contextHolder] = message.useMessage();
     const [statusAlert, setStatusAlert] = useState<{ type: 'warning' | 'error' | 'info'; message: string; reason?: string } | null>(null);
     const [mfaError, setMfaError] = useState<string | null>(null);
     const apiError = useApiError();
+
+    // Surface a failure the Google OAuth redirect couldn't show inline
+    // (it's a full-page navigation back from the backend/Google, not this
+    // component's own submit handler) using the same status-alert UI.
+    useEffect(() => {
+        const googleError = searchParams.get('google_error');
+        if (googleError) {
+            setStatusAlert({ type: 'error', message: googleError });
+            const next = new URLSearchParams(searchParams);
+            next.delete('google_error');
+            setSearchParams(next, { replace: true });
+        }
+    }, [searchParams, setSearchParams]);
 
     const handleSubmit = async (values: LoginRequest) => {
         setLoading(true);
@@ -110,7 +124,7 @@ const Login: React.FC = () => {
     };
 
     const handleGoogleLogin = () => {
-        window.location.href = `${API_URL}/auth/google/login`;
+        window.location.href = googleAuthService.getLoginUrl();
     };
 
     return (

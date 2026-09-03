@@ -16,6 +16,7 @@ import ForgotPassword from "../pages/public/ForgotPassword";
 import ResetPassword from "../pages/public/ResetPassword";
 import ChangePassword from "../pages/public/ChangePassword";
 import EmailVerification from "../pages/public/EmailVerification";
+import GoogleCallback from "../pages/public/GoogleCallback";
 
 // Kiosk Pages
 import KioskLogin from "../pages/kiosk/KioskLogin";
@@ -101,6 +102,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/verify-email" element={<EmailVerification />} />
+        <Route path="/auth/google/callback" element={<GoogleCallback />} />
       </Route>
 
       {/* Kiosk Login - public, separate from PublicRoutes to avoid redirect loop */}
