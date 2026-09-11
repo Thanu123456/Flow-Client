@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Input, DatePicker, Space, Row, Col, message, Tag, Tooltip, Typography } from 'antd';
-import { EyeOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Input, DatePicker, Select, Space, Row, Col, message, Tag, Tooltip, Typography, Modal, InputNumber } from 'antd';
+import { EyeOutlined, ReloadOutlined, SettingOutlined } from '@ant-design/icons';
 import { usePurchaseReturnStore } from '../../store/transactions/purchaseReturnStore';
-import type { PurchaseReturn, PurchaseReturnListItem } from '../../types/entities/purchaseReturn.types';
+import { purchaseReturnService } from '../../services/transactions/purchaseReturnService';
+import type { PurchaseReturn, PurchaseReturnListItem, PurchaseReturnStatus } from '../../types/entities/purchaseReturn.types';
 import PageLayout from '../common/PageLayout/PageLayout';
 import { CommonButton } from '../common/Button';
 import { CommonTable } from '../common/Table';
 import PurchaseReturnDetailsModal from './PurchaseReturnDetailsModal';
+import { usePermissions } from '../../hooks/auth/usePermissions';
+import { PERMISSIONS } from '../../types/auth/permissions';
 import dayjs from 'dayjs';
 
 const { Search } = Input;
@@ -16,20 +19,35 @@ const { Text } = Typography;
 const fmt = (n: number) =>
   `Rs. ${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+const statusColor: Record<PurchaseReturnStatus, string> = {
+  pending_approval: 'gold',
+  completed: 'green',
+  rejected: 'default',
+  voided: 'volcano',
+};
+
 const PurchaseReturnsPage: React.FC = () => {
   const [messageApi, contextHolder] = message.useMessage();
   const { returns, loading, error, pagination, listReturns, getReturn } = usePurchaseReturnStore();
+  const { hasPermission } = usePermissions();
+  const canApprove = hasPermission(PERMISSIONS.PURCHASES_APPROVE);
 
   const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
   const [dateRange, setDateRange] = useState<[string, string] | null>(null);
   const [viewModalVisible, setViewModalVisible] = useState(false);
   const [selectedReturn, setSelectedReturn] = useState<PurchaseReturn | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [threshold, setThreshold] = useState<number>(0);
+  const [loadingSettings, setLoadingSettings] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
+
   const fetchReturns = useCallback(
     (page = 1, perPage = 10) =>
-      listReturns({ page, perPage, search: searchText, dateFrom: dateRange?.[0], dateTo: dateRange?.[1] }),
-    [listReturns, searchText, dateRange]
+      listReturns({ page, perPage, search: searchText, status: statusFilter || undefined, dateFrom: dateRange?.[0], dateTo: dateRange?.[1] }),
+    [listReturns, searchText, statusFilter, dateRange]
   );
 
   useEffect(() => { fetchReturns(); }, [fetchReturns]);
@@ -37,6 +55,7 @@ const PurchaseReturnsPage: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const handleRefresh = async () => {
     setSearchText('');
+    setStatusFilter('');
     setDateRange(null);
     setRefreshing(true);
     try {
@@ -67,13 +86,52 @@ const PurchaseReturnsPage: React.FC = () => {
     }
   };
 
+  const handleChanged = async () => {
+    if (selectedReturn) {
+      const data = await getReturn(selectedReturn.id);
+      setSelectedReturn(data);
+    }
+    fetchReturns(pagination.page, pagination.perPage);
+  };
+
+  const openSettings = async () => {
+    setSettingsOpen(true);
+    setLoadingSettings(true);
+    try {
+      const s = await purchaseReturnService.getSettings();
+      setThreshold(s.approvalThreshold);
+    } catch {
+      messageApi.error('Failed to load settings');
+    } finally {
+      setLoadingSettings(false);
+    }
+  };
+
+  const saveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      await purchaseReturnService.updateSettings(threshold);
+      messageApi.success('Settings updated');
+      setSettingsOpen(false);
+    } catch {
+      messageApi.error('Failed to update settings');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
   const columns = [
     {
       title: 'Return #',
       dataIndex: 'returnNumber',
       key: 'returnNumber',
-      render: (v: string) => (
-        <Text style={{ fontWeight: 600, fontFamily: 'monospace', color: '#f5222d' }}>{v}</Text>
+      render: (v: string, record: PurchaseReturnListItem) => (
+        <Space direction="vertical" size={0}>
+          <Text style={{ fontWeight: 600, fontFamily: 'monospace', color: '#f5222d' }}>{v}</Text>
+          {record.debitNoteNumber && (
+            <Text type="secondary" style={{ fontSize: 11, fontFamily: 'monospace' }}>DN: {record.debitNoteNumber}</Text>
+          )}
+        </Space>
       ),
     },
     {
@@ -108,8 +166,10 @@ const PurchaseReturnsPage: React.FC = () => {
       dataIndex: 'status',
       key: 'status',
       align: 'center' as const,
-      render: () => (
-        <Tag color="green" style={{ borderRadius: '12px', padding: '0 12px' }}>COMPLETED</Tag>
+      render: (status: PurchaseReturnStatus) => (
+        <Tag color={statusColor[status]} style={{ borderRadius: '12px', padding: '0 12px' }}>
+          {status.replace('_', ' ').toUpperCase()}
+        </Tag>
       ),
     },
     {
@@ -142,6 +202,11 @@ const PurchaseReturnsPage: React.FC = () => {
         title="Purchase Returns"
         actions={
           <Space>
+            {canApprove && (
+              <CommonButton icon={<SettingOutlined />} onClick={openSettings}>
+                Approval Settings
+              </CommonButton>
+            )}
             <CommonButton
               icon={<ReloadOutlined style={{ color: 'blue' }} />}
               onClick={handleRefresh}
@@ -154,12 +219,27 @@ const PurchaseReturnsPage: React.FC = () => {
       >
         <div style={{ marginBottom: 16 }}>
           <Row gutter={[12, 12]} align="middle">
-            <Col xs={24} sm={12} md={8}>
+            <Col xs={24} sm={12} md={7}>
               <Search
-                placeholder="Search return #, GRN #, supplier..."
+                placeholder="Search return #, debit note #, GRN #, supplier..."
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
                 allowClear
+              />
+            </Col>
+            <Col xs={12} sm={6} md={5}>
+              <Select
+                style={{ width: '100%' }}
+                placeholder="Status"
+                value={statusFilter || undefined}
+                onChange={setStatusFilter}
+                allowClear
+                options={[
+                  { value: 'pending_approval', label: 'Pending Approval' },
+                  { value: 'completed', label: 'Completed' },
+                  { value: 'rejected', label: 'Rejected' },
+                  { value: 'voided', label: 'Voided' },
+                ]}
               />
             </Col>
             <Col xs={24} sm={12} md={8}>
@@ -189,14 +269,40 @@ const PurchaseReturnsPage: React.FC = () => {
             totalPages: pagination.totalPages,
           }}
           onPageChange={(page, pageSize) => fetchReturns(page, pageSize)}
-          scroll={{ x: 900 }}
+          scroll={{ x: 950 }}
         />
 
         <PurchaseReturnDetailsModal
           visible={viewModalVisible}
           ret={selectedReturn}
           onClose={() => { setViewModalVisible(false); setSelectedReturn(null); }}
+          onChanged={handleChanged}
         />
+
+        <Modal
+          open={settingsOpen}
+          title="Purchase Return Approval Settings"
+          onCancel={() => setSettingsOpen(false)}
+          onOk={saveSettings}
+          okText="Save"
+          confirmLoading={savingSettings}
+        >
+          <Text type="secondary">
+            Returns valued at or above this amount are held for a second person to approve before stock, the
+            supplier balance and the GL move. Set to 0 to never require approval.
+          </Text>
+          <div style={{ marginTop: 16 }}>
+            <Text strong>Approval threshold (Rs.)</Text>
+            <InputNumber
+              min={0}
+              value={threshold}
+              onChange={(v) => setThreshold(v ?? 0)}
+              style={{ width: '100%', marginTop: 8 }}
+              disabled={loadingSettings}
+              precision={2}
+            />
+          </div>
+        </Modal>
       </PageLayout>
     </>
   );

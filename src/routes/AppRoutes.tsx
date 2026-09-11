@@ -59,6 +59,8 @@ import StockTakeDetail from "../pages/management/StockTakeDetail";
 // Transaction Pages
 import Purchases from "../pages/transactions/Purchases";
 import AddPurchase from "../pages/transactions/AddPurchase";
+import PurchaseOrders from "../pages/transactions/PurchaseOrders";
+import AddPurchaseOrder from "../pages/transactions/AddPurchaseOrder";
 import PurchaseReturns from "../pages/transactions/PurchaseReturns";
 import AddPurchaseReturn from "../pages/transactions/AddPurchaseReturn";
 import Sales from "../pages/transactions/Sales";
@@ -244,6 +246,23 @@ const AppRoutes: React.FC = () => {
         >
           <Route path="/purchases/add" element={<AddPurchase />} />
           <Route path="/purchases/:id/edit" element={<AddPurchase />} />
+        </Route>
+
+        {/* Purchase Order Routes */}
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.PURCHASES_VIEW} />
+          }
+        >
+          <Route path="/purchase-orders" element={<PurchaseOrders />} />
+        </Route>
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.PURCHASES_CREATE} />
+          }
+        >
+          <Route path="/purchase-orders/add" element={<AddPurchaseOrder />} />
+          <Route path="/purchase-orders/:id/edit" element={<AddPurchaseOrder />} />
         </Route>
 
         {/* Purchase Returns Routes */}

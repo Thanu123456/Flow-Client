@@ -44,6 +44,7 @@ const transformProduct = (p: any): Product => ({
     // List API returns 'price' which is typically retail/our price. Use it as fallback.
     retailPrice: p.retail_price ?? p.price,
     ourPrice: p.our_price ?? p.price,
+    priceLocked: p.price_locked ?? false,
 
     discountType: p.discount_type,
     discountValue: p.discount_value,
@@ -72,6 +73,7 @@ const transformProduct = (p: any): Product => ({
         wholesalePrice: v.wholesale_price ?? v.wholesalePrice ?? 0,
         retailPrice: v.retail_price ?? v.retailPrice ?? 0,
         ourPrice: v.our_price ?? v.ourPrice ?? 0,
+        priceLocked: v.price_locked ?? v.priceLocked ?? false,
         discountType: v.discount_type || v.discountType,
         discountValue: v.discount_value ?? v.discountValue ?? 0,
         discountAppliesTo: v.discount_applies_to || v.discountAppliesTo,
@@ -136,6 +138,17 @@ export const productService = {
     // Delete product
     deleteProduct: async (id: string): Promise<void> => {
         await axiosInstance.delete(`/admin/products/${id}`);
+    },
+
+    // Lock/unlock a product's selling prices so GRN batch pricing can't
+    // silently overwrite a manually-set price.
+    setPriceLock: async (id: string, locked: boolean): Promise<void> => {
+        await axiosInstance.put(`/admin/products/${id}/price-lock`, { locked });
+    },
+
+    // Same, for a single variation of a variable product.
+    setVariationPriceLock: async (productId: string, variationId: string, locked: boolean): Promise<void> => {
+        await axiosInstance.put(`/admin/products/${productId}/variations/${variationId}/price-lock`, { locked });
     },
 
     // Check SKU availability (Generate SKU)

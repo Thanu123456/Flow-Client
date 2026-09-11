@@ -274,7 +274,7 @@ const EditProductPage: React.FC = () => {
                     </div>
 
                     {productType === "single" ? (
-                        <SingleProductForm editProductId={editProduct?.id} />
+                        <SingleProductForm editProductId={editProduct?.id} initialPriceLocked={editProduct?.priceLocked} />
                     ) : (
                         <VariableProductForm editProduct={editProduct} />
                     )}

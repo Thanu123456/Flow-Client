@@ -78,6 +78,9 @@ export interface Product {
     wholesalePrice?: number;
     retailPrice?: number;
     ourPrice?: number;
+    // When true, GRN receiving can't auto-update this product's selling
+    // prices as new priced batches arrive — a manual price wins.
+    priceLocked?: boolean;
 
     // Discount
     discountType?: DiscountType;
@@ -109,6 +112,7 @@ export interface ProductVariation {
     wholesalePrice?: number;
     retailPrice?: number;
     ourPrice?: number;
+    priceLocked?: boolean;
     discountType?: DiscountType;
     discountValue?: number;
     discountAppliesTo?: DiscountAppliesTo[];

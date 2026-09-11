@@ -1,6 +1,6 @@
 import React from 'react';
-import { Table, Button, Tooltip, Avatar, Tag, InputNumber, Popconfirm } from 'antd';
-import { DeleteOutlined, BarcodeOutlined } from '@ant-design/icons';
+import { Table, Button, Tooltip, Avatar, Tag, InputNumber, Popconfirm, Space } from 'antd';
+import { DeleteOutlined, BarcodeOutlined, AuditOutlined } from '@ant-design/icons';
 import type { GRNItemLocal } from '../../types/entities/purchase.types';
 import dayjs from 'dayjs';
 
@@ -8,6 +8,7 @@ interface Props {
   items: GRNItemLocal[];
   onQuantityChange: (localId: string, qty: number) => void;
   onRemove: (localId: string) => void;
+  onInspect?: (item: GRNItemLocal) => void;
   readOnly?: boolean;
 }
 
@@ -18,6 +19,7 @@ const PurchaseItemsTable: React.FC<Props> = ({
   items,
   onQuantityChange,
   onRemove,
+  onInspect,
   readOnly = false,
 }) => {
   const activeItems = items.filter((i) => !i.isDeleted);
@@ -120,6 +122,32 @@ const PurchaseItemsTable: React.FC<Props> = ({
       },
     },
     {
+      title: 'Lot',
+      key: 'lot',
+      width: 90,
+      render: (_: any, record: GRNItemLocal) =>
+        record.lotNumber ? <span style={{ fontFamily: 'monospace' }}>{record.lotNumber}</span> : <span style={{ color: '#d9d9d9' }}>-</span>,
+    },
+    {
+      title: 'QC',
+      key: 'qc',
+      width: 90,
+      align: 'center' as const,
+      render: (_: any, record: GRNItemLocal) => {
+        if (record.inspectionStatus === 'pending') {
+          return <Tag color="orange">Pending</Tag>;
+        }
+        if (record.rejectedQty && record.rejectedQty > 0) {
+          return (
+            <Tooltip title={record.inspectionNote || 'Rejected at inspection'}>
+              <Tag color="red">−{record.rejectedQty} rej.</Tag>
+            </Tooltip>
+          );
+        }
+        return <Tag color="green">OK</Tag>;
+      },
+    },
+    {
       title: 'Cost',
       key: 'cost',
       align: 'right' as const,
@@ -143,26 +171,38 @@ const PurchaseItemsTable: React.FC<Props> = ({
           {
             title: '',
             key: 'action',
-            width: 48,
+            width: 80,
             render: (_: any, record: GRNItemLocal) => (
-              <Popconfirm
-                title="Remove Item"
-                description={
-                  record.hasSerialNumbers && record.serialNumbers.length > 0
-                    ? 'This item has serial numbers recorded. Remove anyway?'
-                    : 'Remove this item from the GRN?'
-                }
-                onConfirm={() => onRemove(record.localId)}
-                okText="Remove"
-                cancelText="Cancel"
-                okButtonProps={{ danger: true }}
-              >
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<DeleteOutlined style={{ color: '#ff4d4f' }} />}
-                />
-              </Popconfirm>
+              <Space size={4}>
+                {onInspect && record.backendId && (
+                  <Tooltip title="Record receiving inspection (QC)">
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<AuditOutlined style={{ color: '#1890ff' }} />}
+                      onClick={() => onInspect(record)}
+                    />
+                  </Tooltip>
+                )}
+                <Popconfirm
+                  title="Remove Item"
+                  description={
+                    record.hasSerialNumbers && record.serialNumbers.length > 0
+                      ? 'This item has serial numbers recorded. Remove anyway?'
+                      : 'Remove this item from the GRN?'
+                  }
+                  onConfirm={() => onRemove(record.localId)}
+                  okText="Remove"
+                  cancelText="Cancel"
+                  okButtonProps={{ danger: true }}
+                >
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<DeleteOutlined style={{ color: '#ff4d4f' }} />}
+                  />
+                </Popconfirm>
+              </Space>
             ),
           },
         ]),

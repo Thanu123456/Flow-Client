@@ -1,5 +1,24 @@
 export type PaymentMethod = 'cash' | 'cheque' | 'credit';
 export type GRNStatus = 'draft' | 'completed' | 'cancelled';
+export type InspectionStatus = 'pending' | 'accepted' | 'rejected';
+export type ChargeType = 'freight' | 'duty' | 'insurance' | 'handling' | 'other';
+export type ChargeAllocation = 'value' | 'quantity';
+
+export interface GRNCharge {
+  id?: string;
+  chargeType: ChargeType;
+  amount: number;
+  allocationMethod: ChargeAllocation;
+  note?: string;
+}
+
+export interface GRNAttachment {
+  id: string;
+  fileUrl: string;
+  fileName: string;
+  contentType?: string;
+  createdAt: string;
+}
 
 export interface GRNItem {
   id: string;
@@ -32,6 +51,16 @@ export interface GRNItem {
   serialNumbers?: string[];
   currentStock: number;
   returnedQty: number;
+  purchaseOrderItemId?: string;
+  lotNumber?: string;
+  inspectionStatus: InspectionStatus;
+  rejectedQty: number;
+  inspectionNote?: string;
+  landedCostPerUnit: number;
+  effectiveUnitCost: number;
+  // Non-blocking note returned only from addItem when the entered cost
+  // deviates too far from the product's current cost. Not persisted.
+  priceWarning?: string;
 }
 
 export interface GRN {
@@ -55,6 +84,11 @@ export interface GRN {
   isPostDated: boolean;
   status: GRNStatus;
   notes?: string;
+  purchaseOrderId?: string;
+  purchaseOrderNumber?: string;
+  charges?: GRNCharge[];
+  totalLandedCost: number;
+  attachments?: GRNAttachment[];
   grnDate: string;
   items: GRNItem[];
   itemCount: number;
@@ -96,6 +130,7 @@ export interface CreateGRNRequest {
   paymentMethod: PaymentMethod;
   notes?: string;
   grnDate?: string;
+  purchaseOrderId?: string;
 }
 
 export interface UpdateGRNRequest {
@@ -119,6 +154,11 @@ export interface AddGRNItemRequest {
   manufactureDate?: string;
   expiryDate?: string;
   hasSerialNumbers?: boolean;
+  purchaseOrderItemId?: string;
+  lotNumber?: string;
+  inspectionStatus?: InspectionStatus;
+  rejectedQty?: number;
+  inspectionNote?: string;
 }
 
 export interface UpdateGRNItemRequest {
@@ -129,6 +169,10 @@ export interface UpdateGRNItemRequest {
   ourPrice?: number;
   manufactureDate?: string;
   expiryDate?: string;
+  lotNumber?: string;
+  inspectionStatus?: InspectionStatus;
+  rejectedQty?: number;
+  inspectionNote?: string;
 }
 
 export interface CompleteGRNRequest {
@@ -218,9 +262,33 @@ export interface GRNItemLocal {
   hasSerialNumbers: boolean;
   serialNumbers: string[];
   currentStock: number;
+  purchaseOrderItemId?: string;
+  lotNumber?: string;
+  inspectionStatus?: InspectionStatus;
+  rejectedQty?: number;
+  inspectionNote?: string;
 }
 
 export interface SupplierBalance {
   supplierId: string;
   outstandingBalance: number;
+}
+
+// Journal (GL) entry raised for a GRN / vendor bill
+export interface JournalLine {
+  accountCode: string;
+  accountName: string;
+  debit: number;
+  credit: number;
+}
+
+export interface JournalEntry {
+  id: string;
+  entryNumber: string;
+  entryDate: string;
+  description: string;
+  reversesEntryId?: string;
+  reversedByEntryId?: string;
+  lines: JournalLine[];
+  createdAt: string;
 }

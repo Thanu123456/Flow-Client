@@ -1,17 +1,31 @@
-import React, { useRef } from 'react';
-import { Modal, Descriptions, Tag, Table, Divider, Button, Space, Typography, Card, Row, Col, Tooltip } from 'antd';
-import { PrinterOutlined, FileTextOutlined, ShopOutlined, UserOutlined, CalendarOutlined, BankOutlined, RollbackOutlined } from '@ant-design/icons';
+import React, { useRef, useState } from 'react';
+import { Modal, Descriptions, Tag, Table, Divider, Button, Space, Typography, Card, Row, Col, Tooltip, Upload, Popconfirm, message } from 'antd';
+import { PrinterOutlined, FileTextOutlined, ShopOutlined, UserOutlined, CalendarOutlined, BankOutlined, RollbackOutlined, AuditOutlined, PaperClipOutlined, UploadOutlined, DeleteOutlined, StopOutlined } from '@ant-design/icons';
 import type { GRN, GRNItem, GRNStatus, PaymentMethod } from '../../types/entities/purchase.types';
 import dayjs from 'dayjs';
 import PrintGRN from './PrintGRN';
+import GRNJournalModal from './GRNJournalModal';
 import { useNavigate } from 'react-router-dom';
+import { purchaseService } from '../../services/transactions/purchaseService';
+import { usePurchaseStore } from '../../store/transactions/purchaseStore';
+import { usePermissions } from '../../hooks/auth/usePermissions';
+import { PERMISSIONS } from '../../types/auth/permissions';
 
 const { Text, Title } = Typography;
+
+const readAsBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
 
 interface Props {
   visible: boolean;
   grn: GRN | null;
   onClose: () => void;
+  onChanged?: () => void;
 }
 
 const statusColor: Record<GRNStatus, string> = {
@@ -29,11 +43,59 @@ const paymentColor: Record<PaymentMethod, string> = {
 const fmt = (n: number) =>
   `Rs. ${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose }) => {
+const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose, onChanged }) => {
   const printRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const [journalOpen, setJournalOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const { cancelGRN } = usePurchaseStore();
+  const { hasPermission } = usePermissions();
+  const canApprove = hasPermission(PERMISSIONS.PURCHASES_APPROVE);
 
   if (!grn) return null;
+
+  const handleCancel = async () => {
+    setCancelling(true);
+    try {
+      await cancelGRN(grn.id);
+      message.success(`GRN ${grn.grnNumber} cancelled`);
+      onChanged?.();
+      onClose();
+    } catch (e: any) {
+      message.error(e?.response?.data?.error?.message || 'Failed to cancel GRN');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const handleUploadAttachment = async (file: File) => {
+    const okType = /^(image\/|application\/pdf)/.test(file.type);
+    if (!okType) { message.error('Only images and PDF files are allowed'); return Upload.LIST_IGNORE; }
+    if (file.size > 10 * 1024 * 1024) { message.error('File must be under 10 MB'); return Upload.LIST_IGNORE; }
+    setUploading(true);
+    try {
+      const data = await readAsBase64(file);
+      await purchaseService.addAttachment(grn.id, { fileName: file.name, contentType: file.type, data });
+      message.success('Attachment added');
+      onChanged?.();
+    } catch (e: any) {
+      message.error(e?.response?.data?.error?.message ?? 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+    return Upload.LIST_IGNORE;
+  };
+
+  const handleDeleteAttachment = async (attachmentId: string) => {
+    try {
+      await purchaseService.deleteAttachment(grn.id, attachmentId);
+      message.success('Attachment removed');
+      onChanged?.();
+    } catch (e: any) {
+      message.error(e?.response?.data?.error?.message ?? 'Failed to remove');
+    }
+  };
 
   const isFullyReturned =
     grn.items.length > 0 &&
@@ -121,11 +183,18 @@ const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose }) => {
       dataIndex: 'costPrice',
       key: 'costPrice',
       align: 'right' as const,
-      width: 120,
-      render: (v: number) => (
-        <Text style={{ fontFamily: 'monospace' }}>
-          {v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </Text>
+      width: 130,
+      render: (v: number, r: GRNItem) => (
+        <Space direction="vertical" size={0} align="end">
+          <Text style={{ fontFamily: 'monospace' }}>
+            {v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </Text>
+          {r.landedCostPerUnit > 0 && (
+            <Text type="secondary" style={{ fontSize: 11 }}>
+              +{r.landedCostPerUnit.toFixed(2)} landed
+            </Text>
+          )}
+        </Space>
       ),
     },
     {
@@ -151,6 +220,24 @@ const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose }) => {
         const color = diff < 0 ? 'volcano' : diff < 6 ? 'red' : diff < 12 ? 'orange' : 'green';
         return <Tag color={color} style={{ borderRadius: '12px' }}>{dayjs(r.expiryDate).format('DD MMM YYYY')}</Tag>;
       },
+    },
+    {
+      title: 'Lot',
+      key: 'lot',
+      width: 90,
+      align: 'center' as const,
+      render: (_: any, r: GRNItem) =>
+        r.lotNumber ? <Text style={{ fontFamily: 'monospace', fontSize: 12 }}>{r.lotNumber}</Text> : <Text type="secondary" disabled>-</Text>,
+    },
+    {
+      title: 'QC',
+      key: 'qc',
+      width: 90,
+      align: 'center' as const,
+      render: (_: any, r: GRNItem) =>
+        r.rejectedQty > 0
+          ? <Tooltip title={r.inspectionNote || 'Rejected at receiving inspection'}><Tag color="red">−{r.rejectedQty} rejected</Tag></Tooltip>
+          : <Tag color="green">Accepted</Tag>,
     },
     {
       title: 'S/N',
@@ -223,6 +310,29 @@ const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose }) => {
                   Create Return
                 </Button>
               )}
+              {grn.status === 'completed' && (
+                <Button icon={<AuditOutlined />} onClick={() => setJournalOpen(true)}>
+                  View Journal
+                </Button>
+              )}
+              {grn.status !== 'cancelled' && canApprove && (
+                <Popconfirm
+                  title={grn.status === 'completed' ? 'Cancel this GRN?' : 'Cancel this draft?'}
+                  description={
+                    grn.status === 'completed'
+                      ? 'This reverses stock, supplier balance and GL postings for this GRN.'
+                      : undefined
+                  }
+                  onConfirm={handleCancel}
+                  okText="Cancel GRN"
+                  cancelText="Back"
+                  okButtonProps={{ danger: true, loading: cancelling }}
+                >
+                  <Button icon={<StopOutlined />} danger loading={cancelling}>
+                    Cancel GRN
+                  </Button>
+                </Popconfirm>
+              )}
               <Button icon={<PrinterOutlined />} onClick={handlePrint}>
                 Print GRN
               </Button>
@@ -257,6 +367,11 @@ const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose }) => {
                   {grn.paymentMethod.toUpperCase()}
                 </Tag>
               </Descriptions.Item>
+              {grn.purchaseOrderNumber && (
+                <Descriptions.Item label="Purchase Order">
+                  <Tag color="geekblue" style={{ margin: 0 }}>{grn.purchaseOrderNumber}</Tag>
+                </Descriptions.Item>
+              )}
             </Descriptions>
           </Card>
 
@@ -299,6 +414,29 @@ const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose }) => {
             />
           </div>
 
+          {/* Section 2b: Attachments */}
+          <Card
+            size="small"
+            title={<Space><PaperClipOutlined /> Attachments ({grn.attachments?.length ?? 0})</Space>}
+            styles={{ header: { backgroundColor: '#fafafa' } }}
+          >
+            <Space direction="vertical" style={{ width: '100%' }}>
+              {(grn.attachments ?? []).map((a) => (
+                <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                  <a href={a.fileUrl} target="_blank" rel="noreferrer">{a.fileName}</a>
+                  <Popconfirm title="Remove this attachment?" onConfirm={() => handleDeleteAttachment(a.id)}>
+                    <Button size="small" danger type="text" icon={<DeleteOutlined />} />
+                  </Popconfirm>
+                </div>
+              ))}
+              <Upload beforeUpload={handleUploadAttachment} showUploadList={false} accept="image/*,application/pdf">
+                <Button size="small" icon={<UploadOutlined />} loading={uploading}>
+                  Add packing slip / invoice scan
+                </Button>
+              </Upload>
+            </Space>
+          </Card>
+
           {/* Section 3: Summary & Notes */}
           <Row gutter={24}>
             <Col xs={24} md={12}>
@@ -323,6 +461,19 @@ const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose }) => {
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <Text type="secondary">Discount</Text>
                       <Text type="success" style={{ fontFamily: 'monospace' }}>- {fmt(grn.discountAmount)}</Text>
+                    </div>
+                  )}
+
+                  {(grn.charges ?? []).map((c) => (
+                    <div key={c.id ?? c.chargeType} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Text type="secondary" style={{ textTransform: 'capitalize' }}>{c.chargeType}{c.note ? ` (${c.note})` : ''}</Text>
+                      <Text style={{ fontFamily: 'monospace' }}>{fmt(c.amount)}</Text>
+                    </div>
+                  ))}
+                  {grn.totalLandedCost > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Text type="secondary">Landed cost → inventory</Text>
+                      <Text style={{ fontFamily: 'monospace' }}>+ {fmt(grn.totalLandedCost)}</Text>
                     </div>
                   )}
 
@@ -378,6 +529,13 @@ const PurchaseDetailsModal: React.FC<Props> = ({ visible, grn, onClose }) => {
       <div style={{ display: 'none' }}>
         <PrintGRN ref={printRef} grn={grn} />
       </div>
+
+      <GRNJournalModal
+        visible={journalOpen}
+        grnId={grn.id}
+        grnNumber={grn.grnNumber}
+        onClose={() => setJournalOpen(false)}
+      />
     </>
   );
 };

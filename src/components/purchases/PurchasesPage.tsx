@@ -22,7 +22,7 @@ const { RangePicker } = DatePicker;
 const PurchasesPage: React.FC = () => {
   const navigate = useNavigate();
   const [messageApi, contextHolder] = message.useMessage();
-  const { grns, loading, error, pagination, listGRNs, getGRN } = usePurchaseStore();
+  const { grns, loading, error, pagination, listGRNs, getGRN, cancelGRN, deleteGRN } = usePurchaseStore();
   const { getAllWarehouses } = useWarehouseStore();
 
   const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([]);
@@ -104,6 +104,26 @@ const PurchasesPage: React.FC = () => {
 
   const handleReturn = (record: GRNListItem) => {
     navigate(`/purchase-returns/new/${record.id}`);
+  };
+
+  const handleCancel = async (record: GRNListItem) => {
+    try {
+      await cancelGRN(record.id);
+      messageApi.success(`GRN ${record.grnNumber} cancelled`);
+      fetchGRNs(pagination.page, pagination.perPage);
+    } catch (e: any) {
+      messageApi.error(e?.response?.data?.error?.message || 'Failed to cancel GRN');
+    }
+  };
+
+  const handleDelete = async (record: GRNListItem) => {
+    try {
+      await deleteGRN(record.id);
+      messageApi.success(`Draft GRN ${record.grnNumber} deleted`);
+      fetchGRNs(pagination.page, pagination.perPage);
+    } catch (e: any) {
+      messageApi.error(e?.response?.data?.error?.message || 'Failed to delete draft');
+    }
   };
 
   const buildExportParams = () => ({
@@ -230,6 +250,8 @@ const PurchasesPage: React.FC = () => {
           onView={handleView}
           onEdit={handleEdit}
           onReturn={handleReturn}
+          onCancel={handleCancel}
+          onDelete={handleDelete}
           pagination={{
             page: pagination.page,
             perPage: pagination.perPage,
@@ -245,6 +267,11 @@ const PurchasesPage: React.FC = () => {
           onClose={() => {
             setViewModalVisible(false);
             setSelectedGRN(null);
+          }}
+          onChanged={async () => {
+            if (!selectedGRN) return;
+            const data = await getGRN(selectedGRN.id);
+            if (data) setSelectedGRN(data);
           }}
         />
       </PageLayout>

@@ -1,21 +1,30 @@
 import React, { useState, useEffect } from "react";
-import { Form, InputNumber, Row, Col, Typography, Button, Tooltip } from "antd";
+import { Form, InputNumber, Row, Col, Typography, Button, Tooltip, message } from "antd";
 import {
     CalculatorOutlined,
     ShopOutlined,
     TagOutlined,
     ThunderboltOutlined,
-    UnlockOutlined
+    UnlockOutlined,
+    LockOutlined
 } from "@ant-design/icons";
+import { productService } from "../../services/inventory/productService";
 
 const { Text } = Typography;
 
 interface PricingFieldsProps {
     prefix: (string | number)[]; // Form path prefix (relative for items)
     absolutePrefix?: (string | number)[]; // Absolute path for hooks
+    // When set, a "Lock Price" toggle is shown that persists immediately via
+    // its own endpoint (not part of the main product form submit). For a
+    // variation, entityId is the variation id and productId its parent product.
+    entityId?: string;
+    isVariation?: boolean;
+    productId?: string;
+    initialLocked?: boolean;
 }
 
-const PricingFields: React.FC<PricingFieldsProps> = ({ prefix, absolutePrefix }) => {
+const PricingFields: React.FC<PricingFieldsProps> = ({ prefix, absolutePrefix, entityId, isVariation, productId, initialLocked }) => {
     const form = Form.useFormInstance();
     // Use absolute prefix for hooks if provided, otherwise fallback to prefix
     const watchPrefix = absolutePrefix || prefix;
@@ -26,6 +35,34 @@ const PricingFields: React.FC<PricingFieldsProps> = ({ prefix, absolutePrefix })
 
     // State to track if manual override is enabled
     const [isManualSellingPrice, setIsManualSellingPrice] = useState(false);
+
+    // Price lock: when on, GRN receiving won't auto-update retail/wholesale/our
+    // price as new priced batches arrive — a manually-set price wins.
+    const [priceLocked, setPriceLocked] = useState(!!initialLocked);
+    const [lockSaving, setLockSaving] = useState(false);
+
+    useEffect(() => {
+        setPriceLocked(!!initialLocked);
+    }, [initialLocked]);
+
+    const togglePriceLock = async () => {
+        if (!entityId) return;
+        const next = !priceLocked;
+        setLockSaving(true);
+        try {
+            if (isVariation && productId) {
+                await productService.setVariationPriceLock(productId, entityId, next);
+            } else {
+                await productService.setPriceLock(entityId, next);
+            }
+            setPriceLocked(next);
+            message.success(next ? "Selling prices locked" : "Selling prices unlocked");
+        } catch (e: any) {
+            message.error(e?.response?.data?.error?.message ?? "Failed to update price lock");
+        } finally {
+            setLockSaving(false);
+        }
+    };
 
     // Track if we have performed the initial check
     const isInitializedRef = React.useRef(false);
@@ -110,9 +147,35 @@ const PricingFields: React.FC<PricingFieldsProps> = ({ prefix, absolutePrefix })
 
     return (
         <div className="pricing-section">
-            <Text className="text-xs font-normal uppercase text-slate-400 mb-6 block tracking-wider">
-                Financial Configuration
-            </Text>
+            <div className="flex items-center justify-between mb-6">
+                <Text className="text-xs font-normal uppercase text-slate-400 block tracking-wider">
+                    Financial Configuration
+                </Text>
+                {entityId && (
+                    <Tooltip
+                        title={
+                            priceLocked
+                                ? "Selling prices are locked — receiving goods (GRN) won't change them. Click to unlock."
+                                : "Lock selling prices so receiving goods (GRN) can't silently overwrite a manual price."
+                        }
+                    >
+                        <Button
+                            type="text"
+                            size="small"
+                            loading={lockSaving}
+                            onClick={togglePriceLock}
+                            icon={priceLocked ? <LockOutlined className="text-[10px]" /> : <UnlockOutlined className="text-[10px]" />}
+                            className={`flex items-center gap-1 text-[10px] rounded px-2 h-6 border shadow-sm ${
+                                priceLocked
+                                    ? "text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border-red-200"
+                                    : "text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 border-slate-200"
+                            }`}
+                        >
+                            {priceLocked ? "Price Locked" : "Lock Price"}
+                        </Button>
+                    </Tooltip>
+                )}
+            </div>
             <Row gutter={[24, 24]}>
                 <Col span={6}>
                     <Form.Item

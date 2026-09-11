@@ -32,6 +32,7 @@ import {
   WarningOutlined,
   StopOutlined,
   ClockCircleOutlined,
+  ShoppingOutlined,
 } from "@ant-design/icons";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -313,6 +314,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     if (p.startsWith("/sales")) return "sales";
     if (p.startsWith("/pos")) return "pos";
     if (p.startsWith("/purchase-returns")) return "purchase-returns";
+    if (p.startsWith("/purchase-orders")) return "purchase-orders";
     if (p.startsWith("/purchases")) return "purchases";
     if (p.startsWith("/expense-categories")) return "expense-categories";
     if (p.startsWith("/expenses")) return "expenses";
@@ -339,7 +341,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     const p = location.pathname;
     const next = new Set<string>();
     if (["/brands", "/categories", "/subcategories", "/units", "/products", "/inventory", "/adjustments", "/stock-takes", "/warehouses", "/variations", "/warranties"].some((s) => p.startsWith(s))) next.add("inventory");
-    if (["/sales", "/pos", "/purchases", "/sales-returns", "/purchase-returns", "/expenses", "/expense-categories", "/cheques", "/cheque-returns"].some((s) => p.startsWith(s))) next.add("transactions");
+    if (["/sales", "/pos", "/purchases", "/purchase-orders", "/sales-returns", "/purchase-returns", "/expenses", "/expense-categories", "/cheques", "/cheque-returns"].some((s) => p.startsWith(s))) next.add("transactions");
     if (["/customers", "/suppliers", "/credit-supplier"].some((s) => p.startsWith(s))) next.add("contacts");
     if (["/users", "/roles"].some((s) => p.startsWith(s))) next.add("team");
     setExpandedKeys(next);
@@ -428,6 +430,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       txItems.push({ key: "sales", label: "Sales", icon: <DollarOutlined />, path: "/sales" });
     if (isOwner || hasPermission(PERMISSIONS.SALES_REFUNDS))
       txItems.push({ key: "sales-returns", label: "Sale Returns", icon: <RollbackOutlined />, path: "/sales-returns" });
+    if (isOwner || hasPermission(PERMISSIONS.PURCHASES_VIEW))
+      txItems.push({ key: "purchase-orders", label: "Purchase Orders", icon: <ShoppingOutlined />, path: "/purchase-orders" });
     if (isOwner || hasPermission(PERMISSIONS.PURCHASES_VIEW))
       txItems.push({ key: "purchases", label: "GRN", icon: <FileTextOutlined />, path: "/purchases" });
     if (isOwner || hasPermission(PERMISSIONS.PURCHASES_RETURNS))

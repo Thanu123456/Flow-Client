@@ -14,6 +14,8 @@ import type {
   ProductSearchResult,
   ProductVariationOption,
   SupplierBalance,
+  JournalEntry,
+  JournalLine,
 } from "../../types/entities/purchase.types";
 
 // --- Transform helpers ---
@@ -51,6 +53,30 @@ const transformGRNItem = (item: any): GRNItem => ({
   serialNumbers: item.serial_numbers || undefined,
   currentStock: toNum(item.current_stock),
   returnedQty: toNum(item.returned_qty),
+  purchaseOrderItemId: item.purchase_order_item_id || undefined,
+  lotNumber: item.lot_number || undefined,
+  inspectionStatus: item.inspection_status || 'accepted',
+  rejectedQty: toNum(item.rejected_qty),
+  inspectionNote: item.inspection_note || undefined,
+  landedCostPerUnit: toNum(item.landed_cost_per_unit),
+  effectiveUnitCost: toNum(item.effective_unit_cost),
+  priceWarning: item.price_warning || undefined,
+});
+
+const transformCharge = (c: any): import('../../types/entities/purchase.types').GRNCharge => ({
+  id: c.id,
+  chargeType: c.charge_type,
+  amount: toNum(c.amount),
+  allocationMethod: c.allocation_method || 'value',
+  note: c.note || undefined,
+});
+
+const transformAttachment = (a: any): import('../../types/entities/purchase.types').GRNAttachment => ({
+  id: a.id,
+  fileUrl: a.file_url,
+  fileName: a.file_name,
+  contentType: a.content_type || undefined,
+  createdAt: a.created_at,
 });
 
 const transformGRN = (g: any): GRN => ({
@@ -74,6 +100,11 @@ const transformGRN = (g: any): GRN => ({
   isPostDated: g.is_post_dated ?? false,
   status: g.status,
   notes: g.notes || undefined,
+  purchaseOrderId: g.purchase_order_id || undefined,
+  purchaseOrderNumber: g.purchase_order_number || undefined,
+  charges: Array.isArray(g.charges) ? g.charges.map(transformCharge) : [],
+  totalLandedCost: toNum(g.total_landed_cost),
+  attachments: Array.isArray(g.attachments) ? g.attachments.map(transformAttachment) : [],
   grnDate: g.grn_date,
   items: Array.isArray(g.items) ? g.items.map(transformGRNItem) : [],
   itemCount: g.item_count || 0,
@@ -178,6 +209,7 @@ export const purchaseService = {
       payment_method: data.paymentMethod,
       notes: data.notes || undefined,
       grn_date: data.grnDate || undefined,
+      purchase_order_id: data.purchaseOrderId || undefined,
     };
     const response = await axiosInstance.post('/admin/purchases', payload);
     const grn = response.data.grn || response.data.data || response.data;
@@ -218,6 +250,11 @@ export const purchaseService = {
       manufacture_date: data.manufactureDate || undefined,
       expiry_date: data.expiryDate || undefined,
       has_serial_numbers: data.hasSerialNumbers || undefined,
+      purchase_order_item_id: data.purchaseOrderItemId || undefined,
+      lot_number: data.lotNumber || undefined,
+      inspection_status: data.inspectionStatus || undefined,
+      rejected_qty: data.rejectedQty || undefined,
+      inspection_note: data.inspectionNote || undefined,
     };
     const response = await axiosInstance.post(`/admin/purchases/${grnId}/items`, payload);
     const item = response.data.item || response.data.data || response.data;
@@ -234,6 +271,10 @@ export const purchaseService = {
     if (data.ourPrice !== undefined) payload.our_price = data.ourPrice;
     if (data.manufactureDate !== undefined) payload.manufacture_date = data.manufactureDate;
     if (data.expiryDate !== undefined) payload.expiry_date = data.expiryDate;
+    if (data.lotNumber !== undefined) payload.lot_number = data.lotNumber;
+    if (data.inspectionStatus !== undefined) payload.inspection_status = data.inspectionStatus;
+    if (data.rejectedQty !== undefined) payload.rejected_qty = data.rejectedQty;
+    if (data.inspectionNote !== undefined) payload.inspection_note = data.inspectionNote;
 
     const response = await axiosInstance.put(`/admin/purchases/${grnId}/items/${itemId}`, payload);
     const item = response.data.item || response.data.data || response.data;
@@ -265,6 +306,100 @@ export const purchaseService = {
     const response = await axiosInstance.post(`/admin/purchases/${id}/cancel`);
     const grn = response.data.grn || response.data.data || response.data;
     return transformGRN(grn);
+  },
+
+  // Landed-cost charge lines on a GRN
+  getCharges: async (grnId: string): Promise<import('../../types/entities/purchase.types').GRNCharge[]> => {
+    const response = await axiosInstance.get(`/admin/purchases/${grnId}/charges`);
+    const list = response.data.data || response.data || [];
+    return (Array.isArray(list) ? list : []).map(transformCharge);
+  },
+
+  setCharges: async (
+    grnId: string,
+    charges: import('../../types/entities/purchase.types').GRNCharge[],
+  ): Promise<import('../../types/entities/purchase.types').GRNCharge[]> => {
+    const payload = {
+      charges: charges.map((c) => ({
+        charge_type: c.chargeType,
+        amount: c.amount,
+        allocation_method: c.allocationMethod,
+        note: c.note || undefined,
+      })),
+    };
+    const response = await axiosInstance.put(`/admin/purchases/${grnId}/charges`, payload);
+    const list = response.data.data || response.data || [];
+    return (Array.isArray(list) ? list : []).map(transformCharge);
+  },
+
+  // Document attachments on a GRN (packing slip, supplier invoice scan)
+  getAttachments: async (grnId: string): Promise<import('../../types/entities/purchase.types').GRNAttachment[]> => {
+    const response = await axiosInstance.get(`/admin/purchases/${grnId}/attachments`);
+    const list = response.data.data || response.data || [];
+    return (Array.isArray(list) ? list : []).map(transformAttachment);
+  },
+
+  addAttachment: async (
+    grnId: string,
+    data: { fileName: string; contentType?: string; data: string },
+  ): Promise<import('../../types/entities/purchase.types').GRNAttachment> => {
+    const response = await axiosInstance.post(`/admin/purchases/${grnId}/attachments`, {
+      file_name: data.fileName,
+      content_type: data.contentType || undefined,
+      data: data.data,
+    });
+    const att = response.data.data || response.data;
+    return transformAttachment(att);
+  },
+
+  deleteAttachment: async (grnId: string, attachmentId: string): Promise<void> => {
+    await axiosInstance.delete(`/admin/purchases/${grnId}/attachments/${attachmentId}`);
+  },
+
+  // Record receiving inspection for a saved GRN line
+  inspectItem: async (
+    grnId: string,
+    itemId: string,
+    data: { status: 'pending' | 'accepted' | 'rejected'; rejectedQty?: number; note?: string },
+  ): Promise<GRNItem> => {
+    const response = await axiosInstance.post(`/admin/purchases/${grnId}/items/${itemId}/inspect`, {
+      status: data.status,
+      rejected_qty: data.rejectedQty,
+      note: data.note || undefined,
+    });
+    const item = response.data.item || response.data.data || response.data;
+    return transformGRNItem(item);
+  },
+
+  // List the serial numbers of a GRN line still in stock — used to offer
+  // choices when composing a purchase return against a serialised item.
+  getAvailableSerials: async (grnId: string, itemId: string): Promise<string[]> => {
+    const response = await axiosInstance.get(`/admin/purchases/${grnId}/items/${itemId}/available-serials`);
+    const data = response.data.data || response.data || [];
+    return Array.isArray(data) ? data : [];
+  },
+
+  // Get the GL journal entries raised for a GRN (goods receipt + vendor bill)
+  getGRNJournal: async (id: string): Promise<JournalEntry[]> => {
+    const response = await axiosInstance.get(`/admin/purchases/${id}/journal`);
+    const entries = response.data.data || response.data || [];
+    return (Array.isArray(entries) ? entries : []).map((e: any): JournalEntry => ({
+      id: e.id,
+      entryNumber: e.entry_number,
+      entryDate: e.entry_date,
+      description: e.description,
+      reversesEntryId: e.reverses_entry_id || undefined,
+      reversedByEntryId: e.reversed_by_entry_id || undefined,
+      createdAt: e.created_at,
+      lines: Array.isArray(e.lines)
+        ? e.lines.map((l: any): JournalLine => ({
+            accountCode: l.account_code,
+            accountName: l.account_name,
+            debit: toNum(l.debit),
+            credit: toNum(l.credit),
+          }))
+        : [],
+    }));
   },
 
   // Add serial numbers to a GRN item

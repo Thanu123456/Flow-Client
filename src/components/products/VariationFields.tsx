@@ -22,9 +22,11 @@ interface VariationFieldsProps {
     remove: (index: number) => void;
     optionLabel?: string;
     editProductId?: string;
+    variationId?: string;
+    initialPriceLocked?: boolean;
 }
 
-const VariationFields: React.FC<VariationFieldsProps> = ({ name, remove, optionLabel, editProductId }) => {
+const VariationFields: React.FC<VariationFieldsProps> = ({ name, remove, optionLabel, editProductId, variationId, initialPriceLocked }) => {
     const form = Form.useFormInstance();
     const [messageApi, contextHolder] = message.useMessage();
     const prefix: (string | number)[] = [name]; // Fix: items must be relative to the index within Form.List
@@ -239,7 +241,14 @@ const VariationFields: React.FC<VariationFieldsProps> = ({ name, remove, optionL
                         key="1"
                     >
                         <div className="p-4 space-y-8 bg-slate-50/30">
-                            <PricingFields prefix={prefix} absolutePrefix={fullPrefix} />
+                            <PricingFields
+                                prefix={prefix}
+                                absolutePrefix={fullPrefix}
+                                entityId={variationId}
+                                isVariation
+                                productId={editProductId}
+                                initialLocked={initialPriceLocked}
+                            />
                             <Divider dashed className="my-0 border-slate-200" />
                             <DiscountFields prefix={prefix} />
                         </div>

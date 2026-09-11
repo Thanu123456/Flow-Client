@@ -2,25 +2,29 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   App, Card, Row, Col, Select, AutoComplete, DatePicker, Input, Button, Space,
   InputNumber, Checkbox, Modal, Form, message, Typography, Divider, Tag, Alert,
-  Spin, Tooltip,
+  Spin, Tooltip, Table,
 } from 'antd';
 import {
   SaveOutlined, CheckCircleOutlined, ReloadOutlined,
-  PlusOutlined, SearchOutlined, ExclamationCircleOutlined,
+  PlusOutlined, SearchOutlined, ExclamationCircleOutlined, DeleteOutlined,
 } from '@ant-design/icons';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 
 import { usePurchaseStore } from '../../store/transactions/purchaseStore';
 import { useAllWarehouses } from '../../hooks/data/useAllWarehouses';
 import { useSupplierStore } from '../../store/management/supplierStore';
 import { purchaseService } from '../../services/transactions/purchaseService';
+import { purchaseOrderService } from '../../services/transactions/purchaseOrderService';
 import type {
   PaymentMethod,
   GRNItemLocal,
+  GRNCharge,
+  ChargeType,
   ProductSearchResult,
   ProductVariationOption,
 } from '../../types/entities/purchase.types';
+import type { PurchaseOrder, POItem } from '../../types/entities/purchaseOrder.types';
 import PurchaseItemsTable from './PurchaseItemsTable';
 import PurchaseSummary from './PurchaseSummary';
 
@@ -104,10 +108,93 @@ const SerialNumberModal: React.FC<SerialModalProps> = ({
   );
 };
 
+// ─── QC Inspection Modal ────────────────────────────────────────────────────
+interface QCInspectModalProps {
+  open: boolean;
+  item: GRNItemLocal | null;
+  submitting: boolean;
+  onSave: (status: 'accepted' | 'rejected' | 'pending', rejectedQty: number, note: string) => void;
+  onCancel: () => void;
+}
+const QCInspectModal: React.FC<QCInspectModalProps> = ({
+  open, item, submitting, onSave, onCancel,
+}) => {
+  const [status, setStatus] = useState<'accepted' | 'rejected' | 'pending'>('accepted');
+  const [qty, setQty] = useState<number>(0);
+  const [note, setNote] = useState('');
+
+  useEffect(() => {
+    if (open && item) {
+      setStatus((item.inspectionStatus as any) || (item.rejectedQty ? 'rejected' : 'accepted'));
+      setQty(item.rejectedQty || 0);
+      setNote(item.inspectionNote || '');
+    }
+  }, [open, item]);
+
+  if (!item) return null;
+
+  const handleOk = () => onSave(status, status === 'rejected' ? qty : 0, note);
+
+  return (
+    <Modal
+      open={open}
+      title={`Receiving Inspection — ${item.productName}`}
+      onCancel={onCancel}
+      onOk={handleOk}
+      okText="Save Inspection"
+      confirmLoading={submitting}
+      width={440}
+    >
+      <Space direction="vertical" style={{ width: '100%' }} size={12}>
+        <Text type="secondary">Received quantity: {item.quantity}</Text>
+        <div>
+          <Text strong>Outcome</Text>
+          <div style={{ marginTop: 6 }}>
+            <Space>
+              <Button type={status === 'accepted' ? 'primary' : 'default'} onClick={() => setStatus('accepted')}>
+                Accept
+              </Button>
+              <Button danger={status === 'rejected'} type={status === 'rejected' ? 'primary' : 'default'} onClick={() => setStatus('rejected')}>
+                Reject
+              </Button>
+              <Button type={status === 'pending' ? 'primary' : 'default'} onClick={() => setStatus('pending')}>
+                Hold (pending)
+              </Button>
+            </Space>
+          </div>
+        </div>
+        {status === 'rejected' && (
+          <div>
+            <Text strong>Rejected quantity</Text>
+            <InputNumber
+              min={0.0001}
+              max={item.quantity}
+              value={qty || item.quantity}
+              style={{ width: '100%', marginTop: 6 }}
+              onChange={(v) => setQty(v || 0)}
+            />
+          </div>
+        )}
+        <div>
+          <Text strong>Note</Text>
+          <TextArea
+            rows={2}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Reason / inspection remarks (optional)"
+            style={{ marginTop: 6 }}
+          />
+        </div>
+      </Space>
+    </Modal>
+  );
+};
+
 // ─── Main Component ─────────────────────────────────────────────────────────
 const AddPurchasePage: React.FC = () => {
   const navigate = useNavigate();
   const { id: editId } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const isEdit = Boolean(editId);
   const [messageApi, contextHolder] = message.useMessage();
   const { modal } = App.useApp();
@@ -128,6 +215,10 @@ const AddPurchasePage: React.FC = () => {
   const [notes, setNotes] = useState('');
   const [supplierLocked, setSupplierLocked] = useState(false);
 
+  // ── Purchase order receiving ──────────────────────────────
+  const [linkedPO, setLinkedPO] = useState<PurchaseOrder | null>(null);
+  const poId = searchParams.get('poId') || undefined;
+
   // ── Data lists ───────────────────────────────────────────
   const [supplierOptions, setSupplierOptions] = useState<{ value: string; label: string }[]>([]);
   const [_searchingSuppliers, setSearchingSuppliers] = useState(false);
@@ -146,6 +237,8 @@ const AddPurchasePage: React.FC = () => {
   const [ourPrice, setOurPrice] = useState<number>(0);
   const [manufactureDate, setManufactureDate] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
+  const [lotNumber, setLotNumber] = useState('');
+  const [rejectedQty, setRejectedQty] = useState<number>(0);
   const [hasSerialNumbers, setHasSerialNumbers] = useState(false);
   const [pendingSerials, setPendingSerials] = useState<string[]>([]);
   const [serialModalOpen, setSerialModalOpen] = useState(false);
@@ -154,12 +247,26 @@ const AddPurchasePage: React.FC = () => {
   // Set right before a programmatic productSearch change so the debounced effect
   // doesn't fire a redundant search for the name we just filled in.
   const skipNextSearchRef = useRef(false);
+  // PO line currently loaded into the product form (via "Load" on the PO panel).
+  // Cleared by resetProductForm; consumed by doAddItem so the added GRN line
+  // stays linked to its PO line.
+  const pendingPOItemIdRef = useRef<string | null>(null);
+  const [loadingPOLine, setLoadingPOLine] = useState<string | null>(null);
   // Item whose quantity is being changed via the items table; re-opens the
   // serial modal so its serial count stays in sync with the new quantity.
   const [editingSerialItem, setEditingSerialItem] = useState<GRNItemLocal | null>(null);
+  // Item whose receiving inspection (QC) is being recorded via the dedicated
+  // /inspect endpoint. Only items already saved to the backend (backendId set)
+  // can be inspected — see PurchaseItemsTable's Inspect action.
+  const [inspectingItem, setInspectingItem] = useState<GRNItemLocal | null>(null);
+  const [inspectingSubmitting, setInspectingSubmitting] = useState(false);
 
   // ── Items list ───────────────────────────────────────────
   const [items, setItems] = useState<GRNItemLocal[]>([]);
+
+  // ── Landed-cost charges (freight / duty / insurance) ─────
+  const [charges, setCharges] = useState<GRNCharge[]>([]);
+  const chargesTotal = charges.reduce((s, c) => s + (c.amount || 0), 0);
 
   // ── Payment state ────────────────────────────────────────
   const [discountAmount, setDiscountAmount] = useState(0);
@@ -198,6 +305,11 @@ const AddPurchasePage: React.FC = () => {
           purchaseService.getSupplierBalance(grn.supplierId).then((b) => setSupplierBalance(b.outstandingBalance));
         }
 
+        // Show the linked PO's outstanding lines (if any) so more can be received
+        if (grn.purchaseOrderId) {
+          purchaseOrderService.get(grn.purchaseOrderId).then(setLinkedPO).catch(() => {});
+        }
+
         // Map existing items to local state
         setItems(
           grn.items.map((item) => ({
@@ -226,14 +338,37 @@ const AddPurchasePage: React.FC = () => {
             hasSerialNumbers: item.hasSerialNumbers,
             serialNumbers: item.serialNumbers || [],
             currentStock: item.currentStock,
+            purchaseOrderItemId: item.purchaseOrderItemId,
+            lotNumber: item.lotNumber,
+            inspectionStatus: item.inspectionStatus,
+            rejectedQty: item.rejectedQty > 0 ? item.rejectedQty : undefined,
+            inspectionNote: item.inspectionNote,
           }))
         );
+        purchaseService.getCharges(editId).then(setCharges).catch(() => {});
       }).catch(() => {
         messageApi.error('Failed to load GRN for editing');
         navigate('/purchases');
       });
     }
   }, [editId]);
+
+  // ── Load the purchase order being received against (?poId=...) ──────────
+  useEffect(() => {
+    if (isEdit || !poId) return;
+    purchaseOrderService.get(poId).then((po) => {
+      setLinkedPO(po);
+      setWarehouseId(po.warehouseId);
+      setSupplierId(po.supplierId);
+      setSupplierName(po.supplierName || '');
+      if (po.supplierName) {
+        setSupplierOptions([{ value: po.supplierId, label: po.supplierName }]);
+      }
+      purchaseService.getSupplierBalance(po.supplierId).then((b) => setSupplierBalance(b.outstandingBalance));
+    }).catch(() => {
+      messageApi.error('Failed to load the purchase order');
+    });
+  }, [isEdit, poId]);
 
   // ── Product form helpers ─────────────────────────────────
   const resetProductForm = useCallback(() => {
@@ -247,8 +382,11 @@ const AddPurchasePage: React.FC = () => {
     setOurPrice(0);
     setManufactureDate('');
     setExpiryDate('');
+    setLotNumber('');
+    setRejectedQty(0);
     setHasSerialNumbers(false);
     setPendingSerials([]);
+    pendingPOItemIdRef.current = null;
   }, []);
 
   const focusProductSearch = useCallback(() => {
@@ -390,6 +528,70 @@ const AddPurchasePage: React.FC = () => {
     }
   };
 
+  // Load a PO line into the Product Details form: its current selling prices are
+  // pre-filled and editable, cost + quantity come from the PO, and the line
+  // stays linked to the PO (purchaseOrderItemId) once "Add to List" is pressed.
+  const handleLoadFromPO = async (poItem: POItem) => {
+    if (poItem.outstandingQty <= 0) return;
+    if (items.some((i) => !i.isDeleted && i.purchaseOrderItemId === poItem.id)) {
+      messageApi.info('This line has already been added to the GRN');
+      return;
+    }
+
+    setLoadingPOLine(poItem.id);
+    try {
+      const results = await purchaseService.searchProducts(
+        poItem.productSKU || poItem.productName,
+        warehouseId || undefined,
+      );
+      const product = results.find((p) => p.id === poItem.productId);
+
+      if (product) {
+        handleSelectProduct(product);
+        if (poItem.variationId && product.variations?.some((v) => v.id === poItem.variationId)) {
+          handleSelectVariation(poItem.variationId);
+        }
+        // PO wins on cost + quantity; selling prices keep the product defaults
+        // (now editable in the form).
+        setCostPrice(poItem.unitCost || product.costPrice);
+        setQuantity(poItem.outstandingQty);
+      } else {
+        // Product not returned by search (inactive / renamed) — fall back to a
+        // minimal selection; selling prices default to the product's current
+        // ones on the backend.
+        setSelectedProduct({
+          id: poItem.productId,
+          name: poItem.productName,
+          sku: poItem.productSKU,
+          productType: 'single',
+          costPrice: poItem.unitCost,
+          retailPrice: 0,
+          wholesalePrice: 0,
+          ourPrice: 0,
+          currentStock: 0,
+          unitId: poItem.unitId,
+          unitName: poItem.unitName,
+          unitShortName: poItem.unitShortName,
+          hasSerialNumbers: false,
+        } as ProductSearchResult);
+        setSelectedVariation(null);
+        setCostPrice(poItem.unitCost);
+        setRetailPrice(0);
+        setWholesalePrice(0);
+        setOurPrice(0);
+        setQuantity(poItem.outstandingQty);
+        setProductSearch(`${poItem.productSKU ? poItem.productSKU + ' - ' : ''}${poItem.productName}`);
+      }
+
+      pendingPOItemIdRef.current = poItem.id;
+      messageApi.info('Adjust the prices below, then press "Add to List"');
+    } catch {
+      messageApi.error('Failed to load the product');
+    } finally {
+      setLoadingPOLine(null);
+    }
+  };
+
   // ── Supplier search ──────────────────────────────────────
   const handleSupplierSearch = async (query: string) => {
     if (!query || query.length < 1) {
@@ -460,14 +662,19 @@ const AddPurchasePage: React.FC = () => {
 
     const variation = selectedVariation;
     const netPrice = quantity * costPrice;
+    const poItemId = pendingPOItemIdRef.current;
 
-    // Check if same product+variation already in list → increment qty
-    const existingIdx = items.findIndex(
-      (i) =>
-        !i.isDeleted &&
-        i.productId === selectedProduct.id &&
-        (i.variationId ?? '') === (variation?.id ?? '')
-    );
+    // Check if same product+variation already in list → increment qty. A line
+    // being received against a PO stays its own row so its received quantity is
+    // tracked separately.
+    const existingIdx = poItemId
+      ? -1
+      : items.findIndex(
+          (i) =>
+            !i.isDeleted &&
+            i.productId === selectedProduct.id &&
+            (i.variationId ?? '') === (variation?.id ?? '')
+        );
 
     if (existingIdx >= 0) {
       setItems((prev) =>
@@ -509,6 +716,9 @@ const AddPurchasePage: React.FC = () => {
         hasSerialNumbers,
         serialNumbers: serials,
         currentStock: variation ? variation.currentStock : selectedProduct.currentStock,
+        purchaseOrderItemId: poItemId ?? undefined,
+        lotNumber: lotNumber || undefined,
+        rejectedQty: rejectedQty > 0 ? rejectedQty : undefined,
       };
       setItems((prev) => [...prev, newItem]);
     }
@@ -549,6 +759,42 @@ const AddPurchasePage: React.FC = () => {
     if (remaining.length === 0) setSupplierLocked(false);
   };
 
+  // ── Receiving inspection (QC) ─────────────────────────────
+  const handleSaveInspection = async (
+    status: 'accepted' | 'rejected' | 'pending',
+    rejectedQty: number,
+    note: string,
+  ) => {
+    if (!inspectingItem?.backendId || !editId) return;
+    setInspectingSubmitting(true);
+    try {
+      const updated = await purchaseService.inspectItem(editId, inspectingItem.backendId, {
+        status,
+        rejectedQty: status === 'rejected' ? rejectedQty : undefined,
+        note: note || undefined,
+      });
+      setItems((prev) =>
+        prev.map((item) =>
+          item.localId === inspectingItem.localId
+            ? {
+                ...item,
+                inspectionStatus: updated.inspectionStatus,
+                rejectedQty: updated.rejectedQty > 0 ? updated.rejectedQty : undefined,
+                inspectionNote: updated.inspectionNote,
+              }
+            : item
+        )
+      );
+      messageApi.success('Inspection recorded');
+      setInspectingItem(null);
+    } catch (e: any) {
+      const errData = e?.response?.data;
+      messageApi.error(errData?.error?.message || errData?.error?.details || 'Failed to record inspection');
+    } finally {
+      setInspectingSubmitting(false);
+    }
+  };
+
   // ── Validate before submit ────────────────────────────────
   const validate = (doComplete: boolean): string | null => {
     if (!warehouseId) return 'Please select a warehouse';
@@ -581,6 +827,8 @@ const AddPurchasePage: React.FC = () => {
     // Track a newly created draft so we can delete it if completion fails,
     // preventing orphaned draft GRNs from appearing in the list.
     let newlyCreatedGrnId: string | null = null;
+    // Non-blocking supplier price-list deviation notes surfaced by the server.
+    const priceWarnings: string[] = [];
 
     try {
       let grnId: string;
@@ -637,7 +885,15 @@ const AddPurchasePage: React.FC = () => {
             manufactureDate: item.manufactureDate,
             expiryDate: item.expiryDate,
             hasSerialNumbers: item.hasSerialNumbers,
+            purchaseOrderItemId: item.purchaseOrderItemId,
+            lotNumber: item.lotNumber,
+            inspectionStatus: item.rejectedQty && item.rejectedQty > 0 ? 'rejected' : undefined,
+            rejectedQty: item.rejectedQty,
+            inspectionNote: item.inspectionNote,
           });
+          if (backendItem.priceWarning) {
+            priceWarnings.push(`${item.productName}: ${backendItem.priceWarning}`);
+          }
           if (item.hasSerialNumbers && item.serialNumbers.length > 0) {
             await purchaseService.addSerialNumbers(grnId, {
               grnItemId: backendItem.id,
@@ -653,6 +909,7 @@ const AddPurchasePage: React.FC = () => {
           paymentMethod,
           notes: notes || undefined,
           grnDate,
+          purchaseOrderId: linkedPO?.id,
         });
         grnId = grn.id;
         if (doComplete) newlyCreatedGrnId = grnId; // remember for rollback
@@ -672,7 +929,15 @@ const AddPurchasePage: React.FC = () => {
             manufactureDate: item.manufactureDate,
             expiryDate: item.expiryDate,
             hasSerialNumbers: item.hasSerialNumbers,
+            purchaseOrderItemId: item.purchaseOrderItemId,
+            lotNumber: item.lotNumber,
+            inspectionStatus: item.rejectedQty && item.rejectedQty > 0 ? 'rejected' : undefined,
+            rejectedQty: item.rejectedQty,
+            inspectionNote: item.inspectionNote,
           });
+          if (backendItem.priceWarning) {
+            priceWarnings.push(`${item.productName}: ${backendItem.priceWarning}`);
+          }
           if (item.hasSerialNumbers && item.serialNumbers.length > 0) {
             await purchaseService.addSerialNumbers(grnId, {
               grnItemId: backendItem.id,
@@ -681,6 +946,20 @@ const AddPurchasePage: React.FC = () => {
           }
         }
       }
+
+      if (priceWarnings.length > 0) {
+        Modal.warning({
+          title: 'Cost price deviates from the usual price',
+          content: (
+            <ul style={{ margin: 0, paddingLeft: 18 }}>
+              {priceWarnings.map((w, i) => <li key={i}>{w}</li>)}
+            </ul>
+          ),
+        });
+      }
+
+      // Landed-cost charge lines (freight / duty / insurance).
+      await purchaseService.setCharges(grnId, charges.filter((c) => c.amount > 0));
 
       if (doComplete) {
         try {
@@ -753,6 +1032,7 @@ const AddPurchasePage: React.FC = () => {
       setChequeNumber('');
       setChequeDate('');
       setChequeNote('');
+      setCharges([]);
     };
 
     if (activeItems.length > 0) {
@@ -869,6 +1149,48 @@ const AddPurchasePage: React.FC = () => {
           />
         )}
       </Card>
+
+      {/* ── Receiving Against Purchase Order ───────────────── */}
+      {linkedPO && (
+        <Card
+          title={`Receiving Against ${linkedPO.poNumber}`}
+          style={{ marginBottom: 16 }}
+          extra={<Tag color="geekblue">{linkedPO.status.replace('_', ' ').toUpperCase()}</Tag>}
+        >
+          <Table<POItem>
+            size="small"
+            pagination={false}
+            rowKey="id"
+            dataSource={linkedPO.items}
+            columns={[
+              { title: 'Product', dataIndex: 'productName', key: 'productName' },
+              { title: 'Ordered', dataIndex: 'orderedQty', key: 'orderedQty', align: 'right' as const },
+              { title: 'Received', dataIndex: 'receivedQty', key: 'receivedQty', align: 'right' as const },
+              { title: 'Outstanding', dataIndex: 'outstandingQty', key: 'outstandingQty', align: 'right' as const },
+              { title: 'Unit Cost', dataIndex: 'unitCost', key: 'unitCost', align: 'right' as const, render: (v: number) => v.toFixed(2) },
+              {
+                title: '', key: 'action', width: 96,
+                render: (_: any, record: POItem) => {
+                  const added = items.some((i) => !i.isDeleted && i.purchaseOrderItemId === record.id);
+                  const loaded = pendingPOItemIdRef.current === record.id;
+                  return (
+                    <Tooltip title={added ? 'Already added to the GRN' : 'Load into the form below to set prices'}>
+                      <Button
+                        size="small" type={added ? 'default' : 'primary'}
+                        loading={loadingPOLine === record.id}
+                        disabled={added || record.outstandingQty <= 0}
+                        onClick={() => handleLoadFromPO(record)}
+                      >
+                        {added ? 'Added' : loaded ? 'Loaded' : 'Load'}
+                      </Button>
+                    </Tooltip>
+                  );
+                },
+              },
+            ]}
+          />
+        </Card>
+      )}
 
       {/* ── Product Selection Section ──────────────────────── */}
       <Card title="Add Product" style={{ marginBottom: 16 }}>
@@ -1063,6 +1385,29 @@ const AddPurchasePage: React.FC = () => {
                   </Form.Item>
                 </Col>
 
+                {/* ── Row 5: Lot / Batch No. | Rejected Qty (QC) ── */}
+                <Col xs={12} sm={8}>
+                  <Form.Item label="Lot / Batch No." style={{ marginBottom: 0 }}>
+                    <Input
+                      value={lotNumber}
+                      onChange={(e) => setLotNumber(e.target.value)}
+                      placeholder="Supplier's lot code (optional)"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={12} sm={8}>
+                  <Form.Item
+                    label={<span>Rejected Qty <Text type="secondary" style={{ fontSize: 12 }}>(QC)</Text></span>}
+                    style={{ marginBottom: 0 }}
+                  >
+                    <InputNumber
+                      min={0} max={quantity} value={rejectedQty}
+                      onChange={(v) => setRejectedQty(v ?? 0)}
+                      precision={hasSerialNumbers ? 0 : 4} style={{ width: '100%' }}
+                    />
+                  </Form.Item>
+                </Col>
+
                 {/* ── Actions ── */}
                 <Col xs={24} style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                   <Button onClick={resetProductForm}>Reset</Button>
@@ -1084,7 +1429,81 @@ const AddPurchasePage: React.FC = () => {
           items={items}
           onQuantityChange={handleQuantityChange}
           onRemove={handleRemoveItem}
+          onInspect={setInspectingItem}
         />
+      </Card>
+
+      {/* ── Landed Costs (freight / duty / insurance) ──────── */}
+      <Card
+        title="Additional Costs (Freight / Duty / Insurance)"
+        style={{ marginBottom: 16 }}
+        extra={
+          <Button
+            size="small" icon={<PlusOutlined />}
+            onClick={() => setCharges((prev) => [...prev, { chargeType: 'freight', amount: 0, allocationMethod: 'value' }])}
+          >
+            Add Charge
+          </Button>
+        }
+      >
+        {charges.length === 0 ? (
+          <Text type="secondary">
+            No additional costs. Freight, duty and insurance added here are allocated across the
+            items into their unit cost when the GRN is completed.
+          </Text>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {charges.map((c, idx) => (
+              <Row gutter={8} key={idx} align="middle">
+                <Col xs={12} sm={6}>
+                  <Select
+                    style={{ width: '100%' }}
+                    value={c.chargeType}
+                    onChange={(v) => setCharges((prev) => prev.map((x, i) => i === idx ? { ...x, chargeType: v as ChargeType } : x))}
+                    options={[
+                      { value: 'freight', label: 'Freight' },
+                      { value: 'duty', label: 'Duty' },
+                      { value: 'insurance', label: 'Insurance' },
+                      { value: 'handling', label: 'Handling' },
+                      { value: 'other', label: 'Other' },
+                    ]}
+                  />
+                </Col>
+                <Col xs={12} sm={6}>
+                  <InputNumber
+                    style={{ width: '100%' }} min={0} prefix="Rs." precision={2}
+                    value={c.amount}
+                    onChange={(v) => setCharges((prev) => prev.map((x, i) => i === idx ? { ...x, amount: v ?? 0 } : x))}
+                  />
+                </Col>
+                <Col xs={12} sm={5}>
+                  <Select
+                    style={{ width: '100%' }}
+                    value={c.allocationMethod}
+                    onChange={(v) => setCharges((prev) => prev.map((x, i) => i === idx ? { ...x, allocationMethod: v as 'value' | 'quantity' } : x))}
+                    options={[
+                      { value: 'value', label: 'By value' },
+                      { value: 'quantity', label: 'By quantity' },
+                    ]}
+                  />
+                </Col>
+                <Col xs={10} sm={5}>
+                  <Input
+                    placeholder="Note" value={c.note ?? ''}
+                    onChange={(e) => setCharges((prev) => prev.map((x, i) => i === idx ? { ...x, note: e.target.value } : x))}
+                  />
+                </Col>
+                <Col xs={2} sm={2}>
+                  <Button type="text" icon={<DeleteOutlined style={{ color: '#ff4d4f' }} />}
+                    onClick={() => setCharges((prev) => prev.filter((_, i) => i !== idx))} />
+                </Col>
+              </Row>
+            ))}
+            <div style={{ textAlign: 'right', fontWeight: 600 }}>
+              Total additional cost: Rs. {chargesTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* ── Payment Section ────────────────────────────────── */}
@@ -1170,6 +1589,14 @@ const AddPurchasePage: React.FC = () => {
           onCancel={() => setEditingSerialItem(null)}
         />
       )}
+
+      <QCInspectModal
+        open={Boolean(inspectingItem)}
+        item={inspectingItem}
+        submitting={inspectingSubmitting}
+        onSave={handleSaveInspection}
+        onCancel={() => setInspectingItem(null)}
+      />
     </div>
   );
 };

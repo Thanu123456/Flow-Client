@@ -255,6 +255,8 @@ const VariableProductForm: React.FC<VariableProductFormProps> = ({ editProduct }
                                                 key={key}
                                                 name={name}
                                                 editProductId={editProduct?.id}
+                                                variationId={editProduct?.variations?.[name]?.id}
+                                                initialPriceLocked={editProduct?.variations?.[name]?.priceLocked}
                                                 remove={() => {
                                                     remove(name);
                                                     if (optId) {

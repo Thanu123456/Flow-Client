@@ -1,8 +1,10 @@
 import React from 'react';
-import { Tag, Tooltip, Space } from 'antd';
-import { EyeOutlined, EditOutlined, RollbackOutlined } from '@ant-design/icons';
+import { Tag, Tooltip, Space, Popconfirm } from 'antd';
+import { EyeOutlined, EditOutlined, RollbackOutlined, StopOutlined, DeleteOutlined } from '@ant-design/icons';
 import { CommonTable } from '../common/Table';
 import type { GRNListItem, GRNStatus, PaymentMethod } from '../../types/entities/purchase.types';
+import { usePermissions } from '../../hooks/auth/usePermissions';
+import { PERMISSIONS } from '../../types/auth/permissions';
 import dayjs from 'dayjs';
 
 interface Props {
@@ -11,6 +13,8 @@ interface Props {
   onView: (grn: GRNListItem) => void;
   onEdit: (grn: GRNListItem) => void;
   onReturn: (grn: GRNListItem) => void;
+  onCancel: (grn: GRNListItem) => void;
+  onDelete: (grn: GRNListItem) => void;
   pagination: {
     page: number;
     perPage: number;
@@ -38,9 +42,15 @@ const PurchasesTable: React.FC<Props> = ({
   onView,
   onEdit,
   onReturn,
+  onCancel,
+  onDelete,
   pagination,
   onPageChange,
 }) => {
+  const { hasPermission } = usePermissions();
+  const canApprove = hasPermission(PERMISSIONS.PURCHASES_APPROVE);
+  const canCreate = hasPermission(PERMISSIONS.PURCHASES_CREATE);
+
   const columns = [
     {
       title: 'GRN Number',
@@ -144,6 +154,42 @@ const PurchasesTable: React.FC<Props> = ({
                 <RollbackOutlined style={{ color: '#f5222d' }} />
               </div>
             </Tooltip>
+          )}
+          {record.status !== 'cancelled' && canApprove && (
+            <Popconfirm
+              title={record.status === 'completed' ? 'Cancel this GRN?' : 'Cancel this draft?'}
+              description={
+                record.status === 'completed'
+                  ? 'This reverses stock, supplier balance and GL postings for this GRN.'
+                  : undefined
+              }
+              onConfirm={() => onCancel(record)}
+              okText="Cancel GRN"
+              cancelText="Back"
+              okButtonProps={{ danger: true }}
+            >
+              <Tooltip title="Cancel GRN">
+                <div className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-red-50">
+                  <StopOutlined style={{ color: '#f5222d' }} />
+                </div>
+              </Tooltip>
+            </Popconfirm>
+          )}
+          {record.status === 'draft' && canCreate && (
+            <Popconfirm
+              title="Delete this draft?"
+              description="This permanently removes the draft GRN."
+              onConfirm={() => onDelete(record)}
+              okText="Delete"
+              cancelText="Cancel"
+              okButtonProps={{ danger: true }}
+            >
+              <Tooltip title="Delete Draft">
+                <div className="flex items-center justify-center w-7 h-7 bg-white shadow-sm rounded-md cursor-pointer hover:bg-red-50">
+                  <DeleteOutlined style={{ color: '#8c8c8c' }} />
+                </div>
+              </Tooltip>
+            </Popconfirm>
           )}
         </Space>
       ),

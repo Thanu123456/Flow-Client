@@ -24,6 +24,9 @@ interface PurchaseReturnState {
   listReturns: (params: PurchaseReturnListParams) => Promise<void>;
   getReturn: (id: string) => Promise<PurchaseReturn>;
   createReturn: (data: CreatePurchaseReturnRequest) => Promise<PurchaseReturn>;
+  approveReturn: (id: string) => Promise<PurchaseReturn>;
+  rejectReturn: (id: string, reason?: string) => Promise<void>;
+  voidReturn: (id: string, reason: string) => Promise<void>;
   setSelectedReturn: (r: PurchaseReturn | null) => void;
   clearError: () => void;
 }
@@ -79,6 +82,43 @@ export const usePurchaseReturnStore = create<PurchaseReturnState>()(
             err.response?.data?.error?.message ||
             err.response?.data?.message ||
             "Failed to create purchase return";
+          set({ error: msg, submitting: false });
+          throw err;
+        }
+      },
+
+      approveReturn: async (id) => {
+        set({ submitting: true, error: null });
+        try {
+          const ret = await purchaseReturnService.approveReturn(id);
+          set({ submitting: false });
+          return ret;
+        } catch (err: any) {
+          const msg = err.response?.data?.error?.message || "Failed to approve purchase return";
+          set({ error: msg, submitting: false });
+          throw err;
+        }
+      },
+
+      rejectReturn: async (id, reason) => {
+        set({ submitting: true, error: null });
+        try {
+          await purchaseReturnService.rejectReturn(id, reason);
+          set({ submitting: false });
+        } catch (err: any) {
+          const msg = err.response?.data?.error?.message || "Failed to reject purchase return";
+          set({ error: msg, submitting: false });
+          throw err;
+        }
+      },
+
+      voidReturn: async (id, reason) => {
+        set({ submitting: true, error: null });
+        try {
+          await purchaseReturnService.voidReturn(id, reason);
+          set({ submitting: false });
+        } catch (err: any) {
+          const msg = err.response?.data?.error?.message || "Failed to void purchase return";
           set({ error: msg, submitting: false });
           throw err;
         }

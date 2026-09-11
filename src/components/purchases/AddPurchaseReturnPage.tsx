@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Card, Typography, Row, Col, Descriptions, Tag, Table, InputNumber,
-  Input, Button, Space, message, Spin, Alert, Divider, Checkbox,
+  Input, Button, Space, message, Spin, Alert, Divider, Checkbox, Select,
 } from 'antd';
 import {
   ArrowLeftOutlined, RollbackOutlined, ShopOutlined, CalendarOutlined,
@@ -24,6 +24,7 @@ interface ReturnLine {
   returnQty: number;
   maxQty: number;
   reason: string;
+  selectedSerials: string[];
 }
 
 const fmt = (n: number) =>
@@ -39,6 +40,8 @@ const AddPurchaseReturnPage: React.FC = () => {
   const [loadingGrn, setLoadingGrn] = useState(true);
   const [lines, setLines] = useState<Record<string, ReturnLine>>({});
   const [notes, setNotes] = useState('');
+  const [availableSerials, setAvailableSerials] = useState<Record<string, string[]>>({});
+  const [loadingSerials, setLoadingSerials] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!grnId) return;
@@ -55,6 +58,7 @@ const AddPurchaseReturnPage: React.FC = () => {
             returnQty: Math.min(1, remaining),
             maxQty: remaining,
             reason: '',
+            selectedSerials: [],
           };
         });
         setLines(initialLines);
@@ -65,17 +69,29 @@ const AddPurchaseReturnPage: React.FC = () => {
 
   const toggleSelect = (itemId: string, checked: boolean) => {
     setLines((prev) => ({ ...prev, [itemId]: { ...prev[itemId], selected: checked } }));
+    const item = grn?.items.find((i) => i.id === itemId);
+    if (checked && item?.hasSerialNumbers && grnId && !availableSerials[itemId] && !loadingSerials[itemId]) {
+      setLoadingSerials((prev) => ({ ...prev, [itemId]: true }));
+      purchaseService.getAvailableSerials(grnId, itemId)
+        .then((serials) => setAvailableSerials((prev) => ({ ...prev, [itemId]: serials })))
+        .catch(() => messageApi.error('Failed to load available serial numbers'))
+        .finally(() => setLoadingSerials((prev) => ({ ...prev, [itemId]: false })));
+    }
   };
 
   const setQty = (itemId: string, qty: number) => {
     setLines((prev) => ({
       ...prev,
-      [itemId]: { ...prev[itemId], returnQty: Math.max(1, Math.min(qty, prev[itemId].maxQty)) },
+      [itemId]: { ...prev[itemId], returnQty: Math.max(1, Math.min(qty, prev[itemId].maxQty)), selectedSerials: [] },
     }));
   };
 
   const setReason = (itemId: string, reason: string) => {
     setLines((prev) => ({ ...prev, [itemId]: { ...prev[itemId], reason } }));
+  };
+
+  const setSerials = (itemId: string, serials: string[]) => {
+    setLines((prev) => ({ ...prev, [itemId]: { ...prev[itemId], selectedSerials: serials } }));
   };
 
   const selectedLines = Object.values(lines).filter((l) => l.selected);
@@ -94,15 +110,28 @@ const AddPurchaseReturnPage: React.FC = () => {
     }
     if (!grn) return;
 
+    for (const l of selectedLines) {
+      const item = grn.items.find((i) => i.id === l.grnItemId);
+      if (item?.hasSerialNumbers && l.selectedSerials.length !== l.returnQty) {
+        messageApi.warning(`Select exactly ${l.returnQty} serial number(s) for ${item.productName}`);
+        return;
+      }
+    }
+
     const items: CreatePurchaseReturnItemRequest[] = selectedLines.map((l) => ({
       grnItemId: l.grnItemId,
       returnQty: l.returnQty,
       reason: l.reason || undefined,
+      serialNumbers: l.selectedSerials.length > 0 ? l.selectedSerials : undefined,
     }));
 
     try {
       const ret = await createReturn({ originalGrnId: grn.id, notes: notes || undefined, items });
-      messageApi.success(`Return ${ret.returnNumber} created successfully`);
+      messageApi.success(
+        ret.status === 'pending_approval'
+          ? `Return ${ret.returnNumber} submitted for approval`
+          : `Return ${ret.returnNumber} created successfully`
+      );
       setTimeout(() => navigate('/purchase-returns'), 800);
     } catch (err: any) {
       const msg =
@@ -188,11 +217,37 @@ const AddPurchaseReturnPage: React.FC = () => {
           <InputNumber
             min={1}
             max={line?.maxQty ?? record.quantity}
+            precision={record.hasSerialNumbers ? 0 : undefined}
             value={line?.returnQty ?? 1}
             disabled={!line?.selected}
             onChange={(v) => setQty(record.id, v ?? 1)}
             style={{ width: 90 }}
             size="small"
+          />
+        );
+      },
+    },
+    {
+      title: 'Serials',
+      key: 'serials',
+      width: 220,
+      render: (_: any, record: GRNItem) => {
+        if (!record.hasSerialNumbers) return <Text type="secondary" disabled>-</Text>;
+        const line = lines[record.id];
+        if (!line?.selected) return <Text type="secondary">-</Text>;
+        const options = (availableSerials[record.id] ?? []).map((sn) => ({ value: sn, label: sn }));
+        return (
+          <Select
+            mode="multiple"
+            size="small"
+            style={{ width: '100%' }}
+            placeholder={`Select ${line.returnQty} serial(s)`}
+            loading={loadingSerials[record.id]}
+            value={line.selectedSerials}
+            onChange={(vals) => setSerials(record.id, vals)}
+            maxCount={line.returnQty}
+            options={options}
+            notFoundContent={loadingSerials[record.id] ? 'Loading…' : 'No serials in stock'}
           />
         );
       },
@@ -307,7 +362,7 @@ const AddPurchaseReturnPage: React.FC = () => {
               rowKey="id"
               pagination={false}
               size="small"
-              scroll={{ x: 800 }}
+              scroll={{ x: 1020 }}
               rowClassName={(record: GRNItem) => {
                 if (lines[record.id]?.maxQty <= 0) return 'ant-table-row-disabled';
                 return lines[record.id]?.selected ? 'bg-red-50' : '';

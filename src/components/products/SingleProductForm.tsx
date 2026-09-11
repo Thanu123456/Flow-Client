@@ -17,9 +17,10 @@ const { Text: AntText } = Typography;
 
 interface SingleProductFormProps {
     editProductId?: string;
+    initialPriceLocked?: boolean;
 }
 
-const SingleProductForm: React.FC<SingleProductFormProps> = ({ editProductId }) => {
+const SingleProductForm: React.FC<SingleProductFormProps> = ({ editProductId, initialPriceLocked }) => {
     const prefix = ["single_product"];
     const form = Form.useFormInstance();
     const [messageApi, contextHolder] = message.useMessage();
@@ -188,7 +189,7 @@ const SingleProductForm: React.FC<SingleProductFormProps> = ({ editProductId }) 
                 </div>
 
                 <div className="pt-6 border-t border-slate-100">
-                    <PricingFields prefix={prefix} />
+                    <PricingFields prefix={prefix} entityId={editProductId} initialLocked={initialPriceLocked} />
                 </div>
 
                 <div className="pt-6 border-t border-slate-100">
