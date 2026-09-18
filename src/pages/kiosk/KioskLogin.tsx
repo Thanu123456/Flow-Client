@@ -13,18 +13,22 @@ import {
     Card,
     Alert
 } from 'antd';
-import { UserOutlined, InfoCircleOutlined, ShopOutlined, FullscreenOutlined, FullscreenExitOutlined } from '@ant-design/icons';
+import { UserOutlined, InfoCircleOutlined, ShopOutlined, FullscreenOutlined, FullscreenExitOutlined, DownOutlined, UpOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext'; // Added TenantContext
 import VirtualKeypad from '../../components/kiosk/VirtualKeypad';
+import KioskDeviceSetup from '../../components/kiosk/KioskDeviceSetup';
+import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import type { KioskLoginRequest } from '../../types/auth/kiosk.types';
+import DenominationCounter, { denominationTotal } from '../../components/kiosk/DenominationCounter';
+import type { DenominationCounts } from '../../components/kiosk/DenominationCounter';
 
 const { Title, Text } = Typography;
 
 const KioskLogin: React.FC = () => {
     const { kioskLogin } = useAuth();
-    const { tenant } = useTenant(); // Get tenant info
+    const { tenant, loading: tenantLoading, setTenant } = useTenant(); // Get tenant info
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const { token } = theme.useToken();
@@ -37,6 +41,34 @@ const KioskLogin: React.FC = () => {
     const [pinValue, setPinValue] = useState('');
     const [userIdValue, setUserIdValue] = useState('');
     const [errorAlert, setErrorAlert] = useState<string | null>(null);
+    const [showDenomination, setShowDenomination] = useState(false);
+    const [openingCounts, setOpeningCounts] = useState<DenominationCounts>({});
+
+    // Badge/QR clock-in: an employee ID badge printed with their User ID as a
+    // barcode/QR, scanned by a HID scanner (which types the payload like a
+    // fast keyboard) — reuses the same scanner infra the POS screen already
+    // has, rather than a from-scratch camera QR reader. Fills the User ID
+    // field and jumps straight to PIN entry, so a returning cashier only has
+    // to type their PIN, not their whole ID, to clock in.
+    useBarcodeScanner({
+        enabled: !loading,
+        onScan: (code) => {
+            const trimmed = code.trim();
+            if (!trimmed) return;
+            setUserIdValue(trimmed);
+            form.setFieldsValue({ user_id: trimmed });
+            setPinValue('');
+            form.setFieldsValue({ pin: '' });
+            setActiveField('pin');
+        },
+    });
+
+    // This device has never been paired to a shop (fresh browser/tablet, or
+    // was explicitly re-paired below) — resolve which tenant it belongs to
+    // before showing the PIN login screen.
+    if (!tenantLoading && !tenant) {
+        return <KioskDeviceSetup />;
+    }
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -87,9 +119,12 @@ const KioskLogin: React.FC = () => {
     const onFinish = async (values: any) => {
         setLoading(true);
         try {
+            const openingCash = denominationTotal(openingCounts);
             const loginData: KioskLoginRequest = {
                 user_id: values.user_id,
                 pin: values.pin,
+                opening_cash: openingCash > 0 ? openingCash : undefined,
+                opening_denomination: openingCash > 0 ? JSON.stringify(openingCounts) : undefined,
             };
             await kioskLogin(loginData);
             messageApi.success('Shift Started Successfully!');
@@ -145,14 +180,24 @@ const KioskLogin: React.FC = () => {
                     />
                     <Title level={3} style={{ margin: 0 }}>{tenant?.shop_name || 'Flow POS'}</Title>
                 </div>
-                <Button
-                    size="large"
-                    icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
-                    onClick={toggleFullscreen}
-                    style={{ borderRadius: 10 }}
-                >
-                    {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-                </Button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <Button
+                        type="link"
+                        size="small"
+                        onClick={() => setTenant(null)}
+                        style={{ color: '#8c8c8c', fontSize: 12 }}
+                    >
+                        Not your store? Re-pair device
+                    </Button>
+                    <Button
+                        size="large"
+                        icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+                        onClick={toggleFullscreen}
+                        style={{ borderRadius: 10 }}
+                    >
+                        {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+                    </Button>
+                </div>
             </div>
 
             <Row style={{ flex: 1, paddingBottom: 40 }}>
@@ -167,7 +212,7 @@ const KioskLogin: React.FC = () => {
                     }}>
                         <div style={{ textAlign: 'center', marginBottom: 40 }}>
                             <Title level={2} style={{ marginBottom: 8 }}>Team Sign In</Title>
-                            <Text type="secondary" style={{ fontSize: 16 }}>Tap input fields to use keypad</Text>
+                            <Text type="secondary" style={{ fontSize: 16 }}>Tap input fields to use keypad, or scan your badge</Text>
                         </div>
 
                         {errorAlert && (
@@ -256,7 +301,23 @@ const KioskLogin: React.FC = () => {
                                 </div>
                             </Form.Item>
 
-                            <div style={{ marginTop: 40 }}>
+                            <div style={{ marginTop: 24 }}>
+                                <Button
+                                    type="text"
+                                    icon={showDenomination ? <UpOutlined /> : <DownOutlined />}
+                                    onClick={() => setShowDenomination((v) => !v)}
+                                    style={{ color: '#666', fontSize: 14 }}
+                                >
+                                    Count opening drawer {denominationTotal(openingCounts) > 0 ? `(Rs. ${denominationTotal(openingCounts).toFixed(2)})` : '(optional)'}
+                                </Button>
+                                {showDenomination && (
+                                    <div style={{ marginTop: 8, padding: 16, background: '#fafafa', borderRadius: 16 }}>
+                                        <DenominationCounter value={openingCounts} onChange={setOpeningCounts} />
+                                    </div>
+                                )}
+                            </div>
+
+                            <div style={{ marginTop: 24 }}>
                                 <Button
                                     type="primary"
                                     htmlType="submit"

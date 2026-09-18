@@ -5,19 +5,21 @@ import type { POSSaleRequest } from "../../services/transactions/posService";
 import { holdService } from "../../services/transactions/holdService";
 import type { HeldBill } from "../../types/entities/holdBill.types";
 import { isWeightBasedProduct } from "../../utils/posHelpers";
+import { enqueueSale } from "../../utils/offline/offlineDb";
 
 // ─────────────────────────────────────────────────────────────────────
 //  Types
 // ─────────────────────────────────────────────────────────────────────
 export interface CartItem {
-    id: string;          // Product.id or Variation.id (cart key)
-    productId: string;
+    id: string;          // Product.id or Variation.id (cart key) — a generated id for a misc line
+    productId?: string;  // absent for a misc/"unknown item" line (no catalogue product)
     variationId?: string;
     name: string;
     unit: string;
     quantity: number;    // Decimal for weight products, integer for others
     price: number;
-    maxStock: number;    // 0 means unlimited (or no-stock allowed)
+    maxStock: number;    // 0 means unlimited (or no-stock allowed) — always 0 for a misc line
+    isMisc?: boolean;    // true for a cashier-typed line with no catalogue product
 }
 
 interface POSState {
@@ -46,6 +48,15 @@ interface POSState {
     cardLastFour: string;
     cardType: string;
 
+    // Bank Transfer — also used for the bank portion of a Split payment
+    bankName: string;
+    bankReference: string;
+
+    // Split payment — cash/card/bank portions of one bill; must sum to paidAmount
+    splitCashAmount: number;
+    splitCardAmount: number;
+    splitBankAmount: number;
+
     // Feature #6 – Price Mode
     priceMode: "our" | "retail" | "wholesale";
 
@@ -64,9 +75,14 @@ interface POSState {
     setCardFirstDigit: (digit: string) => void;
     setCardLastFour: (lastFour: string) => void;
     setCardType: (type: string) => void;
+    setBankName: (name: string) => void;
+    setBankReference: (reference: string) => void;
+    setSplitCashAmount: (amount: number) => void;
+    setSplitCardAmount: (amount: number) => void;
+    setSplitBankAmount: (amount: number) => void;
     setPriceMode: (mode: "our" | "retail" | "wholesale") => void;
     initializePriceMode: () => void;
-    checkout: (paidAmount: number, billNumber?: string) => Promise<void>;
+    checkout: (paidAmount: number, overrideToken?: string) => Promise<{ invoiceNumber: string; changeDue: number; queued?: boolean }>;
     updateCartItemPrices: (itemsWithNewPrices: { id: string; price: number }[]) => void;
 
     // Feature #10 – Hold Bills
@@ -93,6 +109,11 @@ export const usePOSStore = create<POSState>()(
             cardFirstDigit: "",
             cardLastFour: "",
             cardType: "",
+            bankName: "",
+            bankReference: "",
+            splitCashAmount: 0,
+            splitCardAmount: 0,
+            splitBankAmount: 0,
             priceMode: "retail",
 
             // ── addToCart ─────────────────────────────────────────────
@@ -167,6 +188,11 @@ export const usePOSStore = create<POSState>()(
                     cardFirstDigit: "",
                     cardLastFour: "",
                     cardType: "",
+                    bankName: "",
+                    bankReference: "",
+                    splitCashAmount: 0,
+                    splitCardAmount: 0,
+                    splitBankAmount: 0,
                 }),
 
             setCustomer: (id) => set({ customerId: id }),
@@ -178,6 +204,11 @@ export const usePOSStore = create<POSState>()(
             setCardFirstDigit: (digit) => set({ cardFirstDigit: digit.slice(0, 1) }),
             setCardLastFour: (lastFour) => set({ cardLastFour: lastFour.slice(0, 4) }),
             setCardType: (type) => set({ cardType: type }),
+            setBankName: (name) => set({ bankName: name }),
+            setBankReference: (reference) => set({ bankReference: reference }),
+            setSplitCashAmount: (amount) => set({ splitCashAmount: Math.max(0, amount) }),
+            setSplitCardAmount: (amount) => set({ splitCardAmount: Math.max(0, amount) }),
+            setSplitBankAmount: (amount) => set({ splitBankAmount: Math.max(0, amount) }),
             setPriceMode: (mode) => {
                 set({ priceMode: mode });
                 // Persist to localStorage immediately
@@ -196,14 +227,15 @@ export const usePOSStore = create<POSState>()(
             },
 
             // ── checkout ──────────────────────────────────────────────
-            checkout: async (paidAmount: number, billNumber?: string) => {
+            checkout: async (paidAmount: number, overrideToken?: string) => {
                 const {
                     cart, customerId, paymentMethod, isRefundMode,
                     clearCart, discountType, discountValue, deliveryCharge,
                     cardBank, cardFirstDigit, cardLastFour, cardType, priceMode,
+                    bankName, bankReference, splitCashAmount, splitCardAmount, splitBankAmount,
                 } = get();
 
-                if (cart.length === 0) return;
+                if (cart.length === 0) throw new Error("Cart is empty");
 
                 set({ loading: true, error: null });
                 try {
@@ -221,7 +253,6 @@ export const usePOSStore = create<POSState>()(
                     }
 
                     const payload: POSSaleRequest = {
-                        invoice_number: billNumber,                         // Feature #4
                         customer_id: customerId || undefined,
                         payment_method: paymentMethod,
                         total_amount: Math.abs(totalAmount),
@@ -236,23 +267,65 @@ export const usePOSStore = create<POSState>()(
                                 ? `${cardFirstDigit}***${cardLastFour}`
                                 : undefined,
                         card_type: cardType || undefined,
+                        bank_name: bankName || undefined,
+                        bank_reference: bankReference || undefined,
+                        ...(paymentMethod === 'Split'
+                            ? {
+                                  cash_amount: splitCashAmount,
+                                  card_amount: splitCardAmount,
+                                  bank_transfer_amount: splitBankAmount,
+                              }
+                            : {}),
                         price_mode: priceMode,                           // Feature #6
                         products: cart.map((item) => ({
                             product_id: item.productId,
+                            product_name: item.productId ? undefined : item.name,
                             variation_id: item.variationId,
                             quantity: item.quantity,                     // Feature #5 decimal qty
                             price: item.price,
                         })),
+                        override_token: overrideToken,
                     };
 
-                    if (isRefundMode) {
-                        await posService.createReturn(payload);
-                    } else {
-                        await posService.createSale(payload);
+                    // Best-effort local change-due for the offline fallback below —
+                    // the server's figure (which accounts for credit-balance
+                    // application etc.) is authoritative once the queued sale syncs.
+                    const netPayable = Math.abs(totalAmount) - discountAmount + deliveryCharge;
+                    const queueOffline = async () => {
+                        await enqueueSale(isRefundMode ? "return" : "sale", payload);
+                        clearCart();
+                        set({ loading: false });
+                        return {
+                            invoiceNumber: `OFFLINE-${Date.now().toString(36).toUpperCase()}`,
+                            changeDue: Math.max(0, paidAmount - netPayable),
+                            queued: true,
+                        };
+                    };
+
+                    // Already known offline — skip the network round-trip and its
+                    // timeout, queue immediately.
+                    if (typeof navigator !== "undefined" && !navigator.onLine) {
+                        return await queueOffline();
                     }
 
-                    clearCart();
-                    set({ loading: false });
+                    try {
+                        const result = isRefundMode
+                            ? await posService.createReturn(payload)
+                            : await posService.createSale(payload);
+
+                        clearCart();
+                        set({ loading: false });
+                        return { invoiceNumber: result.invoiceNumber, changeDue: result.changeDue };
+                    } catch (networkError: any) {
+                        // No `response` means the request never reached the server
+                        // (dropped connection, DNS failure, timeout) — a real business
+                        // rejection (400/422/etc.) always carries one and should still
+                        // surface as a hard failure below, not get silently queued.
+                        if (!networkError.response) {
+                            return await queueOffline();
+                        }
+                        throw networkError;
+                    }
                 } catch (error: any) {
                     set({
                         error: error.response?.data?.message || "Failed to complete checkout",

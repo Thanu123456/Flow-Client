@@ -10,6 +10,8 @@ import { TenantProvider } from "./contexts/TenantContext";
 import AppRoutes from "./routes/AppRoutes";
 import SessionExpiredHandler from "./components/auth/SessionExpiredHandler";
 import IdleTimeoutHandler from "./components/auth/IdleTimeoutHandler";
+import OfflineIndicator from "./components/common/OfflineIndicator";
+import KioskLockdownGuard from "./components/kiosk/KioskLockdownGuard";
 
 const App: React.FC = () => {
   return (
@@ -22,6 +24,8 @@ const App: React.FC = () => {
                 <PermissionProvider>
                   <SessionExpiredHandler />
                   <IdleTimeoutHandler />
+                  <OfflineIndicator />
+                  <KioskLockdownGuard />
                   <AppRoutes />
                 </PermissionProvider>
               </TenantProvider>

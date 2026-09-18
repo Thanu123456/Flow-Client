@@ -21,4 +21,6 @@ export const SALES_DEFAULTS = {
   cashDrawerEnabled: false,
   salesMaxDiscountPct: 100,
   salesHoldExpiryHours: 24,
+  blindCashCount: true,
+  cashVarianceAlertThreshold: 500,
 } as const;

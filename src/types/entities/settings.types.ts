@@ -24,6 +24,13 @@ export interface PosSettings {
   salesMaxDiscountPct: number;
   salesHoldExpiryHours: number;
 
+  // Cash control
+  // Hides expected cash from the cashier while counting the drawer at shift
+  // close (a common theft-deterrence pattern) — on by default.
+  blindCashCount: boolean;
+  // Ended shifts with |variance| beyond this amount email the tenant admin.
+  cashVarianceAlertThreshold: number;
+
   // Receipt / invoice
   receiptPaperSize: PaperSize;
   receiptTopMarginMm: number;

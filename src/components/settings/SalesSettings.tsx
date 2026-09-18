@@ -29,6 +29,8 @@ const SalesSettings: React.FC<Props> = ({ onDirtyChange }) => {
             cashDrawerEnabled: settings.cashDrawerEnabled,
             salesMaxDiscountPct: settings.salesMaxDiscountPct,
             salesHoldExpiryHours: settings.salesHoldExpiryHours,
+            blindCashCount: settings.blindCashCount,
+            cashVarianceAlertThreshold: settings.cashVarianceAlertThreshold,
           }
         : null,
     [settings]
@@ -120,7 +122,7 @@ const SalesSettings: React.FC<Props> = ({ onDirtyChange }) => {
           </Row>
         </FieldGroup>
 
-        <FieldGroup title="Checkout behaviour" last>
+        <FieldGroup title="Checkout behaviour">
           <Row gutter={[20, 0]}>
             <Col xs={24} sm={12}>
               <SettingField
@@ -142,6 +144,33 @@ const SalesSettings: React.FC<Props> = ({ onDirtyChange }) => {
                 description="Sends an open-drawer signal to a connected receipt printer on cash sales."
               >
                 <Switch />
+              </SettingField>
+            </Col>
+          </Row>
+        </FieldGroup>
+
+        <FieldGroup title="Cash control" last>
+          <Row gutter={[20, 0]}>
+            <Col xs={24} sm={12}>
+              <SettingField
+                name="blindCashCount"
+                label="Blind cash count at shift close"
+                valuePropName="checked"
+                dirty={d("blindCashCount")}
+                description="Hides expected cash from the cashier while they count the drawer — a common theft-deterrence pattern. Off shows the expected figure live, which can help a cashier catch a counting mistake sooner."
+              >
+                <Switch />
+              </SettingField>
+            </Col>
+            <Col {...col}>
+              <SettingField
+                name="cashVarianceAlertThreshold"
+                label="Cash variance alert threshold"
+                dirty={d("cashVarianceAlertThreshold")}
+                description="A shift ending with a cash variance beyond this amount emails you automatically. Set to 0 to disable."
+                rules={[{ type: "number", min: 0 }]}
+              >
+                <InputNumber min={0} step={50} style={{ width: "100%" }} addonBefore="Rs." />
               </SettingField>
             </Col>
           </Row>

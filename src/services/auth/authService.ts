@@ -15,7 +15,10 @@ import type {
   KioskLoginRequest,
   KioskLoginResponse,
   KioskEndShiftResponse,
-  KioskSessionInfo
+  KioskSessionInfo,
+  KioskStoreInfo,
+  OverrideAuthorization,
+  ShiftInsights
 } from '../../types/auth/kiosk.types';
 import type {
   SuperAdminLoginRequest,
@@ -63,9 +66,18 @@ export const authService = {
   },
 
   // Kiosk End Shift - Backend: POST /kiosk/end-shift
-  async endShift(): Promise<KioskEndShiftResponse> {
-    const response = await api.post<{ data: KioskEndShiftResponse }>('/kiosk/end-shift');
+  async endShift(closingCash?: number, closingDenomination?: string): Promise<KioskEndShiftResponse> {
+    const response = await api.post<{ data: KioskEndShiftResponse }>('/kiosk/end-shift', {
+      closing_cash: closingCash,
+      closing_denomination: closingDenomination,
+    });
     return response.data.data;
+  },
+
+  // Kiosk manual cash-drawer movement (float top-up, petty cash out, etc.)
+  // Backend: POST /kiosk/cash-movement
+  async recordCashMovement(direction: 'in' | 'out', amount: number, note?: string): Promise<void> {
+    await api.post('/kiosk/cash-movement', { direction, amount, note });
   },
 
   // Kiosk Session Info (live shift totals) - Backend: GET /kiosk/session
@@ -74,9 +86,58 @@ export const authService = {
     return response.data.data;
   },
 
+  // Live cash summary for the CURRENT (still-active) shift — used to preview
+  // expected cash before actually ending it. Backend: GET /kiosk/shift-summary
+  async getShiftSummary(): Promise<KioskEndShiftResponse> {
+    const response = await api.get<{ data: KioskEndShiftResponse }>('/kiosk/shift-summary');
+    return response.data.data;
+  },
+
+  // Hourly trend / top items / discount+refund counts for the current shift.
+  // Backend: GET /kiosk/shift-insights
+  async getShiftInsights(): Promise<ShiftInsights> {
+    const response = await api.get<{ data: ShiftInsights }>('/kiosk/shift-insights');
+    return response.data.data;
+  },
+
   // Kiosk Logout - Backend: POST /kiosk/logout
   async kioskLogout(): Promise<void> {
     await api.post('/kiosk/logout');
+  },
+
+  // Manager override — Backend: POST /kiosk/authorize-override. Used when the
+  // signed-in cashier's own role can't authorize a discount or refund on its
+  // own; a manager enters their own User ID + PIN to approve it in place.
+  async authorizeOverride(managerUserId: string, pin: string, permission: string): Promise<OverrideAuthorization> {
+    const response = await api.post<{ data: OverrideAuthorization }>('/kiosk/authorize-override', {
+      manager_user_id: managerUserId,
+      pin,
+      permission,
+    });
+    return response.data.data;
+  },
+
+  // Device pairing — Backend: POST /kiosk/resolve-store (public, no tenant
+  // context needed yet). Used to brand a fresh kiosk device to a shop from a
+  // short code shown in that shop's admin dashboard, instead of requiring a
+  // prior full owner/admin login on that exact device.
+  async resolveKioskStore(code: string): Promise<KioskStoreInfo> {
+    const response = await api.post<{ data: KioskStoreInfo }>('/kiosk/resolve-store', { code });
+    return response.data.data;
+  },
+
+  // Backend: GET /admin/settings/kiosk-pairing-code (owner/admin only) — the
+  // code to read out when setting up a new kiosk device.
+  async getKioskPairingCode(): Promise<string> {
+    const response = await api.get<{ data: { code: string } }>('/admin/settings/kiosk-pairing-code');
+    return response.data.data.code;
+  },
+
+  // Backend: POST /admin/settings/kiosk-pairing-code/regenerate — rotates the
+  // code (e.g. after it's been shared too widely).
+  async regenerateKioskPairingCode(): Promise<string> {
+    const response = await api.post<{ data: { code: string } }>('/admin/settings/kiosk-pairing-code/regenerate');
+    return response.data.data.code;
   },
 
   // Refresh Token

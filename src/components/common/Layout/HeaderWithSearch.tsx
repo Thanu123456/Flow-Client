@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense, lazy } from "react";
 import {
   Layout,
   Input,
@@ -45,16 +45,24 @@ import {
   SwapOutlined,
 } from "@ant-design/icons";
 
-// Quick Action Modals
-import AddCustomerModal from "../../customers/AddCustomerModal";
-import AddSupplierModal from "../../suppliers/AddSupplierModal";
-import AddUserModal from "../../users/AddUserModal";
-import AddRoleModal from "../../roles/AddRoleModal";
-import AddWarrantyModal from "../../warranties/AddWarrantyModal";
-import AddCategoryModal from "../../categories/AddCategoryModal";
-import AddSubCategoryModal from "../../subcategories/AddSubCategoryModal";
-import AddBrandModal from "../../brands/AddBrandModal";
-import AddWarehouseModal from "../../warehouses/AddWarehouseModal";
+// Quick Action Modals — lazy-loaded: HeaderWithSearch is part of the
+// persistent layout mounted on every authenticated page, so a static import
+// here put all nine of these (rarely-opened) forms in the shared chunk every
+// page pays for on load. Each is only fetched the first time its "quick add"
+// action is actually clicked (see the conditional mounts near the bottom of
+// this file — Suspense alone doesn't defer the fetch if the component stays
+// mounted-but-hidden, so those `activeModal === "x" &&` guards are required,
+// not just the lazy() call).
+const AddCustomerModal = lazy(() => import("../../customers/AddCustomerModal"));
+const AddSupplierModal = lazy(() => import("../../suppliers/AddSupplierModal"));
+const AddUserModal = lazy(() => import("../../users/AddUserModal"));
+const AddRoleModal = lazy(() => import("../../roles/AddRoleModal"));
+const AddWarrantyModal = lazy(() => import("../../warranties/AddWarrantyModal"));
+const AddCategoryModal = lazy(() => import("../../categories/AddCategoryModal"));
+const AddSubCategoryModal = lazy(() => import("../../subcategories/AddSubCategoryModal"));
+const AddBrandModal = lazy(() => import("../../brands/AddBrandModal"));
+const AddWarehouseModal = lazy(() => import("../../warehouses/AddWarehouseModal"));
+const KioskPairingCodeModal = lazy(() => import("../../kiosk/KioskPairingCodeModal"));
 
 const { Header: AntHeader } = Layout;
 const { Text } = Typography;
@@ -90,6 +98,24 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({
   // Quick Action States
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [pairingCodeModalVisible, setPairingCodeModalVisible] = useState(false);
+
+  // Once a quick-action modal has been opened, it stays mounted (just
+  // hidden via `visible={false}`) for the rest of the session instead of
+  // unmounting — same as before lazy-loading, so AntD's close animation
+  // still plays. The set only ever grows, so each modal's lazy chunk is
+  // still fetched at most once, on its first open.
+  const [openedModals, setOpenedModals] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (activeModal) {
+      setOpenedModals((prev) => (prev.has(activeModal) ? prev : new Set(prev).add(activeModal)));
+    }
+  }, [activeModal]);
+  useEffect(() => {
+    if (pairingCodeModalVisible) {
+      setOpenedModals((prev) => (prev.has("kiosk-pairing-code") ? prev : new Set(prev).add("kiosk-pairing-code")));
+    }
+  }, [pairingCodeModalVisible]);
 
   const handleSuccess = (type: string) => {
     setActiveModal(null);
@@ -372,6 +398,7 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({
     // "Switch to Kiosk Mode" hands the device off to an employee — meaningless
     // if we're already in a kiosk session.
     ...(!isKiosk ? [{ key: "switch-to-kiosk", icon: <SwapOutlined />, label: "Switch to Kiosk Mode" }] : []),
+    ...(!isKiosk && canManageSettings ? [{ key: "kiosk-pairing-code", icon: <ShopOutlined />, label: "Kiosk Pairing Code" }] : []),
     { type: "divider" as const },
     {
       key: "logout",
@@ -390,6 +417,8 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({
       }
     } else if (key === "switch-to-kiosk") {
       switchToKioskMode();
+    } else if (key === "kiosk-pairing-code") {
+      setPairingCodeModalVisible(true);
     } else if (key === "dashboard") {
       navigate("/dashboard");
     } else if (key === "profile") {
@@ -584,52 +613,81 @@ const HeaderWithSearch: React.FC<HeaderProps> = ({
         </div>
       </Modal>
 
-      {/* Quick Action Modals */}
-      <AddCustomerModal
-        visible={activeModal === "customer"}
-        onCancel={() => setActiveModal(null)}
-        onSuccess={() => handleSuccess("customer")}
-      />
-      <AddSupplierModal
-        visible={activeModal === "supplier"}
-        onCancel={() => setActiveModal(null)}
-        onSuccess={() => handleSuccess("supplier")}
-      />
-      <AddUserModal
-        visible={activeModal === "user"}
-        onCancel={() => setActiveModal(null)}
-        onSuccess={() => handleSuccess("user")}
-      />
-      <AddRoleModal
-        visible={activeModal === "role"}
-        onCancel={() => setActiveModal(null)}
-        onSuccess={() => handleSuccess("role")}
-      />
-      <AddWarrantyModal
-        visible={activeModal === "warranty"}
-        onCancel={() => setActiveModal(null)}
-        onSuccess={() => handleSuccess("warranty")}
-      />
-      <AddCategoryModal
-        visible={activeModal === "category"}
-        onCancel={() => setActiveModal(null)}
-        onSuccess={() => handleSuccess("category")}
-      />
-      <AddSubCategoryModal
-        visible={activeModal === "subcategory"}
-        onCancel={() => setActiveModal(null)}
-        onSuccess={() => handleSuccess("subcategory")}
-      />
-      <AddBrandModal
-        visible={activeModal === "brand"}
-        onCancel={() => setActiveModal(null)}
-        onSuccess={() => handleSuccess("brand")}
-      />
-      <AddWarehouseModal
-        visible={activeModal === "warehouse"}
-        onCancel={() => setActiveModal(null)}
-        onSuccess={() => handleSuccess("warehouse")}
-      />
+      {/* Quick Action Modals — lazy chunk fetched on first open only
+          (openedModals gate); once opened, stays mounted with visible
+          toggled so AntD's close animation still plays on subsequent closes,
+          same as before lazy-loading. */}
+      <Suspense fallback={null}>
+        {openedModals.has("customer") && (
+          <AddCustomerModal
+            visible={activeModal === "customer"}
+            onCancel={() => setActiveModal(null)}
+            onSuccess={() => handleSuccess("customer")}
+          />
+        )}
+        {openedModals.has("supplier") && (
+          <AddSupplierModal
+            visible={activeModal === "supplier"}
+            onCancel={() => setActiveModal(null)}
+            onSuccess={() => handleSuccess("supplier")}
+          />
+        )}
+        {openedModals.has("user") && (
+          <AddUserModal
+            visible={activeModal === "user"}
+            onCancel={() => setActiveModal(null)}
+            onSuccess={() => handleSuccess("user")}
+          />
+        )}
+        {openedModals.has("role") && (
+          <AddRoleModal
+            visible={activeModal === "role"}
+            onCancel={() => setActiveModal(null)}
+            onSuccess={() => handleSuccess("role")}
+          />
+        )}
+        {openedModals.has("warranty") && (
+          <AddWarrantyModal
+            visible={activeModal === "warranty"}
+            onCancel={() => setActiveModal(null)}
+            onSuccess={() => handleSuccess("warranty")}
+          />
+        )}
+        {openedModals.has("category") && (
+          <AddCategoryModal
+            visible={activeModal === "category"}
+            onCancel={() => setActiveModal(null)}
+            onSuccess={() => handleSuccess("category")}
+          />
+        )}
+        {openedModals.has("subcategory") && (
+          <AddSubCategoryModal
+            visible={activeModal === "subcategory"}
+            onCancel={() => setActiveModal(null)}
+            onSuccess={() => handleSuccess("subcategory")}
+          />
+        )}
+        {openedModals.has("brand") && (
+          <AddBrandModal
+            visible={activeModal === "brand"}
+            onCancel={() => setActiveModal(null)}
+            onSuccess={() => handleSuccess("brand")}
+          />
+        )}
+        {openedModals.has("warehouse") && (
+          <AddWarehouseModal
+            visible={activeModal === "warehouse"}
+            onCancel={() => setActiveModal(null)}
+            onSuccess={() => handleSuccess("warehouse")}
+          />
+        )}
+        {openedModals.has("kiosk-pairing-code") && (
+          <KioskPairingCodeModal
+            open={pairingCodeModalVisible}
+            onClose={() => setPairingCodeModalVisible(false)}
+          />
+        )}
+      </Suspense>
     </>
   );
 };
