@@ -31,6 +31,7 @@ import {
     TagOutlined,
     RollbackOutlined,
     TrophyOutlined,
+    SafetyCertificateOutlined,
 } from '@ant-design/icons';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useNavigate } from 'react-router-dom';
@@ -39,6 +40,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { authService } from '../../services/auth/authService';
 import { settingsService } from '../../services/management/settingsService';
 import type { KioskSessionInfo, KioskEndShiftResponse, ShiftInsights } from '../../types/auth/kiosk.types';
+import BackOfficeAccessModal from '../../components/kiosk/BackOfficeAccessModal';
 import DenominationCounter, { denominationTotal } from '../../components/kiosk/DenominationCounter';
 import type { DenominationCounts } from '../../components/kiosk/DenominationCounter';
 
@@ -65,6 +67,9 @@ const KioskPOS: React.FC = () => {
     const [movementAmount, setMovementAmount] = useState<number>(0);
     const [movementNote, setMovementNote] = useState('');
     const [recordingMovement, setRecordingMovement] = useState(false);
+
+    // ── Manager back-office step-up (PIN) ────────────────────────────────
+    const [backOfficeOpen, setBackOfficeOpen] = useState(false);
 
     // ── Shift insights (hourly trend, top items, discount/refund activity) ──
     const [insights, setInsights] = useState<ShiftInsights | null>(null);
@@ -206,6 +211,9 @@ const KioskPOS: React.FC = () => {
                     </Button>
                     <Button size="large" icon={<UserSwitchOutlined />} onClick={handleSwitchUser}>
                         Switch User
+                    </Button>
+                    <Button size="large" icon={<SafetyCertificateOutlined />} onClick={() => setBackOfficeOpen(true)}>
+                        Back Office
                     </Button>
                     <Button danger size="large" icon={<LogoutOutlined />} onClick={handleEndShift} loading={ending}>
                         End Shift
@@ -439,6 +447,8 @@ const KioskPOS: React.FC = () => {
                     <DenominationCounter value={closingCounts} onChange={setClosingCounts} />
                 </div>
             </Modal>
+
+            <BackOfficeAccessModal open={backOfficeOpen} onClose={() => setBackOfficeOpen(false)} />
 
             {/* ── Manual cash in/out during the shift ─────────────────────────── */}
             <Modal

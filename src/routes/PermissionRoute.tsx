@@ -1,6 +1,7 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { usePermission } from '../contexts/PermissionContext';
+import { useAuth } from '../contexts/AuthContext';
 import type { Permission } from '../types/auth/permissions';
 import { Spin, Result, Button } from 'antd';
 
@@ -16,6 +17,7 @@ const PermissionRoute: React.FC<PermissionRouteProps> = ({
   requireAll = false 
 }) => {
   const { hasPermission, hasAnyPermission, hasAllPermissions, isLoading } = usePermission();
+  const { isKiosk } = useAuth();
 
   if (isLoading) {
      return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
@@ -40,7 +42,11 @@ const PermissionRoute: React.FC<PermissionRouteProps> = ({
           status="403"
           title="403"
           subTitle="Sorry, you are not authorized to access this page."
-          extra={<Button type="primary" onClick={() => window.location.href = '/dashboard'}>Back to Dashboard</Button>}
+          extra={
+            <Button type="primary" onClick={() => window.location.href = isKiosk ? '/kiosk/dashboard' : '/dashboard'}>
+              {isKiosk ? 'Back to Shift Screen' : 'Back to Dashboard'}
+            </Button>
+          }
         />
       </div>
     );

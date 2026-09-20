@@ -10,6 +10,7 @@ import PrivateRoutes from "./PrivateRoutes";
 import SuperAdminRoutes from "./SuperAdminRoutes";
 import KioskRoutes from "./KioskRoutes";
 import PermissionRoute from "./PermissionRoute";
+import DashboardRoute from "./DashboardRoute";
 import { PERMISSIONS } from "../types/auth/permissions";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -144,7 +145,9 @@ const AppRoutes: React.FC = () => {
       {/* Owner/Admin Private Routes */}
       <Route element={<PrivateRoutes />}>
         <Route path="/change-password" element={<ChangePassword />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route element={<DashboardRoute />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+        </Route>
         <Route path="/profile" element={<Profile />} />
 
         {/* Product Management Routes */}

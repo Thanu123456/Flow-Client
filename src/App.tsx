@@ -12,6 +12,7 @@ import SessionExpiredHandler from "./components/auth/SessionExpiredHandler";
 import IdleTimeoutHandler from "./components/auth/IdleTimeoutHandler";
 import OfflineIndicator from "./components/common/OfflineIndicator";
 import KioskLockdownGuard from "./components/kiosk/KioskLockdownGuard";
+import ElevationBanner from "./components/kiosk/ElevationBanner";
 
 const App: React.FC = () => {
   return (
@@ -26,6 +27,7 @@ const App: React.FC = () => {
                   <IdleTimeoutHandler />
                   <OfflineIndicator />
                   <KioskLockdownGuard />
+                  <ElevationBanner />
                   <AppRoutes />
                 </PermissionProvider>
               </TenantProvider>

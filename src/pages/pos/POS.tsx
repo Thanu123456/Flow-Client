@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button, Input, Select, Modal, Radio, Checkbox, Typography, Spin, Empty, message, Avatar, Dropdown, Tooltip, InputNumber } from 'antd';
 import type { MenuProps } from 'antd';
-import { SearchOutlined, UserOutlined, SettingOutlined, DeleteOutlined, CloseOutlined, PlusOutlined, MinusOutlined, ShoppingOutlined, DashboardOutlined, KeyOutlined, LogoutOutlined, BarcodeOutlined, UserSwitchOutlined, DesktopOutlined } from '@ant-design/icons';
+import { SearchOutlined, UserOutlined, SettingOutlined, DeleteOutlined, CloseOutlined, PlusOutlined, MinusOutlined, ShoppingOutlined, DashboardOutlined, KeyOutlined, LogoutOutlined, BarcodeOutlined, UserSwitchOutlined, DesktopOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { FaCcVisa, FaCcMastercard, FaCcDiscover } from 'react-icons/fa';
 import { SiAmericanexpress } from 'react-icons/si';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +24,7 @@ import HoldNoteModal from '../../components/pos/HoldNoteModal';
 import POSRefundModal from '../../components/pos/POSRefundModal';
 import ManagerOverrideModal from '../../components/pos/ManagerOverrideModal';
 import SendReceiptModal from '../../components/pos/SendReceiptModal';
+import BackOfficeAccessModal from '../../components/kiosk/BackOfficeAccessModal';
 import CustomerPaymentModal from '../../components/credit-customer/CustomerPaymentModal';
 import { isWeightBasedProduct, formatQuantity } from '../../utils/posHelpers';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
@@ -90,6 +91,9 @@ const POS: React.FC = () => {
 
     // ── POS Refund Modal ───────────────────────────────────────────────
     const [refundModalVisible, setRefundModalVisible] = useState(false);
+
+    // ── Manager back-office step-up (kiosk sessions only) ───────────────
+    const [backOfficeOpen, setBackOfficeOpen] = useState(false);
 
     // ── Digital receipts (email/SMS/QR) + customer-facing display ──────
     const [effectiveSettings, setEffectiveSettings] = useState<EffectiveSettings | null>(null);
@@ -637,12 +641,17 @@ const POS: React.FC = () => {
     const userMenuItems: MenuProps['items'] = [
         { key: 'profile-info', label: (<div className="px-3 py-2"><div className="font-semibold text-gray-800">{displayName}</div>{displayEmail && <div className="text-xs text-gray-500">{displayEmail}</div>}<div className="text-xs text-gray-400 mt-1">{displayRole}</div></div>), disabled: true },
         { type: 'divider' },
-        { key: 'dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
+        // A register (kiosk) session has no business in the admin dashboard or
+        // settings — it gets the shift screen instead, and a manager who needs
+        // the back office steps up with their PIN ("Back office" below).
+        ...(!isKiosk ? [{ key: 'dashboard', icon: <DashboardOutlined />, label: 'Dashboard' }] : []),
         { key: 'profile', icon: <UserOutlined />, label: 'My Profile' },
         // Kiosk sessions authenticate with a PIN, not a password — there's no
         // password to change, and system Settings is an owner/admin concern.
-        ...(canManageSettings ? [{ key: 'settings', icon: <SettingOutlined />, label: 'Settings' }] : []),
+        ...(canManageSettings && !isKiosk ? [{ key: 'settings', icon: <SettingOutlined />, label: 'Settings' }] : []),
         ...(!isKiosk ? [{ key: 'change-password', icon: <KeyOutlined />, label: 'Change Password' }] : []),
+        ...(isKiosk ? [{ key: 'shift-screen', icon: <DashboardOutlined />, label: 'Shift Screen' }] : []),
+        ...(isKiosk ? [{ key: 'back-office', icon: <SafetyCertificateOutlined />, label: 'Back Office (manager)' }] : []),
         // Fast user-switch — swap to the next cashier without ending this
         // shift or a full logout/login round-trip; see AuthContext.switchKioskUser.
         ...(isKiosk ? [{ key: 'switch-user', icon: <UserSwitchOutlined />, label: 'Switch User' }] : []),
@@ -672,6 +681,10 @@ const POS: React.FC = () => {
             });
         } else if (key === 'dashboard') {
             navigate('/dashboard');
+        } else if (key === 'shift-screen') {
+            navigate('/kiosk/dashboard');
+        } else if (key === 'back-office') {
+            setBackOfficeOpen(true);
         } else if (key === 'profile') {
             navigate('/profile');
         } else if (key === 'settings') {
@@ -776,7 +789,7 @@ const POS: React.FC = () => {
                             <Avatar size={40} src={displayAvatar} icon={!displayAvatar && <UserOutlined />} className="bg-indigo-500 hover:bg-indigo-600 transition-all shadow-sm" />
                         </div>
                     </Dropdown>
-                    <Button type="text" onClick={() => navigate('/dashboard')} className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 font-semibold ml-2 rounded-lg px-4 transition-colors">Exit POS</Button>
+                    <Button type="text" onClick={() => navigate(isKiosk ? '/kiosk/dashboard' : '/dashboard')} className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 font-semibold ml-2 rounded-lg px-4 transition-colors">Exit POS</Button>
                 </div>
             </div>
 
@@ -913,7 +926,9 @@ const POS: React.FC = () => {
                             {priceModeLabel[priceMode].toUpperCase()} (F3)
                         </Button>
                         <Button onClick={() => message.info('Help Documentation coming soon.')} style={{ backgroundColor: '#95a5a6', color: 'white', border: 'none', height: '40px' }} className="hover:opacity-90 font-semibold text-[11px] px-4 rounded-lg shadow-sm">HELP (F12)</Button>
-                        <Button onClick={() => navigate('/settings')} style={{ backgroundColor: '#bdc3c7', color: 'white', border: 'none', height: '40px', width: '40px' }} className="flex justify-center items-center hover:opacity-90 rounded-lg shadow-sm" icon={<SettingOutlined />} />
+                        {!isKiosk && (
+                            <Button onClick={() => navigate('/settings')} style={{ backgroundColor: '#bdc3c7', color: 'white', border: 'none', height: '40px', width: '40px' }} className="flex justify-center items-center hover:opacity-90 rounded-lg shadow-sm" icon={<SettingOutlined />} />
+                        )}
                     </div>
 
                     {/* Cart header */}
@@ -1494,6 +1509,9 @@ const POS: React.FC = () => {
                     setPendingOverride(null);
                 }}
             />
+
+            {/* ── Back office – a manager steps in from the register with their PIN ── */}
+            {isKiosk && <BackOfficeAccessModal open={backOfficeOpen} onClose={() => setBackOfficeOpen(false)} />}
 
             {/* ── Send Digital Receipt – email / SMS / QR after a successful sale ── */}
             <SendReceiptModal

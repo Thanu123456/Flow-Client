@@ -24,6 +24,7 @@ import type {
   SuperAdminLoginRequest,
   SuperAdminLoginResponse
 } from '../../types/auth/superadmin.types';
+import type { ElevationResponse } from '../../utils/elevation';
 
 export const authService = {
   // Owner/Admin Login
@@ -103,6 +104,17 @@ export const authService = {
   // Kiosk Logout - Backend: POST /kiosk/logout
   async kioskLogout(): Promise<void> {
     await api.post('/kiosk/logout');
+  },
+
+  // Manager steps from the register into the back office — Backend:
+  // POST /kiosk/elevate. Answers with a ten-minute, non-refreshable full
+  // session for that manager (see utils/elevation.ts for how it's swapped in).
+  async elevateToBackOffice(managerUserId: string, pin: string): Promise<ElevationResponse> {
+    const response = await api.post<{ data: ElevationResponse }>('/kiosk/elevate', {
+      manager_user_id: managerUserId,
+      pin,
+    });
+    return response.data.data;
   },
 
   // Manager override — Backend: POST /kiosk/authorize-override. Used when the

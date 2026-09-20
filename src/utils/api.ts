@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { restoreKioskSession } from './elevation';
 
 export const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
@@ -80,6 +81,13 @@ api.interceptors.response.use(
         req.headers['Authorization'] = `Bearer ${newToken}`;
         return api(req);
       } catch {
+        // An expired manager back-office step-up: hand the register back to the
+        // cashier (their session was only set aside) instead of clearing the
+        // device's auth and dumping it on the full-login screen.
+        if (restoreKioskSession()) {
+          window.location.href = '/kiosk/dashboard';
+          return Promise.reject(error);
+        }
         clearAuthData();
         window.dispatchEvent(
           new CustomEvent('api-error', {

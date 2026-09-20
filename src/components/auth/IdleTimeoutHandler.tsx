@@ -6,6 +6,7 @@ import { authService } from '../../services/auth/authService';
 import KioskLockScreen from '../kiosk/KioskLockScreen';
 import type { KioskUserInfo } from '../../types/auth/kiosk.types';
 import { useKioskLockStore } from '../../store/kiosk/kioskLockStore';
+import { isElevated } from '../../utils/elevation';
 
 const { Text } = Typography;
 
@@ -187,6 +188,9 @@ const IdleTimeoutHandler: React.FC = () => {
         const checkAndRefresh = async () => {
             // Don't refresh while the warning/lock overlay is showing
             if (isWarningActiveRef.current || isKioskLockedRef.current) return;
+            // A manager's back-office step-up is deliberately non-refreshable
+            // (ten minutes, then back to the register) — nothing to refresh.
+            if (isElevated()) return;
 
             const token = localStorage.getItem('token');
             if (!token) return;

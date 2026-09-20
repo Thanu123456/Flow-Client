@@ -28,17 +28,29 @@ const CustomerDisplay: React.FC = () => {
 
     useEffect(() => {
         return subscribeCustomerDisplay((msg) => {
-            if (msg.type === 'cart') setView({ mode: 'cart', data: msg });
-            else if (msg.type === 'payment_complete') setView({ mode: 'paid', data: msg });
-            else setView({ mode: 'idle' });
+            setView((prev) => {
+                if (msg.type === 'payment_complete') return { mode: 'paid', data: msg };
+                if (msg.type === 'cart') {
+                    if (msg.items.length === 0) {
+                        // The POS clears its cart the instant a sale completes, which
+                        // broadcasts an *empty* cart right behind the payment message.
+                        // That must not replace the thank-you / receipt-QR screen the
+                        // customer is about to scan — keep it until the timer below
+                        // (or the next customer's first item) moves things on.
+                        return prev.mode === 'paid' ? prev : { mode: 'idle' };
+                    }
+                    return { mode: 'cart', data: msg };
+                }
+                return { mode: 'idle' };
+            });
         });
     }, []);
 
-    // Auto-return to idle a while after a "thank you" screen, in case the
-    // cashier's tab doesn't explicitly post the next idle/cart event first.
+    // Auto-return to idle after the thank-you screen, long enough for the
+    // customer to scan the QR code on their phone.
     useEffect(() => {
         if (view.mode !== 'paid') return;
-        const t = setTimeout(() => setView({ mode: 'idle' }), 15000);
+        const t = setTimeout(() => setView({ mode: 'idle' }), 30000);
         return () => clearTimeout(t);
     }, [view]);
 

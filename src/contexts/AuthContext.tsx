@@ -19,6 +19,7 @@ import type {
   SuperAdminLoginRequest,
   SuperAdminLoginResponse
 } from '../types/auth/superadmin.types';
+import { isElevated, getElevation, restoreKioskSession, endElevation } from '../utils/elevation';
 
 interface AuthState {
   user: UserInfo | KioskUserInfo | null;
@@ -81,6 +82,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const checkAuth = () => {
+    // A manager's back-office step-up that has expired (or lost its token)
+    // hands the register back to the cashier before anything reads the session.
+    if (isElevated() && (getElevation().until <= Date.now() || !localStorage.getItem('token'))) {
+      restoreKioskSession();
+    }
+
     const token = localStorage.getItem('token');
     if (token) {
       try {
@@ -290,6 +297,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    // "Logging out" of a manager's back-office step-up means returning to the
+    // register, not signing the whole device out — the cashier's kiosk session
+    // and open shift were only set aside (see utils/elevation.ts).
+    if (isElevated()) {
+      endElevation();
+      return;
+    }
+
     // Capture current role and isKiosk before clearing
     const currentRole = state.role;
     const wasKiosk = state.isKiosk;
