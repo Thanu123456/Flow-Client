@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
 	Table, Button, Modal, message, Tag, Empty, Spin, Descriptions, Space,
 } from 'antd';
-import { EyeOutlined, RollbackOutlined } from '@ant-design/icons';
+import { EyeOutlined, RollbackOutlined, PrinterOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { saleService } from '../../services/transactions/saleService';
 import type { SaleListItem, SaleDetailItem } from '../../types/entities/sale.types';
+import PrintReceipt from './PrintReceipt';
 
 const PAYMENT_COLORS: Record<string, string> = {
 	cash: 'green',
@@ -36,6 +37,7 @@ const SalesHistoryTable: React.FC<SalesHistoryTableProps> = ({
 	const [detailVisible, setDetailVisible] = useState(false);
 	const [detailLoading, setDetailLoading] = useState(false);
 	const [selectedSale, setSelectedSale] = useState<SaleDetailItem | null>(null);
+	const printRef = useRef<HTMLDivElement>(null);
 
 	const loadSales = useCallback(async () => {
 		setLoading(true);
@@ -69,6 +71,34 @@ const SalesHistoryTable: React.FC<SalesHistoryTableProps> = ({
 		} finally {
 			setDetailLoading(false);
 		}
+	};
+
+	// Reprints the sale currently open in the detail modal, marked "DUPLICATE"
+	// — same window.open + innerHTML pattern PurchaseDetailsModal uses for GRNs.
+	const handlePrintDuplicate = () => {
+		if (!printRef.current || !selectedSale) return;
+		const content = printRef.current.innerHTML;
+		const win = window.open('', '_blank', 'width=420,height=700');
+		if (!win) return;
+		win.document.write(`
+			<html>
+				<head>
+					<title>Receipt - ${selectedSale.invoice_number}</title>
+					<style>
+						body { margin: 0; padding: 12px; }
+						@media print { body { margin: 0; padding: 0; } }
+						table { width: 100%; border-collapse: collapse; }
+					</style>
+				</head>
+				<body>${content}</body>
+			</html>
+		`);
+		win.document.close();
+		win.focus();
+		setTimeout(() => {
+			win.print();
+			win.close();
+		}, 300);
 	};
 
 	const columns: ColumnsType<SaleListItem> = [
@@ -206,7 +236,16 @@ const SalesHistoryTable: React.FC<SalesHistoryTableProps> = ({
 				open={detailVisible}
 				onCancel={() => setDetailVisible(false)}
 				footer={
-					<Button onClick={() => setDetailVisible(false)}>Close</Button>
+					<Space>
+						<Button
+							icon={<PrinterOutlined />}
+							onClick={handlePrintDuplicate}
+							disabled={!selectedSale}
+						>
+							Print Duplicate
+						</Button>
+						<Button onClick={() => setDetailVisible(false)}>Close</Button>
+					</Space>
 				}
 				width={760}
 			>
@@ -257,6 +296,13 @@ const SalesHistoryTable: React.FC<SalesHistoryTableProps> = ({
 					)}
 				</Spin>
 			</Modal>
+
+			{/* Hidden print view */}
+			{selectedSale && (
+				<div style={{ display: 'none' }}>
+					<PrintReceipt ref={printRef} sale={selectedSale} duplicate />
+				</div>
+			)}
 		</>
 	);
 };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button, Input, Select, Modal, Radio, Checkbox, Typography, Spin, Empty, message, Avatar, Dropdown, Tooltip, InputNumber } from 'antd';
 import type { MenuProps } from 'antd';
-import { SearchOutlined, UserOutlined, SettingOutlined, DeleteOutlined, CloseOutlined, PlusOutlined, MinusOutlined, ShoppingOutlined, DashboardOutlined, KeyOutlined, LogoutOutlined, BarcodeOutlined } from '@ant-design/icons';
+import { SearchOutlined, UserOutlined, SettingOutlined, DeleteOutlined, CloseOutlined, PlusOutlined, MinusOutlined, ShoppingOutlined, DashboardOutlined, KeyOutlined, LogoutOutlined, BarcodeOutlined, UserSwitchOutlined, DesktopOutlined } from '@ant-design/icons';
 import { FaCcVisa, FaCcMastercard, FaCcDiscover } from 'react-icons/fa';
 import { SiAmericanexpress } from 'react-icons/si';
 import { useNavigate } from 'react-router-dom';
@@ -12,6 +12,7 @@ import { useCustomerStore } from '../../store/management/customerStore';
 import { usePOSBootstrap } from '../../hooks/data/usePOSBootstrap';
 import { usePOSProducts } from '../../hooks/data/usePOSProducts';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTenant } from '../../contexts/TenantContext';
 import { usePermissions } from '../../hooks/auth/usePermissions';
 import { PERMISSIONS } from '../../types/auth/permissions';
 import type { Product, ProductVariation } from '../../types/entities/product.types';
@@ -21,10 +22,15 @@ import PriceModeSelector from '../../components/pos/PriceModeSelector';
 import HeldBillsModal from '../../components/pos/HeldBillsModal';
 import HoldNoteModal from '../../components/pos/HoldNoteModal';
 import POSRefundModal from '../../components/pos/POSRefundModal';
+import ManagerOverrideModal from '../../components/pos/ManagerOverrideModal';
+import SendReceiptModal from '../../components/pos/SendReceiptModal';
 import CustomerPaymentModal from '../../components/credit-customer/CustomerPaymentModal';
 import { isWeightBasedProduct, formatQuantity } from '../../utils/posHelpers';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import { axiosInstance } from '../../services/api/axiosInstance';
+import { settingsService } from '../../services/management/settingsService';
+import type { EffectiveSettings } from '../../types/entities/settings.types';
+import { postCartUpdate, postPaymentComplete, openCustomerDisplayWindow } from '../../utils/customerDisplay/customerDisplayChannel';
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -85,8 +91,27 @@ const POS: React.FC = () => {
     // ── POS Refund Modal ───────────────────────────────────────────────
     const [refundModalVisible, setRefundModalVisible] = useState(false);
 
+    // ── Digital receipts (email/SMS/QR) + customer-facing display ──────
+    const [effectiveSettings, setEffectiveSettings] = useState<EffectiveSettings | null>(null);
+    const [receiptModal, setReceiptModal] = useState<{ saleId: string; invoiceNumber: string; totalAmount: number; createdAt: string } | null>(null);
+    useEffect(() => {
+        settingsService.getEffectiveSettings().then(setEffectiveSettings).catch(() => { /* receipt options just stay hidden */ });
+    }, []);
+
+    // ── Manager override (discount/refund a cashier can't self-authorize) ──
+    interface PendingOverride { permission: string; label: string; resolve: (token: string) => void; reject: () => void }
+    const [pendingOverride, setPendingOverride] = useState<PendingOverride | null>(null);
+    const requireOverride = (permission: string, label: string): Promise<string> =>
+        new Promise((resolve, reject) => setPendingOverride({ permission, label, resolve, reject }));
+
     // ── Customer Credit Payment Modal ──────────────────────────────────
     const [creditPaymentModalVisible, setCreditPaymentModalVisible] = useState(false);
+
+    // ── Unknown/misc item modal ─────────────────────────────────────────
+    const [unknownItemModalVisible, setUnknownItemModalVisible] = useState(false);
+    const [unknownItemName, setUnknownItemName] = useState('');
+    const [unknownItemPrice, setUnknownItemPrice] = useState<number>(0);
+    const [unknownItemQty, setUnknownItemQty] = useState<number>(1);
 
     // ── Customer state ─────────────────────────────────────────────────
 
@@ -102,10 +127,12 @@ const POS: React.FC = () => {
         cart, loading: posLoading, paymentMethod, isRefundMode,
         discountType, discountValue, deliveryCharge,
         cardBank, cardFirstDigit, cardLastFour, cardType, priceMode,
+        bankName, bankReference, splitCashAmount, splitCardAmount, splitBankAmount,
         addToCart, updateQuantity, removeItem, clearCart,
         customerId, setCustomer, setPaymentMethod,
         setDiscount, setDeliveryCharge,
         setCardBank, setCardFirstDigit, setCardLastFour, setCardType, setPriceMode,
+        setBankName, setBankReference, setSplitCashAmount, setSplitCardAmount, setSplitBankAmount,
         updateCartItemPrices,
         initializePriceMode,
         checkout,
@@ -122,7 +149,8 @@ const POS: React.FC = () => {
     // ── Signed-in user (owner/employee or kiosk cashier) ────────────────
     // full_name and profile_image_url are common to both session shapes;
     // email only exists on full sessions, role only on kiosk sessions.
-    const { user: authUser, isKiosk, logout, endShift } = useAuth();
+    const { user: authUser, isKiosk, logout, endShift, switchKioskUser } = useAuth();
+    const { tenant } = useTenant();
     const { isOwner, hasPermission } = usePermissions();
     const canManageSettings = isOwner || hasPermission(PERMISSIONS.SETTINGS_SYSTEM);
     const displayName = (authUser as any)?.full_name || 'User';
@@ -160,7 +188,12 @@ const POS: React.FC = () => {
         initializePriceMode();
     }, [initializePriceMode]);
 
-    // ─── Feature #4 – Generate Bill Number locally ────────────────────
+    // ─── Feature #4 – Bill number preview ──────────────────────────────
+    //  Display-only: the server assigns and verifies the real invoice number
+    //  at checkout (never trusts this value), so two terminals checking out
+    //  at once can't collide. This just gives the cashier something to look
+    //  at in the payment modal before it's saved — the actual saved number
+    //  (shown in the success message) may differ slightly in its timestamp.
     //  Format: {MODE_PREFIX}{PAY_CODE}{YYMMDDHHMMSS}{3 random alphanum}
     //  MODE_PREFIX : O=Our/Cost  R=Retail  W=Wholesale
     //  PAY_CODE    : C=Cash  D=Card  R=Credit  O=COD
@@ -201,18 +234,6 @@ const POS: React.FC = () => {
             setBillNumberLoading(false);
         }
     }, [isPaymentModalOpen, paymentMethod, priceMode, isRefundMode, generateBillNumber]);
-
-    // When switching to Credit inside the modal, reset paidAmount to 0 so the full amount is recorded as credit.
-    // Switching away from Credit restores the full payable amount.
-    useEffect(() => {
-        if (!isPaymentModalOpen) return;
-        if (paymentMethod === 'Credit') {
-            setPaidAmount(0);
-        } else {
-            setPaidAmount(totalPayable);
-        }
-    }, [paymentMethod, isPaymentModalOpen]);
-
 
     // ─── Feature #5 – Calculate total weight ─────────────────────────
     useEffect(() => {
@@ -297,11 +318,6 @@ const POS: React.FC = () => {
             const vRetail = parsePrice(variation.retailPrice);
             const vCost = parsePrice(variation.costPrice);
 
-            // DEBUG: Log first product to verify prices are loaded
-            if (mode === 'wholesale' && !priceMode) {
-                console.log('DEBUG Variation:', { name: product.name, vWholesale, vOur, vRetail, vCost, mode });
-            }
-
             switch (mode) {
                 case 'wholesale': return vWholesale || vRetail || vCost;
                 case 'our': return vOur || vRetail || vCost;
@@ -313,11 +329,6 @@ const POS: React.FC = () => {
         const pOur = parsePrice(product.ourPrice);
         const pRetail = parsePrice(product.retailPrice);
         const pCost = parsePrice(product.costPrice);
-
-        // DEBUG: Log first product to verify prices are loaded
-        if (mode === 'wholesale' && !priceMode) {
-            console.log('DEBUG Product:', { name: product.name, pWholesale, pOur, pRetail, pCost, mode });
-        }
 
         switch (mode) {
             case 'wholesale': return pWholesale || pRetail || pCost;
@@ -379,6 +390,28 @@ const POS: React.FC = () => {
         setSelectedWeightProduct(null);
     };
 
+    // ─── Unknown/misc item — a cashier-typed line for something not in the
+    // catalogue. No productId, so no stock is checked or deducted for it.
+    const handleAddUnknownItem = () => {
+        const name = unknownItemName.trim();
+        if (!name) { message.error('Enter a name for the item.'); return; }
+        if (unknownItemPrice <= 0) { message.error('Enter a price greater than zero.'); return; }
+        if (unknownItemQty <= 0) { message.error('Enter a quantity greater than zero.'); return; }
+
+        addToCart({
+            id: `misc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            name,
+            unit: 'pcs',
+            quantity: unknownItemQty,
+            price: unknownItemPrice,
+            maxStock: 0,
+            isMisc: true,
+        });
+        message.success(`Added "${name}" to cart`);
+        setUnknownItemModalVisible(false);
+        setUnknownItemName(''); setUnknownItemPrice(0); setUnknownItemQty(1);
+    };
+
     // ─── Feature #9 – Barcode scanner handler ────────────────────────
     const handleBarcodeScanned = useCallback((barcode: string) => {
         const matching = posItems.find(
@@ -410,10 +443,44 @@ const POS: React.FC = () => {
         : (subTotal * Math.min(discountValue, 100)) / 100;
     const totalPayable = subTotal - discountAmount + deliveryCharge;
 
+    // Mirror the cart to the customer-facing display (if a second window is
+    // open — see customerDisplayChannel.ts). Harmless no-op when it isn't:
+    // BroadcastChannel just has no listener on the other end.
+    useEffect(() => {
+        postCartUpdate({
+            shopName: tenant?.shop_name,
+            logoUrl: tenant?.logo_url,
+            items: cart.map((item) => ({ name: item.name, quantity: item.quantity, price: item.price })),
+            subtotal: subTotal,
+            discount: discountAmount,
+            deliveryCharge,
+            total: totalPayable,
+        });
+    }, [cart, subTotal, discountAmount, deliveryCharge, totalPayable]);
+
+    // When switching to Credit inside the modal, reset paidAmount to 0 so the full amount is recorded as credit.
+    // Switching away from Credit restores the full payable amount.
+    useEffect(() => {
+        if (!isPaymentModalOpen) return;
+        if (paymentMethod === 'Credit') {
+            setPaidAmount(0);
+        } else {
+            setPaidAmount(totalPayable);
+        }
+    }, [paymentMethod, isPaymentModalOpen, totalPayable]);
+
+    // Split payment: keep paidAmount in sync with the three tendered amounts
+    // so the Balance display always reflects what's actually been allocated
+    // across cash/card/bank rather than the auto-filled totalPayable above.
+    useEffect(() => {
+        if (!isPaymentModalOpen || paymentMethod !== 'Split') return;
+        setPaidAmount(splitCashAmount + splitCardAmount + splitBankAmount);
+    }, [paymentMethod, isPaymentModalOpen, splitCashAmount, splitCardAmount, splitBankAmount]);
+
     // ─── Card type detection ──────────────────────────────────────────
     const detectCardType = (firstDigit: string): string => {
         if (firstDigit === '4') return 'VISA';
-        if (firstDigit === '5') return 'MASTERCARD';
+        if (firstDigit === '5' || firstDigit === '2') return 'MASTERCARD';
         if (firstDigit === '3') return 'AMEX';
         if (firstDigit === '6') return 'DISCOVER';
         return '';
@@ -479,20 +546,83 @@ const POS: React.FC = () => {
             }
         }
 
+        if (paymentMethod === 'BankTransfer' && !bankName) {
+            message.error('Please select a bank for the bank transfer.');
+            return;
+        }
+
+        if (paymentMethod === 'Split') {
+            const splitSum = splitCashAmount + splitCardAmount + splitBankAmount;
+            if (Math.abs(splitSum - totalPayable) > 0.01) {
+                message.error(`Split amounts (LKR ${splitSum.toFixed(2)}) must add up to the total payable (LKR ${totalPayable.toFixed(2)}).`);
+                return;
+            }
+            if (splitCardAmount > 0 && (!cardBank || !cardFirstDigit || !cardLastFour || cardLastFour.length < 4)) {
+                message.error('Please complete the card details for the card portion of the split payment.');
+                return;
+            }
+            if (splitBankAmount > 0 && !bankName) {
+                message.error('Please select a bank for the bank-transfer portion of the split payment.');
+                return;
+            }
+        }
+
         // Validation 3: Paid amount vs Payable
         if (paymentMethod !== 'Credit' && paidAmount < totalPayable - 0.01) {
             message.error(`Insufficient paid amount. Total payable is LKR ${totalPayable.toFixed(2)}`);
             return;
         }
 
+        // Validation 4: a cashier without the right permission needs a
+        // manager to approve a discount or a refund before this can proceed.
+        // Scoped to kiosk sessions — a full owner/admin login already gates
+        // POS access behind whatever permissions that account actually has.
+        let overrideToken: string | undefined;
+        if (isKiosk && !isOwner) {
+            try {
+                if (discountValue > 0 && !hasPermission(PERMISSIONS.POS_DISCOUNTS)) {
+                    overrideToken = await requireOverride('pos.discounts', 'A manager needs to approve this discount.');
+                } else if (isRefundMode && !hasPermission(PERMISSIONS.SALES_REFUNDS)) {
+                    overrideToken = await requireOverride('sales.refunds', 'A manager needs to approve this refund.');
+                }
+            } catch {
+                return; // cancelled from the approval modal
+            }
+        }
+
         try {
-            await checkout(paidAmount, billNumber);
-            message.success('Payment completed successfully!');
+            const { saleId, invoiceNumber: savedInvoiceNumber, changeDue, queued } = await checkout(paidAmount, overrideToken);
+            if (queued) {
+                message.warning(
+                    `Saved offline (${savedInvoiceNumber}) — no connection right now. It'll sync automatically once this device is back online.`,
+                    6
+                );
+            } else {
+                message.success(
+                    changeDue > 0
+                        ? `Payment completed! Bill No: ${savedInvoiceNumber} — Change due: LKR ${changeDue.toFixed(2)}`
+                        : `Payment completed successfully! Bill No: ${savedInvoiceNumber}`
+                );
+                postPaymentComplete({
+                    invoiceNumber: savedInvoiceNumber,
+                    totalAmount: totalPayable,
+                    changeDue,
+                    tenantId: tenant?.id,
+                    saleId: saleId || undefined,
+                });
+                // Offline-queued sales have no real saleId yet (see posStore) —
+                // nothing to email/SMS/QR-link to until it actually syncs.
+                if (saleId) {
+                    setReceiptModal({ saleId, invoiceNumber: savedInvoiceNumber, totalAmount: totalPayable, createdAt: new Date().toISOString() });
+                }
+            }
             setIsPaymentModalOpen(false);
             setPaidAmount(0);
             setDeliveryCharge(0);
             setDiscount('fixed', 0);
             setCardBank(''); setCardFirstDigit(''); setCardLastFour(''); setCardType('');
+            setBankName(''); setBankReference('');
+            setSplitCashAmount(0); setSplitCardAmount(0); setSplitBankAmount(0);
             // Generate fresh bill number for the next transaction
             setBillNumber(generateBillNumber(priceMode, paymentMethod, isRefundMode));
             refetchProducts();
@@ -513,6 +643,9 @@ const POS: React.FC = () => {
         // password to change, and system Settings is an owner/admin concern.
         ...(canManageSettings ? [{ key: 'settings', icon: <SettingOutlined />, label: 'Settings' }] : []),
         ...(!isKiosk ? [{ key: 'change-password', icon: <KeyOutlined />, label: 'Change Password' }] : []),
+        // Fast user-switch — swap to the next cashier without ending this
+        // shift or a full logout/login round-trip; see AuthContext.switchKioskUser.
+        ...(isKiosk ? [{ key: 'switch-user', icon: <UserSwitchOutlined />, label: 'Switch User' }] : []),
         { type: 'divider' },
         { key: 'logout', icon: <LogoutOutlined />, label: isKiosk ? 'End Shift' : 'Logout', danger: true },
     ];
@@ -528,6 +661,14 @@ const POS: React.FC = () => {
                 okType: 'danger',
                 cancelText: 'Stay',
                 onOk: () => (isKiosk ? endShift() : logout()),
+            });
+        } else if (key === 'switch-user') {
+            Modal.confirm({
+                title: 'Switch User',
+                content: 'Your shift stays open — resume it later by logging back in. The next cashier can sign in now.',
+                okText: 'Switch User',
+                cancelText: 'Cancel',
+                onOk: () => switchKioskUser(),
             });
         } else if (key === 'dashboard') {
             navigate('/dashboard');
@@ -594,6 +735,19 @@ const POS: React.FC = () => {
                             </div>
                         </Tooltip>
                     )}
+                    {/* Customer-facing display — opens a second window meant to be
+                        dragged onto the customer-facing monitor of a dual-screen
+                        till; see customerDisplayChannel.ts for how it stays in sync. */}
+                    <Tooltip title="Open Customer Display (second monitor)">
+                        <Button
+                            onClick={openCustomerDisplayWindow}
+                            size="middle"
+                            icon={<DesktopOutlined />}
+                            className="text-xs rounded-lg shadow-sm font-semibold"
+                        >
+                            Customer Display
+                        </Button>
+                    </Tooltip>
                     {/* Feature #6 – Price Mode button */}
                     <Tooltip title="Switch Price Mode (F3)">
                         <Button
@@ -615,6 +769,7 @@ const POS: React.FC = () => {
                         HOLD BILL
                     </Button>
                     <Button onClick={() => setRefundModalVisible(true)} size="middle" style={{ backgroundColor: '#fa5f55', color: 'white', border: 'none' }} className="hover:opacity-90 text-xs rounded-lg shadow-sm font-semibold">REFUND</Button>
+                    <Button onClick={() => setUnknownItemModalVisible(true)} size="middle" style={{ backgroundColor: '#8c8c8c', color: 'white', border: 'none' }} className="hover:opacity-90 text-xs rounded-lg shadow-sm font-semibold">+ UNKNOWN ITEM</Button>
 
                     <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }} trigger={['click']} placement="bottomRight">
                         <div className="cursor-pointer ml-2">
@@ -1008,16 +1163,96 @@ const POS: React.FC = () => {
                                 <Radio.Group
                                     value={paymentMethod}
                                     onChange={e => setPaymentMethod(e.target.value)}
-                                    className="flex gap-5"
+                                    className="flex flex-wrap gap-x-5 gap-y-1.5"
                                 >
-                                    {['Cash', 'Card', 'Credit', 'COD'].map(m => (
-                                        <Radio key={m} value={m} className="text-[14px] font-medium text-gray-700">{m}</Radio>
+                                    {[
+                                        { value: 'Cash', label: 'Cash' },
+                                        { value: 'Card', label: 'Card' },
+                                        { value: 'Credit', label: 'Credit' },
+                                        { value: 'COD', label: 'COD' },
+                                        { value: 'BankTransfer', label: 'Bank Transfer' },
+                                        { value: 'Split', label: 'Split' },
+                                    ].map(({ value, label }) => (
+                                        <Radio key={value} value={value} className="text-[14px] font-medium text-gray-700">{label}</Radio>
                                     ))}
                                 </Radio.Group>
                             </div>
 
+                            {/* Split Payment — cash/card/bank portions of one bill */}
+                            {paymentMethod === 'Split' && (
+                                <div className="bg-gray-50 rounded-lg border border-gray-200 p-3.5 flex flex-col gap-3">
+                                    <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Split Payment</div>
+                                    <div className="flex gap-2">
+                                        <div className="flex-1">
+                                            <div className="text-[11px] text-gray-500 font-semibold mb-1">Cash</div>
+                                            <InputNumber
+                                                value={splitCashAmount}
+                                                onChange={v => setSplitCashAmount(Number(v))}
+                                                className="w-full rounded-md"
+                                                precision={2}
+                                                min={0}
+                                            />
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="text-[11px] text-gray-500 font-semibold mb-1">Card</div>
+                                            <InputNumber
+                                                value={splitCardAmount}
+                                                onChange={v => setSplitCardAmount(Number(v))}
+                                                className="w-full rounded-md"
+                                                precision={2}
+                                                min={0}
+                                            />
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="text-[11px] text-gray-500 font-semibold mb-1">Bank Transfer</div>
+                                            <InputNumber
+                                                value={splitBankAmount}
+                                                onChange={v => setSplitBankAmount(Number(v))}
+                                                className="w-full rounded-md"
+                                                precision={2}
+                                                min={0}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between text-[11px] font-semibold">
+                                        <span className="text-gray-500">Split total: {(splitCashAmount + splitCardAmount + splitBankAmount).toFixed(2)}</span>
+                                        <span className={Math.abs(splitCashAmount + splitCardAmount + splitBankAmount - totalPayable) > 0.01 ? 'text-red-500' : 'text-green-600'}>
+                                            {Math.abs(splitCashAmount + splitCardAmount + splitBankAmount - totalPayable) > 0.01
+                                                ? `Short by ${(totalPayable - splitCashAmount - splitCardAmount - splitBankAmount).toFixed(2)}`
+                                                : 'Balanced'}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Bank Transfer Details — for BankTransfer, or the bank portion of a Split */}
+                            {(paymentMethod === 'BankTransfer' || (paymentMethod === 'Split' && splitBankAmount > 0)) && (
+                                <div className="bg-gray-50 rounded-lg border border-gray-200 p-3.5 flex flex-col gap-3">
+                                    <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Bank Transfer Details</div>
+                                    <Select
+                                        value={bankName || undefined}
+                                        onChange={setBankName}
+                                        placeholder="Select receiving bank..."
+                                        className="w-full"
+                                    >
+                                        <Option value="COM">Commercial Bank</Option>
+                                        <Option value="SAM">Sampath Bank</Option>
+                                        <Option value="HNB">HNB Bank</Option>
+                                        <Option value="BOC">Bank of Ceylon</Option>
+                                        <Option value="NDB">NDB Bank</Option>
+                                    </Select>
+                                    <Input
+                                        style={{ height: 34 }}
+                                        value={bankReference}
+                                        onChange={e => setBankReference(e.target.value)}
+                                        placeholder="Reference / transaction number (optional)"
+                                        className="rounded-md"
+                                    />
+                                </div>
+                            )}
+
                             {/* Card Details — shown in left col to avoid vertical overflow */}
-                            {paymentMethod === 'Card' && (
+                            {(paymentMethod === 'Card' || (paymentMethod === 'Split' && splitCardAmount > 0)) && (
                                 <div className="bg-gray-50 rounded-lg border border-gray-200 p-3.5 flex flex-col gap-3">
                                     <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Card Details</div>
                                     <Select
@@ -1152,6 +1387,54 @@ const POS: React.FC = () => {
                 </div>
             </Modal>
 
+            {/* ── Unknown/misc item modal ─────────────────────────────────── */}
+            <Modal
+                title="Add Unknown Item"
+                open={unknownItemModalVisible}
+                onCancel={() => setUnknownItemModalVisible(false)}
+                onOk={handleAddUnknownItem}
+                okText="Add to Cart"
+                destroyOnClose
+            >
+                <div className="flex flex-col gap-3">
+                    <div>
+                        <div className="text-[11px] font-bold text-gray-500 uppercase mb-1.5 tracking-wide">Item Name</div>
+                        <Input
+                            autoFocus
+                            value={unknownItemName}
+                            onChange={e => setUnknownItemName(e.target.value)}
+                            placeholder="e.g. Gift Wrapping"
+                            onPressEnter={handleAddUnknownItem}
+                        />
+                    </div>
+                    <div className="flex gap-3">
+                        <div className="flex-1">
+                            <div className="text-[11px] font-bold text-gray-500 uppercase mb-1.5 tracking-wide">Price</div>
+                            <InputNumber
+                                className="w-full"
+                                value={unknownItemPrice}
+                                onChange={v => setUnknownItemPrice(Number(v))}
+                                precision={2}
+                                min={0}
+                            />
+                        </div>
+                        <div className="flex-1">
+                            <div className="text-[11px] font-bold text-gray-500 uppercase mb-1.5 tracking-wide">Quantity</div>
+                            <InputNumber
+                                className="w-full"
+                                value={unknownItemQty}
+                                onChange={v => setUnknownItemQty(Number(v))}
+                                precision={0}
+                                min={1}
+                            />
+                        </div>
+                    </div>
+                    <div className="text-[11px] text-gray-400">
+                        No stock is tracked for this line — it skips inventory entirely and isn't returnable.
+                    </div>
+                </div>
+            </Modal>
+
             {/* ── Feature #7 – Weight Entry Modal ───────────────────────── */}
             <WeightEntryModal
                 visible={weightModalVisible}
@@ -1195,6 +1478,34 @@ const POS: React.FC = () => {
             <POSRefundModal
                 visible={refundModalVisible}
                 onClose={() => setRefundModalVisible(false)}
+            />
+
+            {/* ── Manager Override – discount/refund a cashier can't self-approve ── */}
+            <ManagerOverrideModal
+                open={!!pendingOverride}
+                label={pendingOverride?.label || ''}
+                permission={pendingOverride?.permission || ''}
+                onAuthorized={(token) => {
+                    pendingOverride?.resolve(token);
+                    setPendingOverride(null);
+                }}
+                onCancel={() => {
+                    pendingOverride?.reject();
+                    setPendingOverride(null);
+                }}
+            />
+
+            {/* ── Send Digital Receipt – email / SMS / QR after a successful sale ── */}
+            <SendReceiptModal
+                open={!!receiptModal}
+                onClose={() => setReceiptModal(null)}
+                settings={effectiveSettings}
+                saleId={receiptModal?.saleId || ''}
+                invoiceNumber={receiptModal?.invoiceNumber || ''}
+                totalAmount={receiptModal?.totalAmount || 0}
+                createdAt={receiptModal?.createdAt || new Date().toISOString()}
+                defaultEmail={selectedCustomer?.email}
+                defaultPhone={selectedCustomer?.phone}
             />
 
             {/* ── Customer Credit Payment Modal ──────────────────────────── */}

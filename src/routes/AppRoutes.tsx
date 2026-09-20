@@ -1,98 +1,121 @@
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+import { Spin } from "antd";
 
-// Route Guards
+// Route Guards — kept as static imports: they're tiny wrappers rendered on
+// every navigation (not heavy page bodies), so lazy-loading them would just
+// add a chunk round-trip with no bundle-size benefit.
 import PublicRoutes from "./PublicRoutes";
 import PrivateRoutes from "./PrivateRoutes";
 import SuperAdminRoutes from "./SuperAdminRoutes";
 import KioskRoutes from "./KioskRoutes";
 import PermissionRoute from "./PermissionRoute";
+import { PERMISSIONS } from "../types/auth/permissions";
+
+// ─────────────────────────────────────────────────────────────────────────
+// Every page below is loaded on demand (React.lazy + dynamic import) instead
+// of bundled into the main chunk. Before this, all ~70 pages — plus whatever
+// heavy libraries individual pages pull in (jspdf, html2canvas, recharts,
+// etc.) — shipped in a single ~3.6 MB chunk on first load, regardless of
+// which single page someone actually opened. Now each page (and its own
+// dependencies) only downloads when its route is visited.
+// ─────────────────────────────────────────────────────────────────────────
 
 // Public Pages
-import Login from "../pages/public/Login";
-import Signup from "../pages/public/Signup";
-import SuperAdminLogin from "../pages/superadmin/SuperAdminLogin";
-import ForgotPassword from "../pages/public/ForgotPassword";
-import ResetPassword from "../pages/public/ResetPassword";
-import ChangePassword from "../pages/public/ChangePassword";
-import EmailVerification from "../pages/public/EmailVerification";
-import GoogleCallback from "../pages/public/GoogleCallback";
+const Login = lazy(() => import("../pages/public/Login"));
+const Signup = lazy(() => import("../pages/public/Signup"));
+const SuperAdminLogin = lazy(() => import("../pages/superadmin/SuperAdminLogin"));
+const ForgotPassword = lazy(() => import("../pages/public/ForgotPassword"));
+const ResetPassword = lazy(() => import("../pages/public/ResetPassword"));
+const ChangePassword = lazy(() => import("../pages/public/ChangePassword"));
+const EmailVerification = lazy(() => import("../pages/public/EmailVerification"));
+const GoogleCallback = lazy(() => import("../pages/public/GoogleCallback"));
+const DigitalReceipt = lazy(() => import("../pages/public/DigitalReceipt"));
 
 // Kiosk Pages
-import KioskLogin from "../pages/kiosk/KioskLogin";
-import KioskPOS from "../pages/kiosk/KioskPOS";
+const KioskLogin = lazy(() => import("../pages/kiosk/KioskLogin"));
+const KioskPOS = lazy(() => import("../pages/kiosk/KioskPOS"));
 
 // Admin Pages
-import Dashboard from "../pages/admin/Dashboard";
-import Profile from "../pages/admin/Profile";
-import AdminSettings from "../pages/admin/Settings";
+const Dashboard = lazy(() => import("../pages/admin/Dashboard"));
+const Profile = lazy(() => import("../pages/admin/Profile"));
+const AdminSettings = lazy(() => import("../pages/admin/Settings"));
 
-import Brands from "../pages/management/Brands";
-import Categories from "../pages/management/Categories";
-import SubCategories from "../pages/management/SubCategories";
-import Units from "../pages/management/Units";
-import Warehouses from "../pages/management/Warehouses";
-import Roles from "../pages/management/Roles";
-import Users from "../pages/management/Users";
-import Variations from "../pages/management/Variations";
-import Customers from "../pages/management/Customers";
-import Suppliers from "../pages/management/Suppliers";
-import CreditSupplier from "../pages/management/CreditSupplier";
-import SupplierPayment from "../pages/management/SupplierPayment";
-import CreditCustomer from "../pages/management/CreditCustomer";
-import Warranties from "../pages/management/Warranties";
-import Products from "../pages/management/Products";
-import Stock from "../pages/management/Stock";
-import LowStock from "../pages/inventory/LowStock";
-import OutOfStock from "../pages/inventory/OutOfStock";
-import ExpiredProducts from "../pages/inventory/ExpiredProducts";
-import AddProduct from "../pages/management/AddProduct";
-import EditProduct from "../pages/management/EditProduct";
-import StockAdjustment from "../pages/management/StockAdjustment";
-import AddStockAdjustment from "../pages/management/AddStockAdjustment";
-import WriteOffExpiredStock from "../pages/management/WriteOffExpiredStock";
-import AdjustmentReasons from "../pages/management/AdjustmentReasons";
-import StockReconcile from "../pages/management/StockReconcile";
-import StockTakes from "../pages/management/StockTakes";
-import StockTakeDetail from "../pages/management/StockTakeDetail";
+const Brands = lazy(() => import("../pages/management/Brands"));
+const Categories = lazy(() => import("../pages/management/Categories"));
+const SubCategories = lazy(() => import("../pages/management/SubCategories"));
+const Units = lazy(() => import("../pages/management/Units"));
+const Warehouses = lazy(() => import("../pages/management/Warehouses"));
+const Roles = lazy(() => import("../pages/management/Roles"));
+const Users = lazy(() => import("../pages/management/Users"));
+const Variations = lazy(() => import("../pages/management/Variations"));
+const Customers = lazy(() => import("../pages/management/Customers"));
+const Suppliers = lazy(() => import("../pages/management/Suppliers"));
+const CreditSupplier = lazy(() => import("../pages/management/CreditSupplier"));
+const SupplierPayment = lazy(() => import("../pages/management/SupplierPayment"));
+const CreditCustomer = lazy(() => import("../pages/management/CreditCustomer"));
+const Warranties = lazy(() => import("../pages/management/Warranties"));
+const Products = lazy(() => import("../pages/management/Products"));
+const Stock = lazy(() => import("../pages/management/Stock"));
+const LowStock = lazy(() => import("../pages/inventory/LowStock"));
+const OutOfStock = lazy(() => import("../pages/inventory/OutOfStock"));
+const ExpiredProducts = lazy(() => import("../pages/inventory/ExpiredProducts"));
+const AddProduct = lazy(() => import("../pages/management/AddProduct"));
+const EditProduct = lazy(() => import("../pages/management/EditProduct"));
+const StockAdjustment = lazy(() => import("../pages/management/StockAdjustment"));
+const AddStockAdjustment = lazy(() => import("../pages/management/AddStockAdjustment"));
+const WriteOffExpiredStock = lazy(() => import("../pages/management/WriteOffExpiredStock"));
+const AdjustmentReasons = lazy(() => import("../pages/management/AdjustmentReasons"));
+const StockReconcile = lazy(() => import("../pages/management/StockReconcile"));
+const StockTakes = lazy(() => import("../pages/management/StockTakes"));
+const StockTakeDetail = lazy(() => import("../pages/management/StockTakeDetail"));
 
 // Transaction Pages
-import Purchases from "../pages/transactions/Purchases";
-import AddPurchase from "../pages/transactions/AddPurchase";
-import PurchaseOrders from "../pages/transactions/PurchaseOrders";
-import AddPurchaseOrder from "../pages/transactions/AddPurchaseOrder";
-import PurchaseReturns from "../pages/transactions/PurchaseReturns";
-import AddPurchaseReturn from "../pages/transactions/AddPurchaseReturn";
-import Sales from "../pages/transactions/Sales";
-import SalesReturns from "../pages/transactions/SalesReturns";
-import Expenses from "../pages/transactions/Expenses";
-import ExpenseCategories from "../pages/transactions/ExpenseCategories";
-import Cheques from "../pages/transactions/Cheques";
-import ChequeReturns from "../pages/transactions/ChequeReturns";
-import Reports from "../pages/reports/Reports";
-import SalesReports from "../pages/reports/SalesReports";
-import PurchaseReports from "../pages/reports/PurchaseReports";
-import FinancialReports from "../pages/reports/FinancialReports";
-import InventoryReports from "../pages/reports/InventoryReports";
-import LogHistoryReports from "../pages/reports/LogHistoryReports";
-import TopSellingReports from "../pages/reports/TopSellingReports";
-import ProcessRefund from "../pages/transactions/ProcessRefund";
-import HoldBills from "../pages/transactions/HoldBills";
+const Purchases = lazy(() => import("../pages/transactions/Purchases"));
+const AddPurchase = lazy(() => import("../pages/transactions/AddPurchase"));
+const PurchaseOrders = lazy(() => import("../pages/transactions/PurchaseOrders"));
+const AddPurchaseOrder = lazy(() => import("../pages/transactions/AddPurchaseOrder"));
+const PurchaseReturns = lazy(() => import("../pages/transactions/PurchaseReturns"));
+const AddPurchaseReturn = lazy(() => import("../pages/transactions/AddPurchaseReturn"));
+const Sales = lazy(() => import("../pages/transactions/Sales"));
+const SalesReturns = lazy(() => import("../pages/transactions/SalesReturns"));
+const Expenses = lazy(() => import("../pages/transactions/Expenses"));
+const ExpenseCategories = lazy(() => import("../pages/transactions/ExpenseCategories"));
+const Cheques = lazy(() => import("../pages/transactions/Cheques"));
+const ChequeReturns = lazy(() => import("../pages/transactions/ChequeReturns"));
+const Reports = lazy(() => import("../pages/reports/Reports"));
+const SalesReports = lazy(() => import("../pages/reports/SalesReports"));
+const PurchaseReports = lazy(() => import("../pages/reports/PurchaseReports"));
+const FinancialReports = lazy(() => import("../pages/reports/FinancialReports"));
+const InventoryReports = lazy(() => import("../pages/reports/InventoryReports"));
+const LogHistoryReports = lazy(() => import("../pages/reports/LogHistoryReports"));
+const TopSellingReports = lazy(() => import("../pages/reports/TopSellingReports"));
+const ProcessRefund = lazy(() => import("../pages/transactions/ProcessRefund"));
+const HoldBills = lazy(() => import("../pages/transactions/HoldBills"));
 
-import POS from "../pages/pos/POS";
+const POS = lazy(() => import("../pages/pos/POS"));
+const CustomerDisplay = lazy(() => import("../pages/pos/CustomerDisplay"));
 
 // Super Admin Pages
-import SuperAdminDashboard from "../pages/superadmin/SuperAdminDashboard";
-import PendingRegistrations from "../pages/superadmin/PendingRegistrations";
-import TenantManagement from "../pages/superadmin/TenantManagement";
-import SystemLogs from "../pages/superadmin/SystemLogs";
-import SystemSettings from "../pages/superadmin/SystemSettings";
+const SuperAdminDashboard = lazy(() => import("../pages/superadmin/SuperAdminDashboard"));
+const PendingRegistrations = lazy(() => import("../pages/superadmin/PendingRegistrations"));
+const TenantManagement = lazy(() => import("../pages/superadmin/TenantManagement"));
+const SystemLogs = lazy(() => import("../pages/superadmin/SystemLogs"));
+const SystemSettings = lazy(() => import("../pages/superadmin/SystemSettings"));
 
-import { PERMISSIONS } from "../types/auth/permissions";
+// Shared full-page fallback while a route's chunk downloads — mirrors the
+// inline spinner each route guard (PrivateRoutes, KioskRoutes, etc.) already
+// shows while resolving auth, so a lazy chunk load looks the same as that.
+const RouteFallback: React.FC = () => (
+  <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
+    <Spin size="large" />
+  </div>
+);
 
 const AppRoutes: React.FC = () => {
   return (
-    <Routes>
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
       {/* Root redirects to login */}
       <Route path="/" element={<Navigate to="/login" replace />} />
 
@@ -109,6 +132,14 @@ const AppRoutes: React.FC = () => {
 
       {/* Kiosk Login - public, separate from PublicRoutes to avoid redirect loop */}
       <Route path="/kiosk/login" element={<KioskLogin />} />
+
+      {/* Digital receipt - public, reached via the QR code on a printed receipt */}
+      <Route path="/receipt/:tenantId/:saleId" element={<DigitalReceipt />} />
+
+      {/* Customer-facing display - opened as a second window onto the
+          customer-facing monitor of a dual-screen till; no auth of its own,
+          purely reactive to BroadcastChannel messages from the cashier's POS tab */}
+      <Route path="/pos/customer-display" element={<CustomerDisplay />} />
 
       {/* Owner/Admin Private Routes */}
       <Route element={<PrivateRoutes />}>
@@ -395,7 +426,8 @@ const AppRoutes: React.FC = () => {
 
       {/* 404 */}
       <Route path="*" element={<div>404 Not Found</div>} />
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 };
 

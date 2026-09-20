@@ -46,8 +46,9 @@ interface AuthContextType extends AuthState {
   cancelMfaLogin: () => void;
   refreshEmailVerificationStatus: () => Promise<void>;
   logout: () => Promise<void>;
-  endShift: () => Promise<KioskEndShiftResponse | void>;
+  endShift: (closingCash?: number, closingDenomination?: string) => Promise<KioskEndShiftResponse | void>;
   switchToKioskMode: () => Promise<void>;
+  switchKioskUser: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -277,9 +278,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const endShift = async () => {
+  const endShift = async (closingCash?: number, closingDenomination?: string) => {
       try {
-          const summary = await authService.endShift();
+          const summary = await authService.endShift(closingCash, closingDenomination);
           // After ending shift, we logout
           await logout();
           return summary;
@@ -345,6 +346,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       window.location.href = '/kiosk/login';
     }
+  };
+
+  // Fast user-switch: hands this device to the next cashier without ending
+  // the departing cashier's shift or making a round-trip to the server —
+  // unlike endShift()/logout(), this deliberately does NOT call
+  // kioskLogout() (which force-closes the active shift). The shift stays
+  // open exactly as a lock-screen would leave it; the departing cashier
+  // resumes it next time they log in anywhere (KioskLogin already does this
+  // for any PIN login against an already-active shift). `tenant`, `isKiosk`
+  // and the abandoned JWT's mere existence in browser storage are the same
+  // low residual risk the lock screen already accepts — a determined
+  // attacker with physical access to an already-unlocked kiosk has bigger
+  // problems available to them than a stale token.
+  const switchKioskUser = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('role');
+    localStorage.removeItem('mustChangePassword');
+
+    setState(prev => ({
+      ...prev,
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      role: null,
+      mustChangePassword: false,
+    }));
+
+    window.location.href = '/kiosk/login';
   };
 
   // Helper to handle state updates after login
@@ -451,7 +481,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       refreshEmailVerificationStatus,
       logout,
       endShift,
-      switchToKioskMode
+      switchToKioskMode,
+      switchKioskUser
     }}>
       {children}
     </AuthContext.Provider>
