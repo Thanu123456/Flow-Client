@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button, Input, Select, Modal, Radio, Checkbox, Typography, Spin, Empty, message, Avatar, Dropdown, Tooltip, InputNumber } from 'antd';
 import type { MenuProps } from 'antd';
-import { SearchOutlined, UserOutlined, SettingOutlined, DeleteOutlined, CloseOutlined, PlusOutlined, MinusOutlined, ShoppingOutlined, DashboardOutlined, KeyOutlined, LogoutOutlined, BarcodeOutlined, UserSwitchOutlined } from '@ant-design/icons';
+import { SearchOutlined, UserOutlined, SettingOutlined, DeleteOutlined, CloseOutlined, PlusOutlined, MinusOutlined, ShoppingOutlined, DashboardOutlined, KeyOutlined, LogoutOutlined, BarcodeOutlined, UserSwitchOutlined, DesktopOutlined } from '@ant-design/icons';
 import { FaCcVisa, FaCcMastercard, FaCcDiscover } from 'react-icons/fa';
 import { SiAmericanexpress } from 'react-icons/si';
 import { useNavigate } from 'react-router-dom';
@@ -12,6 +12,7 @@ import { useCustomerStore } from '../../store/management/customerStore';
 import { usePOSBootstrap } from '../../hooks/data/usePOSBootstrap';
 import { usePOSProducts } from '../../hooks/data/usePOSProducts';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTenant } from '../../contexts/TenantContext';
 import { usePermissions } from '../../hooks/auth/usePermissions';
 import { PERMISSIONS } from '../../types/auth/permissions';
 import type { Product, ProductVariation } from '../../types/entities/product.types';
@@ -22,10 +23,14 @@ import HeldBillsModal from '../../components/pos/HeldBillsModal';
 import HoldNoteModal from '../../components/pos/HoldNoteModal';
 import POSRefundModal from '../../components/pos/POSRefundModal';
 import ManagerOverrideModal from '../../components/pos/ManagerOverrideModal';
+import SendReceiptModal from '../../components/pos/SendReceiptModal';
 import CustomerPaymentModal from '../../components/credit-customer/CustomerPaymentModal';
 import { isWeightBasedProduct, formatQuantity } from '../../utils/posHelpers';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import { axiosInstance } from '../../services/api/axiosInstance';
+import { settingsService } from '../../services/management/settingsService';
+import type { EffectiveSettings } from '../../types/entities/settings.types';
+import { postCartUpdate, postPaymentComplete, openCustomerDisplayWindow } from '../../utils/customerDisplay/customerDisplayChannel';
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -86,6 +91,13 @@ const POS: React.FC = () => {
     // ── POS Refund Modal ───────────────────────────────────────────────
     const [refundModalVisible, setRefundModalVisible] = useState(false);
 
+    // ── Digital receipts (email/SMS/QR) + customer-facing display ──────
+    const [effectiveSettings, setEffectiveSettings] = useState<EffectiveSettings | null>(null);
+    const [receiptModal, setReceiptModal] = useState<{ saleId: string; invoiceNumber: string; totalAmount: number; createdAt: string } | null>(null);
+    useEffect(() => {
+        settingsService.getEffectiveSettings().then(setEffectiveSettings).catch(() => { /* receipt options just stay hidden */ });
+    }, []);
+
     // ── Manager override (discount/refund a cashier can't self-authorize) ──
     interface PendingOverride { permission: string; label: string; resolve: (token: string) => void; reject: () => void }
     const [pendingOverride, setPendingOverride] = useState<PendingOverride | null>(null);
@@ -138,6 +150,7 @@ const POS: React.FC = () => {
     // full_name and profile_image_url are common to both session shapes;
     // email only exists on full sessions, role only on kiosk sessions.
     const { user: authUser, isKiosk, logout, endShift, switchKioskUser } = useAuth();
+    const { tenant } = useTenant();
     const { isOwner, hasPermission } = usePermissions();
     const canManageSettings = isOwner || hasPermission(PERMISSIONS.SETTINGS_SYSTEM);
     const displayName = (authUser as any)?.full_name || 'User';
@@ -430,6 +443,21 @@ const POS: React.FC = () => {
         : (subTotal * Math.min(discountValue, 100)) / 100;
     const totalPayable = subTotal - discountAmount + deliveryCharge;
 
+    // Mirror the cart to the customer-facing display (if a second window is
+    // open — see customerDisplayChannel.ts). Harmless no-op when it isn't:
+    // BroadcastChannel just has no listener on the other end.
+    useEffect(() => {
+        postCartUpdate({
+            shopName: tenant?.shop_name,
+            logoUrl: tenant?.logo_url,
+            items: cart.map((item) => ({ name: item.name, quantity: item.quantity, price: item.price })),
+            subtotal: subTotal,
+            discount: discountAmount,
+            deliveryCharge,
+            total: totalPayable,
+        });
+    }, [cart, subTotal, discountAmount, deliveryCharge, totalPayable]);
+
     // When switching to Credit inside the modal, reset paidAmount to 0 so the full amount is recorded as credit.
     // Switching away from Credit restores the full payable amount.
     useEffect(() => {
@@ -563,7 +591,7 @@ const POS: React.FC = () => {
         }
 
         try {
-            const { invoiceNumber: savedInvoiceNumber, changeDue, queued } = await checkout(paidAmount, overrideToken);
+            const { saleId, invoiceNumber: savedInvoiceNumber, changeDue, queued } = await checkout(paidAmount, overrideToken);
             if (queued) {
                 message.warning(
                     `Saved offline (${savedInvoiceNumber}) — no connection right now. It'll sync automatically once this device is back online.`,
@@ -575,6 +603,18 @@ const POS: React.FC = () => {
                         ? `Payment completed! Bill No: ${savedInvoiceNumber} — Change due: LKR ${changeDue.toFixed(2)}`
                         : `Payment completed successfully! Bill No: ${savedInvoiceNumber}`
                 );
+                postPaymentComplete({
+                    invoiceNumber: savedInvoiceNumber,
+                    totalAmount: totalPayable,
+                    changeDue,
+                    tenantId: tenant?.id,
+                    saleId: saleId || undefined,
+                });
+                // Offline-queued sales have no real saleId yet (see posStore) —
+                // nothing to email/SMS/QR-link to until it actually syncs.
+                if (saleId) {
+                    setReceiptModal({ saleId, invoiceNumber: savedInvoiceNumber, totalAmount: totalPayable, createdAt: new Date().toISOString() });
+                }
             }
             setIsPaymentModalOpen(false);
             setPaidAmount(0);
@@ -695,6 +735,19 @@ const POS: React.FC = () => {
                             </div>
                         </Tooltip>
                     )}
+                    {/* Customer-facing display — opens a second window meant to be
+                        dragged onto the customer-facing monitor of a dual-screen
+                        till; see customerDisplayChannel.ts for how it stays in sync. */}
+                    <Tooltip title="Open Customer Display (second monitor)">
+                        <Button
+                            onClick={openCustomerDisplayWindow}
+                            size="middle"
+                            icon={<DesktopOutlined />}
+                            className="text-xs rounded-lg shadow-sm font-semibold"
+                        >
+                            Customer Display
+                        </Button>
+                    </Tooltip>
                     {/* Feature #6 – Price Mode button */}
                     <Tooltip title="Switch Price Mode (F3)">
                         <Button
@@ -1440,6 +1493,19 @@ const POS: React.FC = () => {
                     pendingOverride?.reject();
                     setPendingOverride(null);
                 }}
+            />
+
+            {/* ── Send Digital Receipt – email / SMS / QR after a successful sale ── */}
+            <SendReceiptModal
+                open={!!receiptModal}
+                onClose={() => setReceiptModal(null)}
+                settings={effectiveSettings}
+                saleId={receiptModal?.saleId || ''}
+                invoiceNumber={receiptModal?.invoiceNumber || ''}
+                totalAmount={receiptModal?.totalAmount || 0}
+                createdAt={receiptModal?.createdAt || new Date().toISOString()}
+                defaultEmail={selectedCustomer?.email}
+                defaultPhone={selectedCustomer?.phone}
             />
 
             {/* ── Customer Credit Payment Modal ──────────────────────────── */}

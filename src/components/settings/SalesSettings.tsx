@@ -1,5 +1,5 @@
 import React from "react";
-import { Col, Form, InputNumber, Row, Select, Switch, message } from "antd";
+import { Col, Form, Input, InputNumber, Row, Select, Switch, Typography, message } from "antd";
 import { useSettingsStore } from "../../store/management/settingsStore";
 import SettingsSection from "./SettingsSection";
 import FieldGroup from "./FieldGroup";
@@ -31,6 +31,17 @@ const SalesSettings: React.FC<Props> = ({ onDirtyChange }) => {
             salesHoldExpiryHours: settings.salesHoldExpiryHours,
             blindCashCount: settings.blindCashCount,
             cashVarianceAlertThreshold: settings.cashVarianceAlertThreshold,
+            receiptEmailEnabled: settings.receiptEmailEnabled,
+            receiptSmsEnabled: settings.receiptSmsEnabled,
+            receiptQrEnabled: settings.receiptQrEnabled,
+            emailjsServiceId: settings.emailjsServiceId,
+            emailjsTemplateId: settings.emailjsTemplateId,
+            emailjsPublicKey: settings.emailjsPublicKey,
+            notifylkUserId: settings.notifylkUserId,
+            notifylkSenderId: settings.notifylkSenderId,
+            // notifylkApiKey deliberately excluded — write-only, the GET side
+            // never returns it, so the form always starts with it blank
+            // regardless of whether one is already saved server-side.
           }
         : null,
     [settings]
@@ -48,7 +59,17 @@ const SalesSettings: React.FC<Props> = ({ onDirtyChange }) => {
   const handleSave = async () => {
     try {
       const values = (await form.validateFields()) as PosSettingsUpdate;
+      // The field always starts blank (write-only, see the `initial` memo
+      // above) — an untouched or cleared field must NEVER be sent, or every
+      // unrelated settings save would wipe out an already-configured key.
+      if (!values.notifylkApiKey) {
+        delete values.notifylkApiKey;
+      }
       await saveSettings(values);
+      // Clear the typed key back out of the field — the server never
+      // returns it, so leaving old text sitting in a password input would
+      // be misleading about what's actually stored now.
+      form.setFieldValue("notifylkApiKey", undefined);
       markSaved();
       message.success("Sales settings saved");
     } catch (e: any) {
@@ -149,7 +170,7 @@ const SalesSettings: React.FC<Props> = ({ onDirtyChange }) => {
           </Row>
         </FieldGroup>
 
-        <FieldGroup title="Cash control" last>
+        <FieldGroup title="Cash control">
           <Row gutter={[20, 0]}>
             <Col xs={24} sm={12}>
               <SettingField
@@ -171,6 +192,100 @@ const SalesSettings: React.FC<Props> = ({ onDirtyChange }) => {
                 rules={[{ type: "number", min: 0 }]}
               >
                 <InputNumber min={0} step={50} style={{ width: "100%" }} addonBefore="Rs." />
+              </SettingField>
+            </Col>
+          </Row>
+        </FieldGroup>
+
+        <FieldGroup title="Digital receipts" last>
+          <Row gutter={[20, 0]}>
+            <Col xs={24} sm={8}>
+              <SettingField
+                name="receiptQrEnabled"
+                label="QR code on receipt"
+                valuePropName="checked"
+                dirty={d("receiptQrEnabled")}
+                description="Prints a QR code on every receipt linking to a digital copy — no external account needed."
+              >
+                <Switch />
+              </SettingField>
+            </Col>
+            <Col xs={24} sm={8}>
+              <SettingField
+                name="receiptEmailEnabled"
+                label="Email receipts"
+                valuePropName="checked"
+                dirty={d("receiptEmailEnabled")}
+                description="Lets the cashier email a copy after checkout. Needs the EmailJS details below."
+              >
+                <Switch />
+              </SettingField>
+            </Col>
+            <Col xs={24} sm={8}>
+              <SettingField
+                name="receiptSmsEnabled"
+                label="SMS receipts"
+                valuePropName="checked"
+                dirty={d("receiptSmsEnabled")}
+                description="Lets the cashier text a copy after checkout. Needs the notify.lk details below."
+              >
+                <Switch />
+              </SettingField>
+            </Col>
+          </Row>
+
+          <Typography.Text type="secondary" style={{ display: "block", margin: "4px 0 12px", fontSize: 12.5 }}>
+            Email is sent from the cashier's browser via{" "}
+            <a href="https://www.emailjs.com" target="_blank" rel="noreferrer">EmailJS</a> — create a free account,
+            a service and a template there, then paste the three IDs below. The template can use variables like{" "}
+            <code>shop_name</code>, <code>invoice_number</code>, <code>total</code> and <code>receipt_url</code>.
+          </Typography.Text>
+          <Row gutter={[20, 0]}>
+            <Col {...col}>
+              <SettingField name="emailjsServiceId" label="EmailJS Service ID" dirty={d("emailjsServiceId")}>
+                <Input placeholder="service_xxxxxxx" />
+              </SettingField>
+            </Col>
+            <Col {...col}>
+              <SettingField name="emailjsTemplateId" label="EmailJS Template ID" dirty={d("emailjsTemplateId")}>
+                <Input placeholder="template_xxxxxxx" />
+              </SettingField>
+            </Col>
+            <Col {...col}>
+              <SettingField name="emailjsPublicKey" label="EmailJS Public Key" dirty={d("emailjsPublicKey")}>
+                <Input placeholder="e.g. AbCdEfGhIjKlMnOp" />
+              </SettingField>
+            </Col>
+          </Row>
+
+          <Typography.Text type="secondary" style={{ display: "block", margin: "4px 0 12px", fontSize: 12.5 }}>
+            SMS is sent from the server via{" "}
+            <a href="https://notify.lk" target="_blank" rel="noreferrer">notify.lk</a> — your User ID, API Key and
+            an approved Sender ID are on your notify.lk account's API Keys page.
+          </Typography.Text>
+          <Row gutter={[20, 0]}>
+            <Col {...col}>
+              <SettingField name="notifylkUserId" label="notify.lk User ID" dirty={d("notifylkUserId")}>
+                <Input placeholder="e.g. 12345" />
+              </SettingField>
+            </Col>
+            <Col {...col}>
+              <SettingField name="notifylkSenderId" label="notify.lk Sender ID" dirty={d("notifylkSenderId")}>
+                <Input placeholder="NotifyDEMO for testing" />
+              </SettingField>
+            </Col>
+            <Col {...col}>
+              <SettingField
+                name="notifylkApiKey"
+                label="notify.lk API Key"
+                dirty={d("notifylkApiKey")}
+                description={
+                  settings.notifylkApiKeySet
+                    ? "A key is already saved — leave blank to keep it."
+                    : "No key saved yet."
+                }
+              >
+                <Input.Password placeholder="Paste to set or replace" autoComplete="new-password" />
               </SettingField>
             </Col>
           </Row>

@@ -1,6 +1,8 @@
 import React, { forwardRef } from 'react';
 import type { SaleDetailItem } from '../../types/entities/sale.types';
 import dayjs from 'dayjs';
+import { useTenant } from '../../contexts/TenantContext';
+import ReceiptQRCode from '../pos/ReceiptQRCode';
 
 interface Props {
   sale: SaleDetailItem;
@@ -11,6 +13,7 @@ interface Props {
 // meant to read like an actual till receipt when printed on a thermal or
 // small-format printer.
 const PrintReceipt = forwardRef<HTMLDivElement, Props>(({ sale, duplicate }, ref) => {
+  const { tenant } = useTenant();
   const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
@@ -97,6 +100,13 @@ const PrintReceipt = forwardRef<HTMLDivElement, Props>(({ sale, duplicate }, ref
       </table>
 
       <div style={{ borderTop: '1px dashed #000', margin: '8px 0' }} />
+
+      {tenant?.id && sale.id && (
+        <div style={{ textAlign: 'center', marginTop: '12px' }}>
+          <ReceiptQRCode tenantId={tenant.id} saleId={sale.id} size={80} />
+          <div style={{ fontSize: '10px', marginTop: '4px' }}>Scan for a digital copy</div>
+        </div>
+      )}
 
       <div style={{ textAlign: 'center', marginTop: '12px' }}>Thank you for your business!</div>
       {duplicate && (

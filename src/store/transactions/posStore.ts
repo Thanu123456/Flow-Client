@@ -82,7 +82,7 @@ interface POSState {
     setSplitBankAmount: (amount: number) => void;
     setPriceMode: (mode: "our" | "retail" | "wholesale") => void;
     initializePriceMode: () => void;
-    checkout: (paidAmount: number, overrideToken?: string) => Promise<{ invoiceNumber: string; changeDue: number; queued?: boolean }>;
+    checkout: (paidAmount: number, overrideToken?: string) => Promise<{ saleId: string; invoiceNumber: string; changeDue: number; queued?: boolean }>;
     updateCartItemPrices: (itemsWithNewPrices: { id: string; price: number }[]) => void;
 
     // Feature #10 – Hold Bills
@@ -296,6 +296,7 @@ export const usePOSStore = create<POSState>()(
                         clearCart();
                         set({ loading: false });
                         return {
+                            saleId: "",
                             invoiceNumber: `OFFLINE-${Date.now().toString(36).toUpperCase()}`,
                             changeDue: Math.max(0, paidAmount - netPayable),
                             queued: true,
@@ -315,7 +316,7 @@ export const usePOSStore = create<POSState>()(
 
                         clearCart();
                         set({ loading: false });
-                        return { invoiceNumber: result.invoiceNumber, changeDue: result.changeDue };
+                        return { saleId: result.id, invoiceNumber: result.invoiceNumber, changeDue: result.changeDue };
                     } catch (networkError: any) {
                         // No `response` means the request never reached the server
                         // (dropped connection, DNS failure, timeout) — a real business

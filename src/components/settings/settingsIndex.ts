@@ -50,6 +50,9 @@ export const SETTINGS_INDEX: SettingEntry[] = [
   { section: "sales", sectionLabel: "Sales & Checkout", field: "cashDrawerEnabled", label: "Cash drawer integration", description: "Open a connected drawer on cash sales.", keywords: ["till", "drawer"] },
   { section: "sales", sectionLabel: "Sales & Checkout", field: "blindCashCount", label: "Blind cash count at shift close", description: "Hide expected cash from the cashier while counting the drawer.", keywords: ["blind", "cash", "count", "theft", "shift", "kiosk"] },
   { section: "sales", sectionLabel: "Sales & Checkout", field: "cashVarianceAlertThreshold", label: "Cash variance alert threshold", description: "Email alert when a shift's cash variance exceeds this amount.", keywords: ["variance", "alert", "email", "shift", "kiosk", "shortage"] },
+  { section: "sales", sectionLabel: "Sales & Checkout", field: "receiptQrEnabled", label: "QR code on receipt", description: "Print a QR code on receipts linking to a digital copy.", keywords: ["qr", "digital", "receipt", "code"] },
+  { section: "sales", sectionLabel: "Sales & Checkout", field: "receiptEmailEnabled", label: "Email receipts", description: "Let the cashier email a receipt copy via EmailJS.", keywords: ["email", "receipt", "emailjs"] },
+  { section: "sales", sectionLabel: "Sales & Checkout", field: "receiptSmsEnabled", label: "SMS receipts", description: "Let the cashier text a receipt copy via notify.lk.", keywords: ["sms", "text", "receipt", "notify.lk"] },
 ];
 
 export function searchSettings(query: string): SettingEntry[] {

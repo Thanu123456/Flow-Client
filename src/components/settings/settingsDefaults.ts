@@ -23,4 +23,15 @@ export const SALES_DEFAULTS = {
   salesHoldExpiryHours: 24,
   blindCashCount: true,
   cashVarianceAlertThreshold: 500,
+  receiptEmailEnabled: false,
+  receiptSmsEnabled: false,
+  receiptQrEnabled: true,
+  emailjsServiceId: "",
+  emailjsTemplateId: "",
+  emailjsPublicKey: "",
+  notifylkUserId: "",
+  notifylkSenderId: "",
+  // notifylkApiKey deliberately omitted — "Reset to defaults" shouldn't
+  // touch a saved secret; see SalesSettings.handleSave for how a blank
+  // value here is kept from ever wiping it out.
 } as const;

@@ -30,6 +30,7 @@ const ResetPassword = lazy(() => import("../pages/public/ResetPassword"));
 const ChangePassword = lazy(() => import("../pages/public/ChangePassword"));
 const EmailVerification = lazy(() => import("../pages/public/EmailVerification"));
 const GoogleCallback = lazy(() => import("../pages/public/GoogleCallback"));
+const DigitalReceipt = lazy(() => import("../pages/public/DigitalReceipt"));
 
 // Kiosk Pages
 const KioskLogin = lazy(() => import("../pages/kiosk/KioskLogin"));
@@ -93,6 +94,7 @@ const ProcessRefund = lazy(() => import("../pages/transactions/ProcessRefund"));
 const HoldBills = lazy(() => import("../pages/transactions/HoldBills"));
 
 const POS = lazy(() => import("../pages/pos/POS"));
+const CustomerDisplay = lazy(() => import("../pages/pos/CustomerDisplay"));
 
 // Super Admin Pages
 const SuperAdminDashboard = lazy(() => import("../pages/superadmin/SuperAdminDashboard"));
@@ -130,6 +132,14 @@ const AppRoutes: React.FC = () => {
 
       {/* Kiosk Login - public, separate from PublicRoutes to avoid redirect loop */}
       <Route path="/kiosk/login" element={<KioskLogin />} />
+
+      {/* Digital receipt - public, reached via the QR code on a printed receipt */}
+      <Route path="/receipt/:tenantId/:saleId" element={<DigitalReceipt />} />
+
+      {/* Customer-facing display - opened as a second window onto the
+          customer-facing monitor of a dual-screen till; no auth of its own,
+          purely reactive to BroadcastChannel messages from the cashier's POS tab */}
+      <Route path="/pos/customer-display" element={<CustomerDisplay />} />
 
       {/* Owner/Admin Private Routes */}
       <Route element={<PrivateRoutes />}>

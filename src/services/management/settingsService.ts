@@ -35,6 +35,15 @@ const transformSettings = (s: any): PosSettings => ({
   receiptHeaderText: s.receipt_header_text || "",
   receiptFooterText: s.receipt_footer_text || "",
   receiptCopies: toNum(s.receipt_copies, 1),
+  receiptEmailEnabled: !!s.receipt_email_enabled,
+  receiptSmsEnabled: !!s.receipt_sms_enabled,
+  receiptQrEnabled: s.receipt_qr_enabled ?? true,
+  emailjsServiceId: s.emailjs_service_id || "",
+  emailjsTemplateId: s.emailjs_template_id || "",
+  emailjsPublicKey: s.emailjs_public_key || "",
+  notifylkUserId: s.notifylk_user_id || "",
+  notifylkSenderId: s.notifylk_sender_id || "",
+  notifylkApiKeySet: !!s.notifylk_api_key_set,
   updatedAt: s.updated_at,
   updatedByName: s.updated_by_name || "",
 });
@@ -59,6 +68,15 @@ const settingsPayload = (u: PosSettingsUpdate): Record<string, any> => {
     receiptHeaderText: "receipt_header_text",
     receiptFooterText: "receipt_footer_text",
     receiptCopies: "receipt_copies",
+    receiptEmailEnabled: "receipt_email_enabled",
+    receiptSmsEnabled: "receipt_sms_enabled",
+    receiptQrEnabled: "receipt_qr_enabled",
+    emailjsServiceId: "emailjs_service_id",
+    emailjsTemplateId: "emailjs_template_id",
+    emailjsPublicKey: "emailjs_public_key",
+    notifylkUserId: "notifylk_user_id",
+    notifylkSenderId: "notifylk_sender_id",
+    notifylkApiKey: "notifylk_api_key",
   };
   const payload: Record<string, any> = {};
   (Object.keys(u) as (keyof PosSettingsUpdate)[]).forEach((k) => {
