@@ -9,6 +9,7 @@ import {
   CreditCardOutlined,
   BellOutlined,
   SearchOutlined,
+  DesktopOutlined,
 } from "@ant-design/icons";
 import { useSettingsStore } from "../../store/management/settingsStore";
 import { useUnloadGuard } from "../../components/settings/useDirtyForm";
@@ -17,11 +18,12 @@ import SetupChecklist from "../../components/settings/SetupChecklist";
 import BusinessProfileSettings from "../../components/settings/BusinessProfileSettings";
 import ReceiptSettings from "../../components/settings/ReceiptSettings";
 import SalesSettings from "../../components/settings/SalesSettings";
+import KioskDevicesPage from "../../components/kiosk/KioskDevicesPage";
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
 
-type SectionKey = "business-profile" | "receipt" | "sales";
+type SectionKey = "business-profile" | "receipt" | "sales" | "kiosk-devices";
 const DEFAULT_SECTION: SectionKey = "business-profile";
 
 const SECTIONS: {
@@ -47,6 +49,12 @@ const SECTIONS: {
     label: "Sales & Checkout",
     icon: <ShoppingCartOutlined />,
     render: (onDirtyChange) => <SalesSettings onDirtyChange={onDirtyChange} />,
+  },
+  {
+    key: "kiosk-devices",
+    label: "Kiosk Devices",
+    icon: <DesktopOutlined />,
+    render: () => <KioskDevicesPage />,
   },
 ];
 

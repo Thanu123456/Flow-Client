@@ -13,6 +13,7 @@ import IdleTimeoutHandler from "./components/auth/IdleTimeoutHandler";
 import OfflineIndicator from "./components/common/OfflineIndicator";
 import KioskLockdownGuard from "./components/kiosk/KioskLockdownGuard";
 import ElevationBanner from "./components/kiosk/ElevationBanner";
+import KioskHeartbeat from "./components/kiosk/KioskHeartbeat";
 
 const App: React.FC = () => {
   return (
@@ -28,6 +29,7 @@ const App: React.FC = () => {
                   <OfflineIndicator />
                   <KioskLockdownGuard />
                   <ElevationBanner />
+                  <KioskHeartbeat />
                   <AppRoutes />
                 </PermissionProvider>
               </TenantProvider>

@@ -18,7 +18,9 @@ import type {
   KioskSessionInfo,
   KioskStoreInfo,
   OverrideAuthorization,
-  ShiftInsights
+  ShiftInsights,
+  HeartbeatResult,
+  KioskDeviceInfo
 } from '../../types/auth/kiosk.types';
 import type {
   SuperAdminLoginRequest,
@@ -99,6 +101,31 @@ export const authService = {
   async getShiftInsights(): Promise<ShiftInsights> {
     const response = await api.get<{ data: ShiftInsights }>('/kiosk/shift-insights');
     return response.data.data;
+  },
+
+  // Fleet-view presence check-in — Backend: POST /kiosk/heartbeat. Called
+  // periodically by every kiosk device; see hooks/kiosk/useKioskHeartbeat.
+  async kioskHeartbeat(deviceId: string): Promise<HeartbeatResult> {
+    const response = await api.post<{ data: HeartbeatResult }>('/kiosk/heartbeat', { device_id: deviceId });
+    return response.data.data;
+  },
+
+  // Fleet view (admin) — Backend: /admin/kiosk-devices*
+  async listKioskDevices(): Promise<KioskDeviceInfo[]> {
+    const response = await api.get<{ data: KioskDeviceInfo[] }>('/admin/kiosk-devices');
+    return response.data.data;
+  },
+
+  async renameKioskDevice(id: string, deviceName: string): Promise<void> {
+    await api.patch(`/admin/kiosk-devices/${id}`, { device_name: deviceName });
+  },
+
+  async signOutKioskDevice(id: string): Promise<void> {
+    await api.post(`/admin/kiosk-devices/${id}/sign-out`);
+  },
+
+  async removeKioskDevice(id: string): Promise<void> {
+    await api.delete(`/admin/kiosk-devices/${id}`);
   },
 
   // Kiosk Logout - Backend: POST /kiosk/logout

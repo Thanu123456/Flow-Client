@@ -9,6 +9,7 @@ import dayjs from 'dayjs';
 import { saleService } from '../../services/transactions/saleService';
 import type { SaleListItem, SaleDetailItem } from '../../types/entities/sale.types';
 import PrintReceipt from './PrintReceipt';
+import { printViaWindow } from '../../utils/printing/printViaWindow';
 
 const PAYMENT_COLORS: Record<string, string> = {
 	cash: 'green',
@@ -77,28 +78,7 @@ const SalesHistoryTable: React.FC<SalesHistoryTableProps> = ({
 	// — same window.open + innerHTML pattern PurchaseDetailsModal uses for GRNs.
 	const handlePrintDuplicate = () => {
 		if (!printRef.current || !selectedSale) return;
-		const content = printRef.current.innerHTML;
-		const win = window.open('', '_blank', 'width=420,height=700');
-		if (!win) return;
-		win.document.write(`
-			<html>
-				<head>
-					<title>Receipt - ${selectedSale.invoice_number}</title>
-					<style>
-						body { margin: 0; padding: 12px; }
-						@media print { body { margin: 0; padding: 0; } }
-						table { width: 100%; border-collapse: collapse; }
-					</style>
-				</head>
-				<body>${content}</body>
-			</html>
-		`);
-		win.document.close();
-		win.focus();
-		setTimeout(() => {
-			win.print();
-			win.close();
-		}, 300);
+		printViaWindow(printRef.current.innerHTML, `Receipt - ${selectedSale.invoice_number}`);
 	};
 
 	const columns: ColumnsType<SaleListItem> = [

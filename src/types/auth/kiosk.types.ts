@@ -104,3 +104,23 @@ export interface ShiftInsights {
   top_items: ShiftTopItem[];
   activity: ShiftActivityCounts;
 }
+
+// POST /kiosk/heartbeat — every kiosk device's periodic "I'm still here"
+// check-in, whether anyone's signed in on it or not. See useKioskHeartbeat.
+export interface HeartbeatResult {
+  // True exactly once, the first heartbeat after an admin requested this
+  // device sign out remotely from the fleet view — the frontend must end the
+  // session immediately on seeing it.
+  force_signout: boolean;
+}
+
+// GET /admin/kiosk-devices — the fleet view: every device paired to this
+// shop, whether it's currently reachable, and who's signed in on it.
+export interface KioskDeviceInfo {
+  id: string;
+  device_name?: string;
+  current_user_name?: string;
+  last_seen_at: string;
+  online: boolean;
+  paired_at: string;
+}

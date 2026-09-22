@@ -11,6 +11,7 @@ import { usePOSStore } from '../../store/transactions/posStore';
 import { useCustomerStore } from '../../store/management/customerStore';
 import { usePOSBootstrap } from '../../hooks/data/usePOSBootstrap';
 import { usePOSProducts } from '../../hooks/data/usePOSProducts';
+import { useOfflineCatalogSync } from '../../hooks/data/useOfflineCatalogSync';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import { usePermissions } from '../../hooks/auth/usePermissions';
@@ -32,6 +33,8 @@ import { axiosInstance } from '../../services/api/axiosInstance';
 import { settingsService } from '../../services/management/settingsService';
 import type { EffectiveSettings } from '../../types/entities/settings.types';
 import { postCartUpdate, postPaymentComplete, openCustomerDisplayWindow } from '../../utils/customerDisplay/customerDisplayChannel';
+import { printReceipt } from '../../utils/printing/receiptPrint';
+import PrinterStatusButton from '../../components/pos/PrinterStatusButton';
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -124,8 +127,13 @@ const POS: React.FC = () => {
     const [trackingNumber, setTrackingNumber] = useState('');
 
     // Stores + query-backed data
-    const { products, productsLoading, refetchProducts } = usePOSProducts(selectedCategory);
+    const { products, productsLoading, isOfflineCatalog, refetchProducts } = usePOSProducts(selectedCategory);
     const { isLoading: categoriesLoading } = usePOSBootstrap();
+    // Keeps the local product/category cache warm while online, so the grid
+    // above can fall back to it the moment the connection actually drops —
+    // see useOfflineCatalogSync's own comment for why this matters beyond
+    // the offline sales queue (which only covers submitting an already-built cart).
+    useOfflineCatalogSync();
     const allCategories = useCategoryStore((s) => s.allCategories);
     const {
         cart, loading: posLoading, paymentMethod, isRefundMode,
@@ -614,6 +622,25 @@ const POS: React.FC = () => {
                     tenantId: tenant?.id,
                     saleId: saleId || undefined,
                 });
+                // Finally wires up the "Print Bill" checkbox, which previously did
+                // nothing — see receiptPrint.ts for the direct-printer/fallback
+                // logic. Cash sales also pulse the drawer, in the same print job.
+                if (printBill) {
+                    printReceipt({
+                        shopName: tenant?.shop_name || 'Flow POS',
+                        invoiceNumber: savedInvoiceNumber,
+                        dateLabel: dayjs().format('DD MMM YYYY HH:mm'),
+                        customerName: customerNameDisplay,
+                        paymentMethod,
+                        items: cart.map((item) => ({ name: item.name, quantity: item.quantity, price: item.price })),
+                        subtotal: subTotal,
+                        discountAmount: discountAmount > 0 ? discountAmount : undefined,
+                        deliveryCharge: deliveryCharge > 0 ? deliveryCharge : undefined,
+                        totalAmount: totalPayable,
+                        paidAmount,
+                        changeDue: changeDue > 0 ? changeDue : undefined,
+                    }, { kickDrawer: paymentMethod === 'Cash' }).catch(() => { /* receipt is a courtesy, never blocks the sale */ });
+                }
                 // Offline-queued sales have no real saleId yet (see posStore) —
                 // nothing to email/SMS/QR-link to until it actually syncs.
                 if (saleId) {
@@ -740,6 +767,16 @@ const POS: React.FC = () => {
                 )}
 
                 <div className="flex items-center gap-2.5">
+                    {/* Product grid is serving from the offline catalog cache —
+                        see useOfflineCatalogSync/usePOSProducts. Prices/stock may
+                        be a little stale; the sale itself still queues fine offline. */}
+                    {isOfflineCatalog && (
+                        <Tooltip title="No connection — showing the last-synced catalog. Prices and stock may be outdated.">
+                            <div className="text-[9px] font-bold px-2 py-1 rounded-full border bg-orange-100 border-orange-300 text-orange-700">
+                                OFFLINE CATALOG
+                            </div>
+                        </Tooltip>
+                    )}
                     {/* Feature #8 – No-stock indicator */}
                     {settingsLoaded && (
                         <Tooltip title={allowNoStockBills ? 'No-stock bills ALLOWED' : 'No-stock bills BLOCKED'}>
@@ -761,6 +798,10 @@ const POS: React.FC = () => {
                             Customer Display
                         </Button>
                     </Tooltip>
+                    {/* Direct thermal-printer connection (WebUSB/ESC-POS) — pair once,
+                        then checkout prints straight to it instead of the OS print
+                        dialog, and can kick the cash drawer. See utils/printing. */}
+                    <PrinterStatusButton />
                     {/* Feature #6 – Price Mode button */}
                     <Tooltip title="Switch Price Mode (F3)">
                         <Button
