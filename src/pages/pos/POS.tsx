@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button, Input, Select, Modal, Radio, Checkbox, Typography, Spin, Empty, message, Avatar, Dropdown, Tooltip, InputNumber } from 'antd';
 import type { MenuProps } from 'antd';
-import { SearchOutlined, UserOutlined, SettingOutlined, DeleteOutlined, CloseOutlined, PlusOutlined, MinusOutlined, ShoppingOutlined, DashboardOutlined, KeyOutlined, LogoutOutlined, BarcodeOutlined, UserSwitchOutlined, DesktopOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { SearchOutlined, UserOutlined, SettingOutlined, DeleteOutlined, CloseOutlined, PlusOutlined, MinusOutlined, ShoppingOutlined, DashboardOutlined, KeyOutlined, LogoutOutlined, BarcodeOutlined, UserSwitchOutlined, DesktopOutlined, SafetyCertificateOutlined, FullscreenOutlined, FullscreenExitOutlined } from '@ant-design/icons';
 import { FaCcVisa, FaCcMastercard, FaCcDiscover } from 'react-icons/fa';
 import { SiAmericanexpress } from 'react-icons/si';
 import { useNavigate } from 'react-router-dom';
@@ -125,6 +125,31 @@ const POS: React.FC = () => {
     // ── Print Bill checkbox ────────────────────────────────────────────
     const [printBill, setPrintBill] = useState(true);
     const [trackingNumber, setTrackingNumber] = useState('');
+
+    // ── Fullscreen ──────────────────────────────────────────────────────
+    // A till should fill the screen the moment the cashier lands here, not
+    // require a manual click. requestFullscreen() only succeeds within a
+    // recent user gesture (the login/nav click that brought us here still
+    // counts immediately after mount in Chromium/Edge); if the browser
+    // rejects it (e.g. a page refresh with no gesture, or an unsupported
+    // browser) we fail silently — Esc/F11 or the toolbar button below still
+    // work as the manual fallback.
+    const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement);
+    useEffect(() => {
+        if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(() => { /* no user gesture to hang it on — that's fine */ });
+        }
+        const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+        document.addEventListener('fullscreenchange', onChange);
+        return () => document.removeEventListener('fullscreenchange', onChange);
+    }, []);
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => message.error('Fullscreen was blocked by the browser.'));
+        } else {
+            document.exitFullscreen();
+        }
+    };
 
     // Stores + query-backed data
     const { products, productsLoading, isOfflineCatalog, refetchProducts } = usePOSProducts(selectedCategory);
@@ -802,6 +827,18 @@ const POS: React.FC = () => {
                         then checkout prints straight to it instead of the OS print
                         dialog, and can kick the cash drawer. See utils/printing. */}
                     <PrinterStatusButton />
+                    {/* Manual fullscreen fallback — the page already tries to enter
+                        fullscreen on its own on mount (see effect above), but that
+                        silently fails without a recent user gesture (e.g. a page
+                        refresh), and a touchscreen till has no Esc/F11 key. */}
+                    <Tooltip title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}>
+                        <Button
+                            onClick={toggleFullscreen}
+                            size="middle"
+                            icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+                            className="text-xs rounded-lg shadow-sm font-semibold"
+                        />
+                    </Tooltip>
                     {/* Feature #6 – Price Mode button */}
                     <Tooltip title="Switch Price Mode (F3)">
                         <Button
