@@ -9,6 +9,9 @@ interface Props {
     open: boolean;
     label: string;
     permission: string;
+    // Kiosk sessions approve via /kiosk/authorize-override; a full login
+    // uses the admin equivalent (the kiosk route requires a kiosk token).
+    isKiosk?: boolean;
     onAuthorized: (token: string, authorizedBy: string) => void;
     onCancel: () => void;
 }
@@ -18,7 +21,7 @@ interface Props {
 // User ID + PIN here instead of the cashier being able to self-authorize it.
 // See POSHandler.checkOverride (backend) for where the resulting token is
 // actually enforced, not just requested.
-const ManagerOverrideModal: React.FC<Props> = ({ open, label, permission, onAuthorized, onCancel }) => {
+const ManagerOverrideModal: React.FC<Props> = ({ open, label, permission, isKiosk = true, onAuthorized, onCancel }) => {
     const [managerId, setManagerId] = useState('');
     const [pin, setPin] = useState('');
     const [loading, setLoading] = useState(false);
@@ -43,7 +46,8 @@ const ManagerOverrideModal: React.FC<Props> = ({ open, label, permission, onAuth
         setLoading(true);
         setError(null);
         try {
-            const result = await authService.authorizeOverride(managerId.trim(), pin.trim(), permission);
+            const authorize = isKiosk ? authService.authorizeOverride : authService.authorizePOSOverride;
+            const result = await authorize(managerId.trim(), pin.trim(), permission);
             reset();
             onAuthorized(result.token, result.authorized_by);
         } catch (err: any) {

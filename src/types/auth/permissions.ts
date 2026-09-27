@@ -8,6 +8,7 @@ export const PERMISSIONS = {
   POS_RETURNS: 'pos.returns',
   POS_DISCOUNTS: 'pos.discounts',
   POS_VOID: 'pos.void',
+  POS_PRICE_OVERRIDE: 'pos.price_override',
 
   // Inventory
   INVENTORY_VIEW: 'inventory.view',
@@ -22,6 +23,7 @@ export const PERMISSIONS = {
   SALES_VIEW: 'sales.view',
   SALES_REPORTS: 'sales.reports',
   SALES_REFUNDS: 'sales.refunds',
+  SALES_REVIEW: 'sales.review',
 
   // Purchases
   PURCHASES_VIEW: 'purchases.view',

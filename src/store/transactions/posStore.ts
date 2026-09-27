@@ -1,11 +1,12 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { posService } from "../../services/transactions/posService";
-import type { POSSaleRequest } from "../../services/transactions/posService";
+import type { POSSaleRequest, PriceChangedLine } from "../../services/transactions/posService";
 import { holdService } from "../../services/transactions/holdService";
 import type { HeldBill } from "../../types/entities/holdBill.types";
 import { isWeightBasedProduct } from "../../utils/posHelpers";
 import { enqueueSale } from "../../utils/offline/offlineDb";
+import { newClientTxnId, getStoredPOSWarehouseId, setStoredPOSWarehouseId } from "../../utils/posSession";
 
 // ─────────────────────────────────────────────────────────────────────
 //  Types
@@ -20,11 +21,29 @@ export interface CartItem {
     price: number;
     maxStock: number;    // 0 means unlimited (or no-stock allowed) — always 0 for a misc line
     isMisc?: boolean;    // true for a cashier-typed line with no catalogue product
+    // Set when the cashier deliberately changed this line's price — sent to
+    // the server as a price override (needs pos.price_override). Without it,
+    // the server prices the line from the catalogue and rejects a mismatch.
+    priceOverrideReason?: string;
+    catalogPrice?: number;         // the price before the override, for "reset"
+}
+
+// Manager-override tokens for a checkout — each covers one permission.
+export interface CheckoutApprovals {
+    override?: string;       // pos.discounts on a sale, sales.refunds on a return
+    priceOverride?: string;  // pos.price_override
 }
 
 interface POSState {
     // Cart
     cart: CartItem[];
+    // Idempotency key for the current cart — regenerated whenever a new cart
+    // starts (after checkout, reset, hold, or resuming a held bill), reused for
+    // every retry of the same cart so the server can't save it twice.
+    clientTxnId: string;
+
+    // Warehouse this till sells from (non-kiosk picker; persisted per device).
+    warehouseId?: string;
 
     // Meta
     loading: boolean;
@@ -82,8 +101,12 @@ interface POSState {
     setSplitBankAmount: (amount: number) => void;
     setPriceMode: (mode: "our" | "retail" | "wholesale") => void;
     initializePriceMode: () => void;
-    checkout: (paidAmount: number, overrideToken?: string) => Promise<{ saleId: string; invoiceNumber: string; changeDue: number; queued?: boolean }>;
+    checkout: (paidAmount: number, approvals?: CheckoutApprovals) => Promise<{ saleId: string; invoiceNumber: string; changeDue: number; queued?: boolean }>;
     updateCartItemPrices: (itemsWithNewPrices: { id: string; price: number }[]) => void;
+    setLinePrice: (id: string, price: number, reason: string) => void;
+    clearLinePriceOverride: (id: string) => void;
+    setWarehouseId: (id: string | undefined) => void;
+    applyServerPrices: (lines: PriceChangedLine[]) => void;
 
     // Feature #10 – Hold Bills
     holdBill: (notes?: string) => Promise<void>;
@@ -97,6 +120,8 @@ export const usePOSStore = create<POSState>()(
     devtools(
         (set, get) => ({
             cart: [],
+            clientTxnId: newClientTxnId(),
+            warehouseId: getStoredPOSWarehouseId(),
             loading: false,
             error: null,
             customerId: null,
@@ -178,6 +203,7 @@ export const usePOSStore = create<POSState>()(
             clearCart: () =>
                 set({
                     cart: [],
+                    clientTxnId: newClientTxnId(),
                     customerId: null,
                     paymentMethod: "Cash",
                     isRefundMode: false,
@@ -227,9 +253,9 @@ export const usePOSStore = create<POSState>()(
             },
 
             // ── checkout ──────────────────────────────────────────────
-            checkout: async (paidAmount: number, overrideToken?: string) => {
+            checkout: async (paidAmount: number, approvals?: CheckoutApprovals) => {
                 const {
-                    cart, customerId, paymentMethod, isRefundMode,
+                    cart, customerId, paymentMethod, isRefundMode, clientTxnId, warehouseId,
                     clearCart, discountType, discountValue, deliveryCharge,
                     cardBank, cardFirstDigit, cardLastFour, cardType, priceMode,
                     bankName, bankReference, splitCashAmount, splitCardAmount, splitBankAmount,
@@ -283,8 +309,12 @@ export const usePOSStore = create<POSState>()(
                             variation_id: item.variationId,
                             quantity: item.quantity,                     // Feature #5 decimal qty
                             price: item.price,
+                            price_override_reason: item.priceOverrideReason || undefined,
                         })),
-                        override_token: overrideToken,
+                        override_token: approvals?.override,
+                        price_override_token: approvals?.priceOverride,
+                        client_txn_id: clientTxnId,
+                        warehouse_id: warehouseId,
                     };
 
                     // Best-effort local change-due for the offline fallback below —
@@ -292,7 +322,16 @@ export const usePOSStore = create<POSState>()(
                     // application etc.) is authoritative once the queued sale syncs.
                     const netPayable = Math.abs(totalAmount) - discountAmount + deliveryCharge;
                     const queueOffline = async () => {
-                        await enqueueSale(isRefundMode ? "return" : "sale", payload);
+                        // Marked offline so the server records it on sync even where
+                        // it would reject a live sale (stock/price/approval since
+                        // changed) — flagged for review instead. The client_txn_id
+                        // above makes the replay safe if the original request did
+                        // in fact reach the server before the connection dropped.
+                        await enqueueSale(isRefundMode ? "return" : "sale", {
+                            ...payload,
+                            offline: true,
+                            offline_created_at: new Date().toISOString(),
+                        });
                         clearCart();
                         set({ loading: false });
                         return {
@@ -325,11 +364,17 @@ export const usePOSStore = create<POSState>()(
                         if (!networkError.response) {
                             return await queueOffline();
                         }
+                        // Stale prices: the server refused and sent the current
+                        // ones. Put them in the cart so the cashier sees the new
+                        // total and confirms again — never charge silently.
+                        if (networkError.response.status === 409 && Array.isArray(networkError.response.data?.lines)) {
+                            get().applyServerPrices(networkError.response.data.lines);
+                        }
                         throw networkError;
                     }
                 } catch (error: any) {
                     set({
-                        error: error.response?.data?.message || "Failed to complete checkout",
+                        error: error.response?.data?.error || error.response?.data?.message || "Failed to complete checkout",
                         loading: false,
                     });
                     throw error;
@@ -373,6 +418,9 @@ export const usePOSStore = create<POSState>()(
                             quantity: item.quantity,
                             price: item.price,
                             max_stock: item.maxStock,
+                            is_misc: item.isMisc || undefined,
+                            price_override_reason: item.priceOverrideReason,
+                            catalog_price: item.catalogPrice,
                         })),
                         subtotal,
                         discount_type: discountType,
@@ -404,10 +452,14 @@ export const usePOSStore = create<POSState>()(
                     quantity: item.quantity,
                     price: item.price,
                     maxStock: item.maxStock,
+                    isMisc: item.isMisc,
+                    priceOverrideReason: item.priceOverrideReason,
+                    catalogPrice: item.catalogPrice,
                 }));
 
                 set({
                     cart: cartItems,
+                    clientTxnId: newClientTxnId(),
                     customerId: bill.customerId || null,
                     discountType: bill.discountType as "fixed" | "percent",
                     discountValue: bill.discountValue,
@@ -416,13 +468,54 @@ export const usePOSStore = create<POSState>()(
             },
 
             // ─── updateCartItemPrices ─────────────────────────────────
+            // A price-mode switch re-prices lines from the catalogue, which
+            // also discards any manual override on them.
             updateCartItemPrices: (itemsWithNewPrices) => {
                 const { cart } = get();
                 const newCart = cart.map((item) => {
                     const match = itemsWithNewPrices.find((m) => m.id === item.id);
-                    return match ? { ...item, price: match.price } : item;
+                    return match ? { ...item, price: match.price, priceOverrideReason: undefined, catalogPrice: undefined } : item;
                 });
                 set({ cart: newCart });
+            },
+
+            // ─── Line price override ──────────────────────────────────
+            setLinePrice: (id, price, reason) => {
+                set({
+                    cart: get().cart.map((item) =>
+                        item.id === id
+                            ? { ...item, price, priceOverrideReason: reason, catalogPrice: item.catalogPrice ?? item.price }
+                            : item
+                    ),
+                });
+            },
+            clearLinePriceOverride: (id) => {
+                set({
+                    cart: get().cart.map((item) =>
+                        item.id === id
+                            ? { ...item, price: item.catalogPrice ?? item.price, priceOverrideReason: undefined, catalogPrice: undefined }
+                            : item
+                    ),
+                });
+            },
+
+            setWarehouseId: (id) => {
+                setStoredPOSWarehouseId(id);
+                set({ warehouseId: id });
+            },
+
+            // Server said these lines' prices changed (409 POS_PRICE_CHANGED):
+            // adopt the current catalogue price on every matching, non-override line.
+            applyServerPrices: (lines) => {
+                set({
+                    cart: get().cart.map((item) => {
+                        if (item.priceOverrideReason || !item.productId) return item;
+                        const match = lines.find(
+                            (l) => l.product_id === item.productId && (l.variation_id ?? undefined) === (item.variationId ?? undefined)
+                        );
+                        return match ? { ...item, price: Number(match.current_price) } : item;
+                    }),
+                });
             },
         }),
         { name: "pos-store" }

@@ -1,4 +1,5 @@
 import { axiosInstance } from '../api/axiosInstance';
+import { getStoredPOSWarehouseId } from '../../utils/posSession';
 import type {
   SaleReturn,
   SaleReturnsFilter,
@@ -88,7 +89,12 @@ export const saleReturnService = {
   },
 
   async processRefund(data: ProcessRefundRequest): Promise<{ id: string; invoiceNumber: string }> {
-    const res = await axiosInstance.post('/admin/pos/return', data);
+    // Stock goes back to the original sale's warehouse; the till's picked
+    // warehouse is only the fallback for a legacy sale that never recorded one.
+    const res = await axiosInstance.post('/admin/pos/return', {
+      ...data,
+      warehouse_id: data.warehouse_id ?? getStoredPOSWarehouseId(),
+    });
     const sale = res.data.sale;
     return { id: sale.id, invoiceNumber: sale.invoice_number };
   },

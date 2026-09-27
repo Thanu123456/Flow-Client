@@ -18,7 +18,8 @@ const SYNC_INTERVAL_MS = 10 * 60 * 1000; // 10 min
  * yet today — that's the difference between "still can browse everything
  * offline" and "only whatever was on screen a moment ago".
  */
-export function useOfflineCatalogSync(): void {
+// warehouseId: cache that warehouse's stock figures, matching the live grid.
+export function useOfflineCatalogSync(warehouseId?: string): void {
     useEffect(() => {
         let cancelled = false;
 
@@ -26,7 +27,7 @@ export function useOfflineCatalogSync(): void {
             if (typeof navigator !== 'undefined' && !navigator.onLine) return;
             try {
                 const [productsRes, categories] = await Promise.all([
-                    productService.getProducts({ page: 1, limit: FULL_CATALOG_LIMIT, status: 'active' }),
+                    productService.getProducts({ page: 1, limit: FULL_CATALOG_LIMIT, status: 'active', warehouseId }),
                     useCategoryStore.getState().getAllCategories(),
                 ]);
                 if (!cancelled) {
@@ -48,5 +49,5 @@ export function useOfflineCatalogSync(): void {
             clearInterval(interval);
             window.removeEventListener('online', sync);
         };
-    }, []);
+    }, [warehouseId]);
 }

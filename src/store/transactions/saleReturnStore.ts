@@ -100,8 +100,8 @@ export const useSaleReturnStore = create<SaleReturnState>()(
           const result = await saleReturnService.processRefund(data);
           message.success(`Refund processed: ${result.invoiceNumber}`);
           return result.id;
-        } catch {
-          message.error('Failed to process refund');
+        } catch (err: any) {
+          message.error(err?.response?.data?.error || 'Failed to process refund');
           return null;
         } finally {
           set({ submitting: false });

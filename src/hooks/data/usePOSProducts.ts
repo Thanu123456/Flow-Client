@@ -26,11 +26,14 @@ interface CategoryProducts {
  * "cashier can't find anything to sell" — offline resilience covering the
  * shopping itself, not just submitting a cart that was already built.
  */
-export function usePOSProducts(selectedCategory: string) {
+// warehouseId: the till's warehouse (from /admin/pos/context) — stock on the
+// cards is that warehouse's, not the all-warehouse total, so a cashier can't
+// be shown stock that a sale from this till can't actually take.
+export function usePOSProducts(selectedCategory: string, warehouseId?: string) {
   const categoryId = selectedCategory === 'All Categories' ? undefined : selectedCategory;
 
   const query = useQuery({
-    queryKey: ['pos', 'products', categoryId ?? 'all'],
+    queryKey: ['pos', 'products', categoryId ?? 'all', warehouseId ?? 'all-warehouses'],
     queryFn: async (): Promise<CategoryProducts> => {
       try {
         const res = await productService.getProducts({
@@ -38,6 +41,7 @@ export function usePOSProducts(selectedCategory: string) {
           limit: POS_PRODUCT_LIMIT,
           categoryId,
           status: 'active',
+          warehouseId,
         });
         return { items: res.data ?? [], fromCache: false };
       } catch (err: any) {

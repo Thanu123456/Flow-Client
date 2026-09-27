@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
   Modal, Input, Button, Table, InputNumber, Select, Checkbox,
   Typography, message, Spin,
@@ -9,6 +9,7 @@ import dayjs from 'dayjs';
 import { useSaleReturnStore } from '../../store/transactions/saleReturnStore';
 import type { OriginalSaleItem } from '../../types/entities/saleReturn.types';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
+import { newClientTxnId } from '../../utils/posSession';
 
 const { Text } = Typography;
 
@@ -49,6 +50,9 @@ const POSRefundModal: React.FC<POSRefundModalProps> = ({ visible, onClose }) => 
   const [reason, setReason]                   = useState('damaged_product');
   const [note, setNote]                       = useState('');
   const [refundDelivery, setRefundDelivery]   = useState(false);
+  // One idempotency key per refund: a double-submit or retry of the same
+  // refund reuses it; a new one is issued each time the modal closes.
+  const refundTxnId = useRef(newClientTxnId());
 
   // Reset everything when modal closes
   useEffect(() => {
@@ -61,6 +65,7 @@ const POSRefundModal: React.FC<POSRefundModalProps> = ({ visible, onClose }) => 
       setNote('');
       setRefundDelivery(false);
       clearOriginalSale();
+      refundTxnId.current = newClientTxnId();
     }
   }, [visible, clearOriginalSale]);
 
@@ -139,6 +144,7 @@ const POSRefundModal: React.FC<POSRefundModalProps> = ({ visible, onClose }) => 
       reason,
       note:                 note || undefined,
       refund_delivery_charge: refundDelivery,
+      client_txn_id:        refundTxnId.current,
       products: returnItems.map(i => ({
         product_id:   i.productId,
         variation_id: i.variationId,

@@ -156,6 +156,18 @@ export const authService = {
     return response.data.data;
   },
 
+  // Same manager approval for a POS opened from a full (owner/employee) login
+  // — Backend: POST /admin/pos/authorize-override. The token it returns is
+  // checked by the server exactly like a kiosk-issued one.
+  async authorizePOSOverride(managerUserId: string, pin: string, permission: string): Promise<OverrideAuthorization> {
+    const response = await api.post<{ data: OverrideAuthorization }>('/admin/pos/authorize-override', {
+      manager_user_id: managerUserId,
+      pin,
+      permission,
+    });
+    return response.data.data;
+  },
+
   // Device pairing — Backend: POST /kiosk/resolve-store (public, no tenant
   // context needed yet). Used to brand a fresh kiosk device to a shop from a
   // short code shown in that shop's admin dashboard, instead of requiring a

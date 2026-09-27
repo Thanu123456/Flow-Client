@@ -22,6 +22,11 @@ export interface SaleListItem {
   payment_method: string;
   status: string;
   created_at: string;
+  // Accepted by the server with an exception (offline sync, negative stock,
+  // stale price, unverifiable approval) and not yet cleared by a manager.
+  needs_review?: boolean;
+  review_reasons?: string[];
+  is_offline?: boolean;
 }
 
 export interface SaleItemDetail {
@@ -40,4 +45,5 @@ export interface SalesListFilter {
   payment_method?: string;
   date_from?: string;
   date_to?: string;
+  needs_review?: boolean;
 }

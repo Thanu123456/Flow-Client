@@ -29,8 +29,12 @@ import BackOfficeAccessModal from '../../components/kiosk/BackOfficeAccessModal'
 import CustomerPaymentModal from '../../components/credit-customer/CustomerPaymentModal';
 import { isWeightBasedProduct, formatQuantity } from '../../utils/posHelpers';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
-import { axiosInstance } from '../../services/api/axiosInstance';
 import { settingsService } from '../../services/management/settingsService';
+import { useWarehouseStore } from '../../store/management/warehouseStore';
+import type { Warehouse } from '../../types/entities/warehouse.types';
+import type { CheckoutApprovals } from '../../store/transactions/posStore';
+import { posService } from '../../services/transactions/posService';
+import type { PriceChangedLine, TillContext } from '../../services/transactions/posService';
 import type { EffectiveSettings } from '../../types/entities/settings.types';
 import { postCartUpdate, postPaymentComplete, openCustomerDisplayWindow } from '../../utils/customerDisplay/customerDisplayChannel';
 import { printReceipt } from '../../utils/printing/receiptPrint';
@@ -101,8 +105,18 @@ const POS: React.FC = () => {
     // ── Digital receipts (email/SMS/QR) + customer-facing display ──────
     const [effectiveSettings, setEffectiveSettings] = useState<EffectiveSettings | null>(null);
     const [receiptModal, setReceiptModal] = useState<{ saleId: string; invoiceNumber: string; totalAmount: number; createdAt: string } | null>(null);
+    // Also the source of the "allow no-stock bills" setting (Feature #8) — the
+    // server applies the same setting at checkout, this just mirrors it in the
+    // grid. On failure the safe default (block no-stock) stands and receipt
+    // options stay hidden.
     useEffect(() => {
-        settingsService.getEffectiveSettings().then(setEffectiveSettings).catch(() => { /* receipt options just stay hidden */ });
+        settingsService.getEffectiveSettings()
+            .then((s) => {
+                setEffectiveSettings(s);
+                setAllowNoStockBills(!!s.settings?.allowNoStockBills);
+            })
+            .catch(() => setAllowNoStockBills(false))
+            .finally(() => setSettingsLoaded(true));
     }, []);
 
     // ── Manager override (discount/refund a cashier can't self-authorize) ──
@@ -151,14 +165,30 @@ const POS: React.FC = () => {
         }
     };
 
+    // ── Till context: which warehouse this till sells from ─────────────
+    // Resolved by the server exactly as a sale would be (shift → user
+    // assignment → the till's pick → the only warehouse), so the grid shows
+    // that warehouse's stock rather than the all-warehouse total. Kept as-is
+    // when the request fails (offline) — the last known warehouse still holds.
+    const pickedWarehouseId = usePOSStore((s) => s.warehouseId);
+    const [tillContext, setTillContext] = useState<TillContext | null>(null);
+    useEffect(() => {
+        let cancelled = false;
+        posService.getTillContext(pickedWarehouseId)
+            .then((tc) => { if (!cancelled) setTillContext(tc); })
+            .catch(() => { /* offline or transient — keep the last context */ });
+        return () => { cancelled = true; };
+    }, [pickedWarehouseId]);
+    const tillWarehouseId = tillContext?.warehouseId;
+
     // Stores + query-backed data
-    const { products, productsLoading, isOfflineCatalog, refetchProducts } = usePOSProducts(selectedCategory);
+    const { products, productsLoading, isOfflineCatalog, refetchProducts } = usePOSProducts(selectedCategory, tillWarehouseId);
     const { isLoading: categoriesLoading } = usePOSBootstrap();
     // Keeps the local product/category cache warm while online, so the grid
     // above can fall back to it the moment the connection actually drops —
     // see useOfflineCatalogSync's own comment for why this matters beyond
     // the offline sales queue (which only covers submitting an already-built cart).
-    useOfflineCatalogSync();
+    useOfflineCatalogSync(tillWarehouseId);
     const allCategories = useCategoryStore((s) => s.allCategories);
     const {
         cart, loading: posLoading, paymentMethod, isRefundMode,
@@ -174,6 +204,8 @@ const POS: React.FC = () => {
         initializePriceMode,
         checkout,
         holdBill, resumeHoldBill,
+        warehouseId, setWarehouseId,
+        setLinePrice, clearLinePriceOverride,
     } = usePOSStore();
     const { allCustomers } = useCustomerStore();
 
@@ -195,6 +227,34 @@ const POS: React.FC = () => {
     const displayAvatar = (authUser as any)?.profile_image_url as string | undefined;
     const displayRole = isOwner ? 'Owner' : (authUser as any)?.role_name || (authUser as any)?.role || 'Employee';
 
+    // ── Warehouse picker options ────────────────────────────────────────
+    // Only a full (owner/employee) session picks one here, and only when the
+    // shop has several and the user's shift/record doesn't already pin one
+    // (tillContext.pinned). A kiosk session can't list warehouses; its shift
+    // carries the warehouse, shown read-only from tillContext.
+    const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+    useEffect(() => {
+        if (isKiosk) return;
+        useWarehouseStore.getState().getAllWarehouses().then((list) => {
+            const active = list.filter((w) => w.status === 'active');
+            setWarehouses(active);
+            const current = usePOSStore.getState().warehouseId;
+            if (current && !active.some((w) => w.id === current)) setWarehouseId(undefined);
+        });
+    }, [isKiosk, setWarehouseId]);
+
+    // ── Line price override ─────────────────────────────────────────────
+    // Anyone can change a catalogue line's price (with a reason); a cashier
+    // without pos.price_override gets a manager's PIN approval at checkout.
+    const [priceEdit, setPriceEdit] = useState<{ id: string; name: string; price: number; reason: string; overridden: boolean } | null>(null);
+    const handleSavePriceOverride = () => {
+        if (!priceEdit) return;
+        if (!(priceEdit.price >= 0)) { message.error('Enter a valid price.'); return; }
+        if (!priceEdit.reason.trim()) { message.error('Enter a reason for the price change.'); return; }
+        setLinePrice(priceEdit.id, priceEdit.price, priceEdit.reason.trim());
+        setPriceEdit(null);
+    };
+
     // ─── Clock ───────────────────────────────────────────────────────
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(dayjs()), 1000);
@@ -203,22 +263,6 @@ const POS: React.FC = () => {
 
     // Categories + customers load via usePOSBootstrap(); the product grid loads
     // via usePOSProducts(selectedCategory). Both are React Query-cached.
-
-    // ─── Feature #8 – Load POS Settings ──────────────────────────────
-    useEffect(() => {
-        const loadSettings = async () => {
-            try {
-                const resp = await axiosInstance.get('/admin/pos/settings');
-                setAllowNoStockBills(resp.data?.allow_no_stock_bills ?? false);
-            } catch {
-                // Settings endpoint may not exist yet; default is safe (false = block no-stock)
-                setAllowNoStockBills(false);
-            } finally {
-                setSettingsLoaded(true);
-            }
-        };
-        loadSettings();
-    }, []);
 
     // ─── Feature #6 – Initialize price mode from localStorage ──────────
     useEffect(() => {
@@ -540,8 +584,11 @@ const POS: React.FC = () => {
                 if (e.key === 'F7') { e.preventDefault(); setDiscount('percent', discountValue); return; }
                 if (e.key === 'F9') { e.preventDefault(); document.querySelector<HTMLInputElement>('.pos-paid-input .ant-input-number-input')?.focus(); return; }
             } else {
-                // Main POS screen shortcuts
-                if (e.key === 'Delete') { clearCart(); return; }
+                // Main POS screen shortcuts. Delete inside a text field (search,
+                // the price-override reason…) is just editing, not "clear cart".
+                const t = e.target as HTMLElement | null;
+                const typing = !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+                if (e.key === 'Delete' && !typing) { clearCart(); return; }
                 if (e.key === 'F1') { e.preventDefault(); setIsAddCustomerModalVisible(true); return; }
                 if (e.key === 'F2') { e.preventDefault(); setCreditPaymentModalVisible(true); return; }
                 if (e.key === 'F3') { e.preventDefault(); setIsPriceModeVisible(true); return; }
@@ -611,16 +658,20 @@ const POS: React.FC = () => {
         }
 
         // Validation 4: a cashier without the right permission needs a
-        // manager to approve a discount or a refund before this can proceed.
-        // Scoped to kiosk sessions — a full owner/admin login already gates
-        // POS access behind whatever permissions that account actually has.
-        let overrideToken: string | undefined;
-        if (isKiosk && !isOwner) {
+        // manager to approve a discount or a refund before this can proceed —
+        // on a kiosk or a full login alike (the server enforces it for both).
+        // Price overrides need pos.price_override the same way — each approval
+        // is its own token, so a sale with both asks the manager twice.
+        const approvals: CheckoutApprovals = {};
+        if (!isOwner) {
             try {
                 if (discountValue > 0 && !hasPermission(PERMISSIONS.POS_DISCOUNTS)) {
-                    overrideToken = await requireOverride('pos.discounts', 'A manager needs to approve this discount.');
+                    approvals.override = await requireOverride('pos.discounts', 'A manager needs to approve this discount.');
                 } else if (isRefundMode && !hasPermission(PERMISSIONS.SALES_REFUNDS)) {
-                    overrideToken = await requireOverride('sales.refunds', 'A manager needs to approve this refund.');
+                    approvals.override = await requireOverride('sales.refunds', 'A manager needs to approve this refund.');
+                }
+                if (cart.some((i) => i.priceOverrideReason) && !hasPermission(PERMISSIONS.POS_PRICE_OVERRIDE)) {
+                    approvals.priceOverride = await requireOverride('pos.price_override', 'A manager needs to approve the changed price(s).');
                 }
             } catch {
                 return; // cancelled from the approval modal
@@ -628,7 +679,7 @@ const POS: React.FC = () => {
         }
 
         try {
-            const { saleId, invoiceNumber: savedInvoiceNumber, changeDue, queued } = await checkout(paidAmount, overrideToken);
+            const { saleId, invoiceNumber: savedInvoiceNumber, changeDue, queued } = await checkout(paidAmount, approvals);
             if (queued) {
                 message.warning(
                     `Saved offline (${savedInvoiceNumber}) — no connection right now. It'll sync automatically once this device is back online.`,
@@ -682,8 +733,32 @@ const POS: React.FC = () => {
             // Generate fresh bill number for the next transaction
             setBillNumber(generateBillNumber(priceMode, paymentMethod, isRefundMode));
             refetchProducts();
-        } catch (error) {
-            message.error('Failed to complete checkout.');
+        } catch (error: any) {
+            const data = error?.response?.data;
+            if (error?.response?.status === 409 && data?.code === 'POS_PRICE_CHANGED') {
+                // posStore has already put the current prices into the cart,
+                // so the modal's total is now the real one — the cashier
+                // tells the customer and completes again.
+                const lines: PriceChangedLine[] = data.lines ?? [];
+                Modal.warning({
+                    title: 'Prices have changed',
+                    content: (
+                        <div>
+                            <p>The cart has been updated with the current prices. Check the new total with the customer, then complete the payment again.</p>
+                            <ul className="mt-2 pl-4 list-disc">
+                                {lines.map((l) => (
+                                    <li key={`${l.product_id}-${l.variation_id ?? ''}`}>
+                                        {l.name}: {Number(l.sent_price).toFixed(2)} → <strong>{Number(l.current_price).toFixed(2)}</strong>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    ),
+                });
+                refetchProducts();
+                return;
+            }
+            message.error(data?.error || 'Failed to complete checkout.');
         }
     };
 
@@ -792,6 +867,33 @@ const POS: React.FC = () => {
                 )}
 
                 <div className="flex items-center gap-2.5">
+                    {/* Which warehouse this till's sales deduct from — only when
+                        there's a real choice (see the warehouses effect above). */}
+                    {tillContext?.pinned && tillContext.warehouseName ? (
+                        <Tooltip title="Assigned to your shift / user account — stock shown is this warehouse's">
+                            <div className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border bg-slate-50 border-slate-200 text-slate-700 whitespace-nowrap">
+                                {tillContext.warehouseName}
+                            </div>
+                        </Tooltip>
+                    ) : !isKiosk && warehouses.length > 1 ? (
+                        <Tooltip title={tillContext?.needsSelection ? (tillContext.message || 'Choose a warehouse') : 'Warehouse this till sells from — stock shown is this warehouse\'s'}>
+                            <Select
+                                size="middle"
+                                value={warehouseId}
+                                onChange={(v) => setWarehouseId(v)}
+                                placeholder="Select warehouse"
+                                status={tillWarehouseId ? undefined : 'warning'}
+                                style={{ minWidth: 170 }}
+                                options={warehouses.map((w) => ({ value: w.id, label: w.name }))}
+                            />
+                        </Tooltip>
+                    ) : tillContext?.message && !tillWarehouseId ? (
+                        <Tooltip title={tillContext.message}>
+                            <div className="text-[9px] font-bold px-2 py-1 rounded-full border bg-red-100 border-red-300 text-red-700">
+                                NO WAREHOUSE
+                            </div>
+                        </Tooltip>
+                    ) : null}
                     {/* Product grid is serving from the offline catalog cache —
                         see useOfflineCatalogSync/usePOSProducts. Prices/stock may
                         be a little stale; the sale itself still queues fine offline. */}
@@ -1045,7 +1147,22 @@ const POS: React.FC = () => {
                                             <PlusOutlined className="text-[12px] font-bold" />
                                         </div>
                                     </div>
-                                    <div className="flex-1 min-w-0 text-right text-gray-600 font-medium tabular-nums">{item.price.toFixed(2)}</div>
+                                    <div className="flex-1 min-w-0 text-right tabular-nums">
+                                        {/* Catalogue lines can be re-priced (with a reason) —
+                                            sent to the server as a price override. */}
+                                        {!item.isMisc ? (
+                                            <Tooltip title={item.priceOverrideReason ? `Price changed: ${item.priceOverrideReason} (catalogue ${item.catalogPrice?.toFixed(2)})` : 'Change price'}>
+                                                <span
+                                                    className={`cursor-pointer border-b border-dashed font-medium ${item.priceOverrideReason ? 'text-orange-600 border-orange-400' : 'text-gray-600 border-gray-300 hover:text-indigo-600'}`}
+                                                    onClick={() => setPriceEdit({ id: item.id, name: item.name, price: item.price, reason: item.priceOverrideReason ?? '', overridden: !!item.priceOverrideReason })}
+                                                >
+                                                    {item.price.toFixed(2)}
+                                                </span>
+                                            </Tooltip>
+                                        ) : (
+                                            <span className="text-gray-600 font-medium">{item.price.toFixed(2)}</span>
+                                        )}
+                                    </div>
                                     <div className="flex-1 min-w-0 text-right font-bold text-gray-900 text-base tabular-nums pr-2">{(item.price * item.quantity).toFixed(2)}</div>
                                     <div className="w-8 shrink-0 flex justify-center">
                                         <div className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-rose-100 text-gray-400 hover:text-rose-600 cursor-pointer transition-colors" onClick={() => removeItem(item.id)}>
@@ -1528,6 +1645,58 @@ const POS: React.FC = () => {
                 </div>
             </Modal>
 
+            {/* ── Line price override ─────────────────────────────────────── */}
+            <Modal
+                title={priceEdit ? `Change price — ${priceEdit.name}` : 'Change price'}
+                open={!!priceEdit}
+                onCancel={() => setPriceEdit(null)}
+                onOk={handleSavePriceOverride}
+                okText="Apply price"
+                destroyOnClose
+                footer={(_, { OkBtn, CancelBtn }) => (
+                    <div className="flex justify-between">
+                        <div>
+                            {priceEdit?.overridden && (
+                                <Button onClick={() => { clearLinePriceOverride(priceEdit.id); setPriceEdit(null); }}>
+                                    Reset to catalogue price
+                                </Button>
+                            )}
+                        </div>
+                        <div className="flex gap-2"><CancelBtn /><OkBtn /></div>
+                    </div>
+                )}
+            >
+                {priceEdit && (
+                    <div className="flex flex-col gap-3">
+                        <div>
+                            <div className="text-[11px] font-bold text-gray-500 uppercase mb-1.5 tracking-wide">New unit price</div>
+                            <InputNumber
+                                autoFocus
+                                className="w-full"
+                                value={priceEdit.price}
+                                onChange={(v) => setPriceEdit({ ...priceEdit, price: Number(v ?? 0) })}
+                                precision={2}
+                                min={0}
+                            />
+                        </div>
+                        <div>
+                            <div className="text-[11px] font-bold text-gray-500 uppercase mb-1.5 tracking-wide">Reason</div>
+                            <Input
+                                value={priceEdit.reason}
+                                onChange={(e) => setPriceEdit({ ...priceEdit, reason: e.target.value })}
+                                placeholder="e.g. Damaged packaging, price match"
+                                onPressEnter={handleSavePriceOverride}
+                                maxLength={200}
+                            />
+                        </div>
+                        <div className="text-[11px] text-gray-400">
+                            Recorded on the sale with the catalogue price.
+                            {!isOwner && !hasPermission(PERMISSIONS.POS_PRICE_OVERRIDE) && ' A manager will need to approve it at checkout.'}
+                        </div>
+                    </div>
+                )}
+            </Modal>
+
             {/* ── Feature #7 – Weight Entry Modal ───────────────────────── */}
             <WeightEntryModal
                 visible={weightModalVisible}
@@ -1578,6 +1747,7 @@ const POS: React.FC = () => {
                 open={!!pendingOverride}
                 label={pendingOverride?.label || ''}
                 permission={pendingOverride?.permission || ''}
+                isKiosk={isKiosk}
                 onAuthorized={(token) => {
                     pendingOverride?.resolve(token);
                     setPendingOverride(null);

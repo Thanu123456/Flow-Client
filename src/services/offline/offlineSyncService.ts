@@ -25,11 +25,20 @@ export async function syncQueuedSales(): Promise<SyncResult> {
     try {
         const queue = await getQueuedSales();
         for (const item of queue) {
+            // Always replayed as an offline sale — entries queued before the
+            // flag existed get it here, with the queue time as when it happened.
+            // Its client_txn_id (if any) lets the server spot one that did in
+            // fact get saved before the connection dropped.
+            const payload = {
+                ...item.payload,
+                offline: true,
+                offline_created_at: item.payload.offline_created_at ?? item.createdAt,
+            };
             try {
                 if (item.kind === 'return') {
-                    await posService.createReturn(item.payload);
+                    await posService.createReturn(payload);
                 } else {
-                    await posService.createSale(item.payload);
+                    await posService.createSale(payload);
                 }
                 await removeQueuedSale(item.localId);
                 synced++;
@@ -40,7 +49,7 @@ export async function syncQueuedSales(): Promise<SyncResult> {
                     failed++;
                     break;
                 }
-                await bumpAttempt(item.localId, err.response?.data?.message || err.message || 'Sync failed');
+                await bumpAttempt(item.localId, err.response?.data?.error || err.response?.data?.message || err.message || 'Sync failed');
                 failed++;
             }
         }

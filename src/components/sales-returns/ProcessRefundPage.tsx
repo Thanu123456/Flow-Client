@@ -12,6 +12,7 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useSaleReturnStore } from '../../store/transactions/saleReturnStore';
 import type { OriginalSaleItem } from '../../types/entities/saleReturn.types';
+import { newClientTxnId } from '../../utils/posSession';
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -42,6 +43,9 @@ const ProcessRefundPage: React.FC = () => {
   const [refundMethod, setRefundMethod]   = useState('cash');
   const [refundAmount, setRefundAmount]   = useState(0);
   const [refundReason, setRefundReason]   = useState('');
+  // One idempotency key per visit to this page — a double-submit or retry of
+  // the same refund can't refund twice (the page is left on success).
+  const [refundTxnId] = useState(() => newClientTxnId());
 
   // Auto-load when navigated from Sales History with a saleId param
   useEffect(() => {
@@ -138,6 +142,7 @@ const ProcessRefundPage: React.FC = () => {
       paid_amount:      finalPaid,
       reason:           refundReason.trim(),
       products:         selectedItems,
+      client_txn_id:    refundTxnId,
     });
 
     if (refundId) {

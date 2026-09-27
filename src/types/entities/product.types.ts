@@ -136,6 +136,8 @@ export interface ProductPaginationParams {
     subcategoryId?: string;
     brandId?: string;
     productType?: ProductType;
+    // Limits currentStock to one warehouse (the POS grid); omit for the total.
+    warehouseId?: string;
 }
 
 export interface ProductResponse {

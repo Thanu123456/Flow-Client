@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-	Table, Button, Modal, message, Tag, Empty, Spin, Descriptions, Space,
+	Table, Button, Modal, message, Tag, Empty, Spin, Descriptions, Space, Tooltip,
 } from 'antd';
-import { EyeOutlined, RollbackOutlined, PrinterOutlined } from '@ant-design/icons';
+import { EyeOutlined, RollbackOutlined, PrinterOutlined, CheckOutlined } from '@ant-design/icons';
+import { usePermissions } from '../../hooks/auth/usePermissions';
+import { PERMISSIONS } from '../../types/auth/permissions';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { saleService } from '../../services/transactions/saleService';
@@ -24,15 +26,19 @@ interface SalesHistoryTableProps {
 	paymentMethod?: string;
 	dateRange?: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null;
 	refresh?: boolean;
+	needsReviewOnly?: boolean;
 }
 
 const SalesHistoryTable: React.FC<SalesHistoryTableProps> = ({
 	search,
 	paymentMethod,
 	dateRange,
-	refresh
+	refresh,
+	needsReviewOnly,
 }) => {
 	const navigate = useNavigate();
+	const { isOwner, hasPermission } = usePermissions();
+	const canReview = isOwner || hasPermission(PERMISSIONS.SALES_REVIEW);
 	const [sales, setSales] = useState<SaleListItem[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [detailVisible, setDetailVisible] = useState(false);
@@ -48,6 +54,7 @@ const SalesHistoryTable: React.FC<SalesHistoryTableProps> = ({
 				payment_method: paymentMethod || undefined,
 				date_from: dateRange?.[0]?.format('YYYY-MM-DD') ?? undefined,
 				date_to: dateRange?.[1]?.format('YYYY-MM-DD') ?? undefined,
+				needs_review: needsReviewOnly || undefined,
 			});
 			setSales(data);
 		} catch {
@@ -55,7 +62,28 @@ const SalesHistoryTable: React.FC<SalesHistoryTableProps> = ({
 		} finally {
 			setLoading(false);
 		}
-	}, [search, paymentMethod, dateRange]);
+	}, [search, paymentMethod, dateRange, needsReviewOnly]);
+
+	const handleMarkReviewed = (record: SaleListItem) => {
+		Modal.confirm({
+			title: `Mark ${record.invoice_number} as reviewed?`,
+			content: (
+				<ul style={{ paddingLeft: 18, margin: 0 }}>
+					{(record.review_reasons ?? []).map((r) => <li key={r}>{r}</li>)}
+				</ul>
+			),
+			okText: 'Mark reviewed',
+			onOk: async () => {
+				try {
+					await saleService.markReviewed(record.id);
+					message.success('Sale marked as reviewed');
+					loadSales();
+				} catch (err: any) {
+					message.error(err?.response?.data?.error || 'Failed to mark sale as reviewed');
+				}
+			},
+		});
+	};
 
 	useEffect(() => { loadSales(); }, [loadSales, refresh]);
 
@@ -87,7 +115,17 @@ const SalesHistoryTable: React.FC<SalesHistoryTableProps> = ({
 			dataIndex: 'invoice_number',
 			key: 'invoice_number',
 			width: 180,
-			render: (text) => <strong>{text || '—'}</strong>,
+			render: (text, record) => (
+				<Space size={4} wrap>
+					<strong>{text || '—'}</strong>
+					{record.is_offline && <Tag>OFFLINE</Tag>}
+					{record.needs_review && (
+						<Tooltip title={(record.review_reasons ?? []).join(' • ') || 'Needs review'}>
+							<Tag color="orange">REVIEW</Tag>
+						</Tooltip>
+					)}
+				</Space>
+			),
 		},
 		{
 			title: 'Customer',
@@ -151,7 +189,7 @@ const SalesHistoryTable: React.FC<SalesHistoryTableProps> = ({
 		{
 			title: 'Actions',
 			key: 'actions',
-			width: 160,
+			width: 220,
 			render: (_, record) => (
 				<Space size="small">
 					<Button
@@ -171,6 +209,11 @@ const SalesHistoryTable: React.FC<SalesHistoryTableProps> = ({
 					>
 						Return
 					</Button>
+					{record.needs_review && canReview && (
+						<Button size="small" icon={<CheckOutlined />} onClick={() => handleMarkReviewed(record)}>
+							Reviewed
+						</Button>
+					)}
 				</Space>
 			),
 		},

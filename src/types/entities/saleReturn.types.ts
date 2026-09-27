@@ -67,6 +67,11 @@ export interface ProcessRefundRequest {
   reason?: string;
   note?: string;
   refund_delivery_charge?: boolean;
+  // Idempotency key for this refund (utils/posSession) — a retried submit
+  // returns the refund already saved instead of refunding twice.
+  client_txn_id?: string;
+  // Only used when the original sale has no recorded warehouse.
+  warehouse_id?: string;
   products: {
     product_id: string;
     variation_id?: string;

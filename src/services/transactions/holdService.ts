@@ -5,13 +5,16 @@ const toNum = (v: any) => parseFloat(v || '0');
 
 const transformItem = (raw: any) => ({
   id: raw.id,
-  productId: raw.product_id,
-  variationId: raw.variation_id,
+  productId: raw.product_id || undefined,
+  variationId: raw.variation_id || undefined,
   name: raw.name,
   unit: raw.unit,
   quantity: toNum(raw.quantity),
   price: toNum(raw.price),
   maxStock: raw.max_stock ?? 0,
+  isMisc: !!raw.is_misc || !raw.product_id,
+  priceOverrideReason: raw.price_override_reason || undefined,
+  catalogPrice: raw.catalog_price != null ? toNum(raw.catalog_price) : undefined,
 });
 
 const transform = (raw: any): HeldBill => ({

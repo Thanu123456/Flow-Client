@@ -95,6 +95,7 @@ export const productService = {
             subcategory_id: params.subcategoryId || undefined,
             brand_id: params.brandId || undefined,
             product_type: params.productType || undefined,
+            warehouse_id: params.warehouseId || undefined,
             include_inactive: params.status === 'inactive' ? true : undefined,
             is_active: params.status === 'active' ? true : params.status === 'inactive' ? false : undefined,
         };

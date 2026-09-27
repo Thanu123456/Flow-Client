@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Space, message, DatePicker } from 'antd';
+import { Space, message, DatePicker, Checkbox } from 'antd';
 import { ReloadOutlined, FilePdfOutlined, FileExcelOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import SalesHistoryTable from './SalesHistoryTable';
@@ -16,6 +16,9 @@ const SalesPage: React.FC = () => {
 	const [paymentFilter, setPaymentFilter] = useState<string | undefined>(undefined);
 	const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
 	const [refresh, setRefresh] = useState(false);
+	// Sales the server accepted with an exception (offline sync, negative
+	// stock, stale price) that a manager hasn't cleared yet.
+	const [needsReviewOnly, setNeedsReviewOnly] = useState(false);
 	const [exportingPdf, setExportingPdf] = useState(false);
 	const [exportingExcel, setExportingExcel] = useState(false);
 	const [reportData, setReportData] = useState<SalesReportResponse | null>(null);
@@ -115,6 +118,13 @@ const SalesPage: React.FC = () => {
 						]}
 						allowClear
 					/>
+					<Checkbox
+						checked={needsReviewOnly}
+						onChange={(e) => setNeedsReviewOnly(e.target.checked)}
+						style={{ whiteSpace: 'nowrap' }}
+					>
+						Needs review
+					</Checkbox>
 				</div>
 			}
 			actions={
@@ -149,6 +159,7 @@ const SalesPage: React.FC = () => {
 				paymentMethod={paymentFilter}
 				dateRange={dateRange}
 				refresh={refresh}
+				needsReviewOnly={needsReviewOnly}
 			/>
 
 			{/* Off-screen render target for PDF capture — not visible to the user */}
