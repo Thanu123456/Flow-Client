@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Space, message, Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import { PlusOutlined, ImportOutlined, ReloadOutlined, FilePdfOutlined, FileExcelOutlined, DownOutlined, DownloadOutlined, UploadOutlined } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import ProductsTable from "./ProductsTable";
 import ImportProducts from "./ImportProducts";
 import { PageLayout } from "../common/PageLayout";
@@ -11,6 +11,8 @@ import { useProductStore } from "../../store/inventory/productStore";
 import { useDebounce } from "../../hooks/ui/useDebounce";
 import { productService } from "../../services/inventory/productService";
 import type { ProductType, ProductStatus } from "../../types/entities/product.types";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface ProductsPageProps {
     onHeaderCollapseChange?: (collapsed: boolean) => void;
@@ -34,10 +36,27 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
         onHeaderCollapseChange?.(newCollapsed);
     };
 
-    // Filter states
-    const [searchTerm, setSearchTerm] = useState("");
-    const [typeFilter, setTypeFilter] = useState<ProductType | undefined>(undefined);
-    const [statusFilter, setStatusFilter] = useState<ProductStatus | undefined>(undefined);
+    // Filter/sort state, seeded from the URL on first render so a reload or
+    // the browser back/forward buttons land back on the same view instead of
+    // resetting to an empty list. Kept in sync back to the URL below.
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [searchTerm, setSearchTerm] = useState(() => searchParams.get("search") || "");
+    const [typeFilter, setTypeFilter] = useState<ProductType | undefined>(
+        () => (searchParams.get("type") as ProductType) || undefined
+    );
+    const [statusFilter, setStatusFilter] = useState<ProductStatus | undefined>(
+        () => (searchParams.get("status") as ProductStatus) || undefined
+    );
+    const [sortBy, setSortBy] = useState<string | undefined>(() => searchParams.get("sort_by") || undefined);
+    const [sortDir, setSortDir] = useState<"asc" | "desc" | undefined>(
+        () => (searchParams.get("sort_dir") as "asc" | "desc") || undefined
+    );
+
+    // The URL's ?page= is only honored for the very first fetch (so a
+    // reloaded/bookmarked/back-navigated URL lands on the same page); any
+    // later change to search/type/status/sort resets to page 1 as before.
+    const initialPageRef = React.useRef(parseInt(searchParams.get("page") || "1", 10) || 1);
+    const isFirstFetchRef = React.useRef(true);
 
     const debouncedSearch = useDebounce(searchTerm, 300);
     const { products, loading, pagination, getProducts } = useProductStore();
@@ -49,16 +68,39 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
             search: debouncedSearch || undefined,
             productType: typeFilter,
             status: statusFilter,
+            sortBy,
+            sortDir,
         });
-    }, [getProducts, debouncedSearch, typeFilter, statusFilter]);
+    }, [getProducts, debouncedSearch, typeFilter, statusFilter, sortBy, sortDir]);
 
     useEffect(() => {
-        fetchProducts(1, pagination.limit || 50);
+        const page = isFirstFetchRef.current ? initialPageRef.current : 1;
+        isFirstFetchRef.current = false;
+        fetchProducts(page, pagination.limit || 50);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [debouncedSearch, typeFilter, statusFilter, fetchProducts]);
+    }, [debouncedSearch, typeFilter, statusFilter, sortBy, sortDir, fetchProducts]);
+
+    // Mirror the current filters/sort/page into the URL (replace, not push,
+    // so every keystroke/page click doesn't pile up in browser history).
+    useEffect(() => {
+        const next = new URLSearchParams();
+        if (debouncedSearch) next.set("search", debouncedSearch);
+        if (typeFilter) next.set("type", typeFilter);
+        if (statusFilter) next.set("status", statusFilter);
+        if (sortBy) next.set("sort_by", sortBy);
+        if (sortDir) next.set("sort_dir", sortDir);
+        if (pagination.page > 1) next.set("page", String(pagination.page));
+        setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [debouncedSearch, typeFilter, statusFilter, sortBy, sortDir, pagination.page]);
 
     const handlePageChange = (page: number, pageSize: number) => {
         fetchProducts(page, pageSize);
+    };
+
+    const handleSortChange = (nextSortBy?: string, nextSortDir?: "asc" | "desc") => {
+        setSortBy(nextSortBy);
+        setSortDir(nextSortDir);
     };
 
     const [refreshing, setRefreshing] = useState(false);
@@ -66,6 +108,8 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
         setSearchTerm("");
         setTypeFilter(undefined);
         setStatusFilter(undefined);
+        setSortBy(undefined);
+        setSortDir(undefined);
         setRefreshing(true);
         try {
             // Fetch with explicitly cleared filters — fetchProducts would
@@ -78,12 +122,76 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
         }
     };
 
-    const handleExportPDF = () => {
-        message.info("Export to PDF coming soon");
+    const [exportingPdf, setExportingPdf] = useState(false);
+    const [exportingExcel, setExportingExcel] = useState(false);
+
+    // Both exports use the filters currently applied to the table (search/type/
+    // status/sort), not just the loaded page, so the file matches what the
+    // user is actually looking at.
+    const currentFilters = {
+        search: debouncedSearch || undefined,
+        productType: typeFilter,
+        status: statusFilter,
+        sortBy,
+        sortDir,
     };
 
-    const handleExportExcel = () => {
-        message.info("Export to Excel coming soon");
+    const handleExportPDF = async () => {
+        setExportingPdf(true);
+        try {
+            const products = await productService.getAllForExport(currentFilters);
+            if (products.length === 0) {
+                message.warning("No products match the current filters");
+                return;
+            }
+            const doc = new jsPDF({ orientation: "landscape" });
+            doc.setFontSize(14);
+            doc.text("Products", 14, 14);
+            doc.setFontSize(9);
+            doc.text(`Generated ${new Date().toLocaleString()} — ${products.length} product(s)`, 14, 20);
+
+            autoTable(doc, {
+                startY: 26,
+                head: [["Name", "SKU", "Category", "Type", "Retail Price", "Cost Price", "Stock", "Status"]],
+                body: products.map((p) => [
+                    p.name,
+                    p.sku || "-",
+                    p.categoryName || "-",
+                    p.productType === "variable" ? `Variable (${p.variationCount || 0})` : "Single",
+                    `Rs. ${(p.retailPrice ?? 0).toFixed(2)}`,
+                    `Rs. ${(p.costPrice ?? 0).toFixed(2)}`,
+                    `${p.currentStock ?? 0} ${p.unitShortName || ""}`.trim(),
+                    p.status === "active" ? "Active" : "Inactive",
+                ]),
+                styles: { fontSize: 8 },
+                headStyles: { fillColor: [24, 144, 255] },
+            });
+
+            doc.save(`products_export_${new Date().toISOString().slice(0, 10)}.pdf`);
+        } catch (error: any) {
+            message.error(error?.response?.data?.message || "Failed to export PDF");
+        } finally {
+            setExportingPdf(false);
+        }
+    };
+
+    const handleExportExcel = async () => {
+        setExportingExcel(true);
+        try {
+            const blob = await productService.exportExcel(currentFilters);
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `products_export_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        } catch (error: any) {
+            message.error(error?.response?.data?.message || "Failed to export Excel");
+        } finally {
+            setExportingExcel(false);
+        }
     };
 
     const handleDownloadTemplate = async () => {
@@ -158,6 +266,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
                         <CommonButton
                             icon={<FilePdfOutlined style={{ color: "#FF0000" }} />}
                             onClick={handleExportPDF}
+                            loading={exportingPdf}
                             tooltip="Download PDF"
                         >
                             PDF
@@ -165,6 +274,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
                         <CommonButton
                             icon={<FileExcelOutlined style={{ color: "#107C41" }} />}
                             onClick={handleExportExcel}
+                            loading={exportingExcel}
                             tooltip="Download Excel"
                         >
                             Excel
@@ -196,6 +306,9 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
                         totalPages: pagination.totalPages
                     }}
                     onPageChange={handlePageChange}
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSortChange={handleSortChange}
                     refreshData={() => fetchProducts(pagination.page, pagination.limit)}
                 />
             </PageLayout>

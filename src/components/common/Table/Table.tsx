@@ -15,6 +15,7 @@ function CommonTable<T extends Record<string, any>>({
   selectedDate,
   onBulkDelete,
   bulkDeleteText = "Delete Selected",
+  extraBulkActions,
   sticky = { offsetHeader: 0 },
   rowSelection,
   simplePagination = false,
@@ -92,6 +93,8 @@ function CommonTable<T extends Record<string, any>>({
             >
               Clear
             </Button>
+
+            {extraBulkActions}
 
             {onBulkDelete && (
               <Button

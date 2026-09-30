@@ -51,6 +51,7 @@ export function renderReceiptHtml(data: EscposReceiptData): string {
                     <tr><td>Subtotal</td><td style="text-align:right;">${money(data.subtotal)}</td></tr>
                     ${data.discountAmount ? `<tr><td>Discount</td><td style="text-align:right;">-${money(data.discountAmount)}</td></tr>` : ''}
                     ${data.deliveryCharge ? `<tr><td>Delivery</td><td style="text-align:right;">+${money(data.deliveryCharge)}</td></tr>` : ''}
+                    ${data.taxAmount ? `<tr><td>Tax</td><td style="text-align:right;">+${money(data.taxAmount)}</td></tr>` : ''}
                     <tr style="font-weight:700;border-top:1px solid #000;">
                         <td style="padding-top:4px;">Total</td>
                         <td style="text-align:right;padding-top:4px;">${money(data.totalAmount)}</td>

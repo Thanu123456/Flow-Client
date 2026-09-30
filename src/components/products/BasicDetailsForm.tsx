@@ -1,5 +1,5 @@
 import React from "react";
-import { Form, Input, Select, Row, Col, Radio, Card, Typography, Spin } from "antd";
+import { Form, Input, InputNumber, Select, Row, Col, Radio, Card, Typography, Spin } from "antd";
 import {
     InfoCircleOutlined,
     TagsOutlined,
@@ -285,6 +285,56 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ form, editProduct }
                                             </Select.Option>
                                         ))}
                                     </Select>
+                                </Form.Item>
+                            </Col>
+                        </Row>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100">
+                        <Text className="text-xs font-normal uppercase text-slate-400 mb-4 block tracking-wider">
+                            Tax
+                        </Text>
+                        <Row gutter={[24, 0]}>
+                            <Col span={12}>
+                                <Form.Item
+                                    name="tax_type"
+                                    label={<span className="font-normal">Tax</span>}
+                                    initialValue=""
+                                >
+                                    <Select placeholder="No Tax" size="large" className="w-full">
+                                        <Select.Option value="">No Tax</Select.Option>
+                                        <Select.Option value="exclusive">Exclusive (added on top at checkout)</Select.Option>
+                                    </Select>
+                                </Form.Item>
+                            </Col>
+                            <Col span={12}>
+                                <Form.Item dependencies={["tax_type"]} noStyle>
+                                    {({ getFieldValue }) => {
+                                        const taxType = getFieldValue("tax_type");
+                                        return (
+                                            <Form.Item
+                                                name="tax_rate"
+                                                label={<span className="font-normal">Tax Rate</span>}
+                                                rules={[
+                                                    { required: taxType === "exclusive", message: "Enter a tax rate" },
+                                                ]}
+                                                initialValue={0}
+                                            >
+                                                <InputNumber
+                                                    style={{ width: "100%" }}
+                                                    min={0}
+                                                    max={100}
+                                                    precision={2}
+                                                    step={0.01}
+                                                    disabled={taxType !== "exclusive"}
+                                                    suffix="%"
+                                                    size="large"
+                                                    className="rounded-lg"
+                                                    placeholder="e.g. 15.00"
+                                                />
+                                            </Form.Item>
+                                        );
+                                    }}
                                 </Form.Item>
                             </Col>
                         </Row>

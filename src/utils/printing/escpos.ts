@@ -107,6 +107,7 @@ export interface EscposReceiptData {
     subtotal: number;
     discountAmount?: number;
     deliveryCharge?: number;
+    taxAmount?: number;
     totalAmount: number;
     paidAmount: number;
     changeDue?: number;
@@ -145,6 +146,7 @@ export function buildEscposReceipt(data: EscposReceiptData): Uint8Array {
     b.twoColumn('Subtotal', money(data.subtotal));
     if (data.discountAmount) b.twoColumn('Discount', `-${money(data.discountAmount)}`);
     if (data.deliveryCharge) b.twoColumn('Delivery', `+${money(data.deliveryCharge)}`);
+    if (data.taxAmount) b.twoColumn('Tax', `+${money(data.taxAmount)}`);
     // Bold only for emphasis — deliberately NOT double-width here: doubling
     // shifts the effective column count (42 -> ~21) and getting that
     // recalculation wrong risks overflow/wraparound on real paper, which

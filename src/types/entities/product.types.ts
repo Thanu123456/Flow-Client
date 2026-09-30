@@ -2,6 +2,10 @@ export type ProductType = "single" | "variable";
 export type DiscountType = "fixed" | "percentage";
 export type DiscountAppliesTo = "wholesale" | "retail" | "our_price";
 export type ProductStatus = "active" | "inactive";
+// "" means no tax. "exclusive" adds tax_rate% on top of the price at
+// checkout. Applies to the whole product, including every variation of a
+// variable product uniformly — there's no per-variation tax override.
+export type TaxType = "" | "exclusive";
 
 export interface CreateProductRequest {
     name: string;
@@ -16,6 +20,8 @@ export interface CreateProductRequest {
     single_product?: SingleProductRequest;
     variable_product?: VariableProductRequest;
     image_url?: string;
+    tax_type?: TaxType;
+    tax_rate?: number;
 }
 
 export interface SingleProductRequest {
@@ -82,6 +88,10 @@ export interface Product {
     // prices as new priced batches arrive — a manual price wins.
     priceLocked?: boolean;
 
+    // Tax — applies to the whole product; see TaxType.
+    taxType?: TaxType;
+    taxRate?: number;
+
     // Discount
     discountType?: DiscountType;
     discountValue?: number;
@@ -138,6 +148,11 @@ export interface ProductPaginationParams {
     productType?: ProductType;
     // Limits currentStock to one warehouse (the POS grid); omit for the total.
     warehouseId?: string;
+    // Server-side sort. sortBy must be one of the backend's whitelisted keys
+    // (name, cost_price, retail_price, current_stock) — anything else is
+    // ignored server-side and falls back to newest-first.
+    sortBy?: string;
+    sortDir?: "asc" | "desc";
 }
 
 export interface ProductResponse {

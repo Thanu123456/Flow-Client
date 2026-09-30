@@ -6,7 +6,8 @@ import {
     TagOutlined,
     ThunderboltOutlined,
     UnlockOutlined,
-    LockOutlined
+    LockOutlined,
+    PercentageOutlined
 } from "@ant-design/icons";
 import { productService } from "../../services/inventory/productService";
 
@@ -32,6 +33,19 @@ const PricingFields: React.FC<PricingFieldsProps> = ({ prefix, absolutePrefix, e
     // Watch prices to auto-sync
     const retailPrice = Form.useWatch([...watchPrefix, "retail_price"], form);
     const ourPrice = Form.useWatch([...watchPrefix, "our_price"], form);
+    const costPrice = Form.useWatch([...watchPrefix, "cost_price"], form);
+
+    // Live margin: profit as a % of the actual selling price (our_price) —
+    // the number staff actually care about while typing prices, since it's
+    // the standard retail margin definition (profit / selling price), not
+    // markup (profit / cost).
+    const margin = (() => {
+        const cost = Number(costPrice) || 0;
+        const selling = Number(ourPrice) || 0;
+        if (selling <= 0) return null;
+        return ((selling - cost) / selling) * 100;
+    })();
+    const profit = (Number(ourPrice) || 0) - (Number(costPrice) || 0);
 
     // State to track if manual override is enabled
     const [isManualSellingPrice, setIsManualSellingPrice] = useState(false);
@@ -321,6 +335,28 @@ const PricingFields: React.FC<PricingFieldsProps> = ({ prefix, absolutePrefix, e
                     </Form.Item>
                 </Col>
             </Row>
+            {margin !== null && (
+                <div
+                    className={`mt-4 flex items-center gap-3 rounded-lg px-4 py-2 text-sm border ${
+                        margin < 0
+                            ? "bg-red-50 border-red-200 text-red-700"
+                            : margin < 15
+                            ? "bg-amber-50 border-amber-200 text-amber-700"
+                            : "bg-emerald-50 border-emerald-200 text-emerald-700"
+                    }`}
+                >
+                    <PercentageOutlined />
+                    <span className="font-medium">
+                        Margin: {margin.toFixed(1)}%
+                    </span>
+                    <span className="text-slate-400">·</span>
+                    <span>
+                        Profit: Rs. {profit.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {" "}per unit
+                    </span>
+                    {margin < 0 && <span className="font-medium">— selling below cost</span>}
+                </div>
+            )}
         </div>
     );
 };

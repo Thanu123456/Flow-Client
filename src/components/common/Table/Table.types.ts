@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { TableProps as AntTableProps, ColumnType } from "antd/es/table";
 import type { Dayjs } from "dayjs";
 
@@ -26,4 +27,7 @@ export interface CommonTableProps<T>
   onBulkDelete?: () => void;
   bulkDeleteText?: string;
   simplePagination?: boolean;
+  // Extra buttons/dropdowns rendered in the bulk-selection bar, before the
+  // delete button. Callers own their own actions/state; this is just a slot.
+  extraBulkActions?: ReactNode;
 }

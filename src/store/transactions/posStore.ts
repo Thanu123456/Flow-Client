@@ -26,6 +26,11 @@ export interface CartItem {
     // the server prices the line from the catalogue and rejects a mismatch.
     priceOverrideReason?: string;
     catalogPrice?: number;         // the price before the override, for "reset"
+    // Snapshot of the product's tax setting when added — see
+    // ProductType (types/entities/product.types.ts). Absent/"" for a misc
+    // line (no catalogue product) or an untaxed product.
+    taxType?: "" | "exclusive";
+    taxRate?: number;
 }
 
 // Manager-override tokens for a checkout — each covers one permission.

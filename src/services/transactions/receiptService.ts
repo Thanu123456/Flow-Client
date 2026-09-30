@@ -19,6 +19,7 @@ const transformPublicReceipt = (d: any): PublicReceipt => ({
         subtotal: Number(d.sale.subtotal || 0),
         discount_amount: Number(d.sale.discount_amount || 0),
         delivery_charge: Number(d.sale.delivery_charge || 0),
+        tax_total: Number(d.sale.tax_total || 0),
         total_amount: Number(d.sale.total_amount || 0),
         paid_amount: Number(d.sale.paid_amount || 0),
         payment_method: d.sale.payment_method,
@@ -29,6 +30,8 @@ const transformPublicReceipt = (d: any): PublicReceipt => ({
             name: i.name,
             quantity: Number(i.quantity || 0),
             price: Number(i.price || 0),
+            tax_rate: Number(i.tax_rate || 0),
+            tax_amount: Number(i.tax_amount || 0),
         })),
     },
 });

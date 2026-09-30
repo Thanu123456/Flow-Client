@@ -141,6 +141,11 @@ const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({ visible, prod
                                             <Text type="success" strong>Rs. {product.retailPrice?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>
                                         </Descriptions.Item>
                                         <Descriptions.Item label="Wholesale" span={2}>Rs. {product.wholesalePrice?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Descriptions.Item>
+                                        <Descriptions.Item label="Tax" span={2}>
+                                            {product.taxType === "exclusive"
+                                                ? `${(product.taxRate ?? 0).toFixed(2)}% (added at checkout)`
+                                                : "No tax"}
+                                        </Descriptions.Item>
                                         <Descriptions.Item label="Stock">
                                             <Tag color={product.currentStock > (product.quantityAlert || 0) ? 'green' : 'red'}>
                                                 {product.currentStock} {product.unitShortName}

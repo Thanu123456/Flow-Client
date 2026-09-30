@@ -17,6 +17,7 @@ export interface SaleListItem {
   subtotal: number;
   discount_amount: number;
   delivery_charge: number;
+  tax_total: number;
   total_amount: number;
   paid_amount: number;
   payment_method: string;
@@ -34,6 +35,8 @@ export interface SaleItemDetail {
   name: string;
   quantity: number;
   price: number;
+  tax_rate?: number;
+  tax_amount?: number;
 }
 
 export interface SaleDetailItem extends SaleListItem {

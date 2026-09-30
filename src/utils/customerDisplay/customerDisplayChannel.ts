@@ -22,6 +22,7 @@ export interface CustomerDisplayCartMessage {
     subtotal: number;
     discount: number;
     deliveryCharge: number;
+    tax?: number;
     total: number;
 }
 

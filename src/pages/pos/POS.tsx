@@ -448,6 +448,8 @@ const POS: React.FC = () => {
             quantity: 1,
             price: item.price,
             maxStock: item.stock,
+            taxType: item.product.taxType,
+            taxRate: item.product.taxRate,
         });
     }, [allowNoStockBills, addToCart]);
 
@@ -465,6 +467,8 @@ const POS: React.FC = () => {
             quantity,
             price: selectedWeightProduct.price,
             maxStock: selectedWeightProduct.stock,
+            taxType: selectedWeightProduct.product.taxType,
+            taxRate: selectedWeightProduct.product.taxRate,
         });
         message.success(`Added ${formatQuantity(quantity, selectedWeightProduct.product.unitName)} ${selectedWeightProduct.product.unitShortName} to cart`);
         setWeightModalVisible(false);
@@ -522,7 +526,19 @@ const POS: React.FC = () => {
     const discountAmount = discountType === 'fixed'
         ? Math.min(discountValue, subTotal)
         : (subTotal * Math.min(discountValue, 100)) / 100;
-    const totalPayable = subTotal - discountAmount + deliveryCharge;
+    // Mirrors POSService.CreateSale's tax calc exactly (pos_service.go) so
+    // what the cashier sees before checkout matches what the server actually
+    // charges: each line's discount share is proportional to its share of
+    // the subtotal, then that line's own tax rate applies to what's left —
+    // required for a mixed-tax cart, not just "tax the grand total once".
+    const taxAmount = cart.reduce((sum, item) => {
+        if (item.taxType !== 'exclusive' || !item.taxRate) return sum;
+        const lineGross = item.price * item.quantity;
+        const lineDiscountShare = subTotal > 0 ? (lineGross * discountAmount) / subTotal : 0;
+        const lineTaxable = lineGross - lineDiscountShare;
+        return sum + (lineTaxable * item.taxRate) / 100;
+    }, 0);
+    const totalPayable = subTotal - discountAmount + deliveryCharge + taxAmount;
 
     // Mirror the cart to the customer-facing display (if a second window is
     // open — see customerDisplayChannel.ts). Harmless no-op when it isn't:
@@ -535,9 +551,10 @@ const POS: React.FC = () => {
             subtotal: subTotal,
             discount: discountAmount,
             deliveryCharge,
+            tax: taxAmount,
             total: totalPayable,
         });
-    }, [cart, subTotal, discountAmount, deliveryCharge, totalPayable]);
+    }, [cart, subTotal, discountAmount, deliveryCharge, taxAmount, totalPayable]);
 
     // When switching to Credit inside the modal, reset paidAmount to 0 so the full amount is recorded as credit.
     // Switching away from Credit restores the full payable amount.
@@ -712,6 +729,7 @@ const POS: React.FC = () => {
                         subtotal: subTotal,
                         discountAmount: discountAmount > 0 ? discountAmount : undefined,
                         deliveryCharge: deliveryCharge > 0 ? deliveryCharge : undefined,
+                        taxAmount: taxAmount > 0 ? taxAmount : undefined,
                         totalAmount: totalPayable,
                         paidAmount,
                         changeDue: changeDue > 0 ? changeDue : undefined,

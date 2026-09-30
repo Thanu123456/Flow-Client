@@ -58,6 +58,8 @@ const EditProductPage: React.FC = () => {
                     warehouse_id: product.warehouseId,
                     warranty_id: product.warrantyId,
                     image_url: product.imageUrl,
+                    tax_type: product.taxType || "",
+                    tax_rate: product.taxRate || 0,
                 };
 
                 if (product.productType === "single") {

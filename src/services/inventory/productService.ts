@@ -46,6 +46,9 @@ const transformProduct = (p: any): Product => ({
     ourPrice: p.our_price ?? p.price,
     priceLocked: p.price_locked ?? false,
 
+    taxType: p.tax_type ?? "",
+    taxRate: p.tax_rate ?? 0,
+
     discountType: p.discount_type,
     discountValue: p.discount_value,
     discountAppliesTo: p.discount_applies_to,
@@ -98,6 +101,8 @@ export const productService = {
             warehouse_id: params.warehouseId || undefined,
             include_inactive: params.status === 'inactive' ? true : undefined,
             is_active: params.status === 'active' ? true : params.status === 'inactive' ? false : undefined,
+            sort_by: params.sortBy || undefined,
+            sort_dir: params.sortDir || undefined,
         };
 
         const response = await axiosInstance.get('/admin/products', { params: backendParams });
@@ -198,5 +203,32 @@ export const productService = {
         return transformBulkImportResult(result);
     },
 
-    // ExportPDF, ExportExcel can be added later
+    // Export every product matching the current list filters (search/type/status/
+    // category/brand/warehouse) as an .xlsx workbook, generated server-side so it
+    // always matches what ListProducts would return — not just the current page.
+    exportExcel: async (params: Omit<ProductPaginationParams, "page" | "limit">): Promise<Blob> => {
+        const backendParams: any = {
+            search: params.search || undefined,
+            category_id: params.categoryId || undefined,
+            subcategory_id: params.subcategoryId || undefined,
+            brand_id: params.brandId || undefined,
+            product_type: params.productType || undefined,
+            warehouse_id: params.warehouseId || undefined,
+            is_active: params.status === "active" ? true : params.status === "inactive" ? false : undefined,
+            sort_by: params.sortBy || undefined,
+            sort_dir: params.sortDir || undefined,
+        };
+        const response = await axiosInstance.get("/admin/products/export", {
+            params: backendParams,
+            responseType: "blob",
+        });
+        return response.data;
+    },
+
+    // Fetch every product matching the current list filters (unpaginated) for
+    // client-side PDF export.
+    getAllForExport: async (params: Omit<ProductPaginationParams, "page" | "limit">): Promise<Product[]> => {
+        const response = await productService.getProducts({ ...params, page: 1, limit: 5000 });
+        return response.data;
+    },
 };

@@ -109,6 +109,12 @@ const DigitalReceipt: React.FC = () => {
                         <Text>+Rs. {fmt(sale.delivery_charge)}</Text>
                     </div>
                 )}
+                {sale.tax_total > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: 4 }}>
+                        <Text type="secondary">Tax</Text>
+                        <Text>+Rs. {fmt(sale.tax_total)}</Text>
+                    </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 16, marginTop: 8, paddingTop: 8, borderTop: '1px solid #000' }}>
                     <span>Total</span>
                     <span>Rs. {fmt(sale.total_amount)}</span>

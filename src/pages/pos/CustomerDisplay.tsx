@@ -179,6 +179,12 @@ const CustomerDisplay: React.FC = () => {
                                         <span className="tabular-nums">+Rs. {fmt(view.data.deliveryCharge)}</span>
                                     </div>
                                 )}
+                                {!!view.data.tax && view.data.tax > 0 && (
+                                    <div className="flex justify-between text-sm text-white/60">
+                                        <span>Tax</span>
+                                        <span className="tabular-nums">+Rs. {fmt(view.data.tax)}</span>
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <div className="my-5 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
