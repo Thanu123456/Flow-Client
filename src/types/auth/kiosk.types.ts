@@ -123,4 +123,7 @@ export interface KioskDeviceInfo {
   last_seen_at: string;
   online: boolean;
   paired_at: string;
+  /** The warehouse this register sells from, when one is set. */
+  warehouse_id?: string;
+  warehouse_name?: string;
 }

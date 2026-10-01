@@ -120,6 +120,11 @@ export const authService = {
     await api.patch(`/admin/kiosk-devices/${id}`, { device_name: deviceName });
   },
 
+  /** Tie a register to a warehouse (null clears it) — Backend: PUT /admin/kiosk-devices/:id/warehouse */
+  async setKioskDeviceWarehouse(id: string, warehouseId: string | null): Promise<void> {
+    await api.put(`/admin/kiosk-devices/${id}/warehouse`, { warehouse_id: warehouseId });
+  },
+
   async signOutKioskDevice(id: string): Promise<void> {
     await api.post(`/admin/kiosk-devices/${id}/sign-out`);
   },

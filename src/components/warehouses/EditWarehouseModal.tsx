@@ -1,11 +1,9 @@
 import React, { useEffect } from "react";
-import { Form, Input, Switch, message, Row, Col } from "antd";
+import { message } from "antd";
 import type { Warehouse, WarehouseFormData } from "../../types/entities/warehouse.types";
 import { useWarehouseStore } from "../../store/management/warehouseStore";
 import EditModal from "../common/Modal/EditModal";
-import type { FormInstance } from "antd";
-
-const { TextArea } = Input;
+import WarehouseFormFields from "./WarehouseFormFields";
 
 interface EditWarehouseModalProps {
   visible: boolean;
@@ -35,6 +33,12 @@ const EditWarehouseModal: React.FC<EditWarehouseModalProps> = ({
   const handleSubmit = async (values: any, originalData: Warehouse) => {
     const warehouseData: Partial<WarehouseFormData> = {
       name: values.name,
+      code: values.code,
+      warehouseType: values.warehouseType,
+      // "" clears the manager; null clears the capacity
+      managerUserId: values.managerUserId ?? "",
+      capacity: values.capacity ?? null,
+      isDefault: values.isDefault && !originalData.isDefault ? true : undefined,
       contactPerson: values.contactPerson,
       email: values.email,
       mobile: values.mobile,
@@ -42,20 +46,26 @@ const EditWarehouseModal: React.FC<EditWarehouseModalProps> = ({
       city: values.city,
       address: values.address,
       status: values.status ? "active" : "inactive",
+      updatedAt: originalData.updatedAt,
     };
 
     await updateWarehouse(originalData.id, warehouseData);
   };
 
-  const mapDataToForm = (warehouse: Warehouse) => ({
-    name: warehouse.name,
-    contactPerson: warehouse.contactPerson,
-    email: warehouse.email,
-    mobile: warehouse.mobile,
-    phone: warehouse.phone,
-    city: warehouse.city,
-    address: warehouse.address,
-    status: warehouse.status === "active",
+  const mapDataToForm = (w: Warehouse) => ({
+    name: w.name,
+    code: w.code,
+    warehouseType: w.warehouseType,
+    managerUserId: w.managerUserId,
+    capacity: w.capacity,
+    isDefault: w.isDefault,
+    contactPerson: w.contactPerson,
+    email: w.email,
+    mobile: w.mobile,
+    phone: w.phone,
+    city: w.city,
+    address: w.address,
+    status: w.status === "active",
   });
 
   return (
@@ -70,92 +80,16 @@ const EditWarehouseModal: React.FC<EditWarehouseModalProps> = ({
       submitButtonText="Update Warehouse"
       width={700}
     >
-      {(_form: FormInstance, _data: Warehouse | null) => (
-        <>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="Warehouse Name"
-                name="name"
-                rules={[
-                  { required: true, message: "Please enter Warehouse Name" },
-                  { min: 1, max: 100, message: "Name must be between 1 and 100 characters" },
-                ]}
-              >
-                <Input placeholder="Enter Warehouse Name" maxLength={100} />
-              </Form.Item>
-            </Col>
-
-            <Col span={12}>
-              <Form.Item
-                label="Contact Person"
-                name="contactPerson"
-                rules={[{ max: 100, message: "Contact person must be less than 100 characters" }]}
-              >
-                <Input placeholder="Enter Contact Person" maxLength={100} />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="Email"
-                name="email"
-                rules={[
-                  { type: "email", message: "Please enter a valid email" },
-                  { max: 100, message: "Email must be less than 100 characters" },
-                ]}
-              >
-                <Input placeholder="Enter Email" maxLength={100} />
-              </Form.Item>
-            </Col>
-
-            <Col span={12}>
-              <Form.Item
-                label="Mobile"
-                name="mobile"
-                rules={[{ max: 20, message: "Mobile must be less than 20 characters" }]}
-              >
-                <Input placeholder="Enter Mobile Number" maxLength={20} />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="Phone"
-                name="phone"
-                rules={[{ max: 20, message: "Phone must be less than 20 characters" }]}
-              >
-                <Input placeholder="Enter Phone Number" maxLength={20} />
-              </Form.Item>
-            </Col>
-
-            <Col span={12}>
-              <Form.Item
-                label="City"
-                name="city"
-                rules={[{ max: 100, message: "City must be less than 100 characters" }]}
-              >
-                <Input placeholder="Enter City" maxLength={100} />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item
-            label="Address"
-            name="address"
-            rules={[{ max: 500, message: "Address must be less than 500 characters" }]}
-          >
-            <TextArea rows={3} placeholder="Enter Address" maxLength={500} />
-          </Form.Item>
-
-          <Form.Item label="Status" name="status" valuePropName="checked">
-            <Switch />
-          </Form.Item>
-        </>
+      {() => (
+        <WarehouseFormFields
+          isEdit
+          isCurrentDefault={warehouse?.isDefault}
+          currentManager={
+            warehouse?.managerUserId && warehouse.managerName
+              ? { id: warehouse.managerUserId, name: warehouse.managerName }
+              : undefined
+          }
+        />
       )}
     </EditModal>
   );

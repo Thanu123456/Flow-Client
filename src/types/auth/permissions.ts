@@ -18,6 +18,7 @@ export const PERMISSIONS = {
   INVENTORY_ADJUST: 'inventory.adjust',
   INVENTORY_ADJUST_APPROVE: 'inventory.adjust.approve',
   INVENTORY_STOCKTAKE: 'inventory.stocktake',
+  INVENTORY_TRANSFER: 'inventory.transfer',
 
   // Sales
   SALES_VIEW: 'sales.view',
@@ -50,6 +51,7 @@ export const PERMISSIONS = {
   WARRANTIES_ADD: 'warranties.add',
   WARRANTIES_EDIT: 'warranties.edit',
   WARRANTIES_DELETE: 'warranties.delete',
+  WARRANTIES_CLAIMS: 'warranties.claims',
 
   // Expenses
   EXPENSES_VIEW: 'expenses.view',

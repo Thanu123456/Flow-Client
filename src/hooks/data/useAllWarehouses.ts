@@ -16,5 +16,7 @@ export function useAllWarehouses() {
   return {
     warehouses: (query.data ?? []) as Warehouse[],
     isLoading: query.isLoading,
+    error: query.error as Error | null,
+    refetch: query.refetch,
   };
 }

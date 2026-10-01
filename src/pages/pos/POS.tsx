@@ -22,6 +22,8 @@ import WeightEntryModal from '../../components/pos/WeightEntryModal';
 import PriceModeSelector from '../../components/pos/PriceModeSelector';
 import HeldBillsModal from '../../components/pos/HeldBillsModal';
 import HoldNoteModal from '../../components/pos/HoldNoteModal';
+import { isSellableWarehouseType } from '../../utils/warehouse';
+import WarrantyLookupModal from '../../components/warranty-claims/WarrantyLookupModal';
 import POSRefundModal from '../../components/pos/POSRefundModal';
 import ManagerOverrideModal from '../../components/pos/ManagerOverrideModal';
 import SendReceiptModal from '../../components/pos/SendReceiptModal';
@@ -73,6 +75,7 @@ const POS: React.FC = () => {
     const [isAddCustomerModalVisible, setIsAddCustomerModalVisible] = useState(false);
     const [heldBillsModalVisible, setHeldBillsModalVisible] = useState(false);
     const [holdNoteModalOpen, setHoldNoteModalOpen] = useState(false);
+    const [warrantyLookupOpen, setWarrantyLookupOpen] = useState(false);
     const [currentTime, setCurrentTime] = useState(dayjs());
     const [paidAmount, setPaidAmount] = useState<number>(0);
     const [searchTerm, setSearchTerm] = useState('');
@@ -236,7 +239,8 @@ const POS: React.FC = () => {
     useEffect(() => {
         if (isKiosk) return;
         useWarehouseStore.getState().getAllWarehouses().then((list) => {
-            const active = list.filter((w) => w.status === 'active');
+            // Only store / distribution warehouses can be sold from (not returns / damaged / in-transit).
+            const active = list.filter((w) => w.status === 'active' && isSellableWarehouseType(w.warehouseType));
             setWarehouses(active);
             const current = usePOSStore.getState().warehouseId;
             if (current && !active.some((w) => w.id === current)) setWarehouseId(undefined);
@@ -696,7 +700,7 @@ const POS: React.FC = () => {
         }
 
         try {
-            const { saleId, invoiceNumber: savedInvoiceNumber, changeDue, queued } = await checkout(paidAmount, approvals);
+            const { saleId, invoiceNumber: savedInvoiceNumber, changeDue, queued, warranties } = await checkout(paidAmount, approvals);
             if (queued) {
                 message.warning(
                     `Saved offline (${savedInvoiceNumber}) — no connection right now. It'll sync automatically once this device is back online.`,
@@ -725,7 +729,17 @@ const POS: React.FC = () => {
                         dateLabel: dayjs().format('DD MMM YYYY HH:mm'),
                         customerName: customerNameDisplay,
                         paymentMethod,
-                        items: cart.map((item) => ({ name: item.name, quantity: item.quantity, price: item.price })),
+                        items: cart.map((item) => {
+                            const w = (warranties ?? []).find((x) => x.productId === item.productId);
+                            return {
+                                name: item.name,
+                                quantity: item.quantity,
+                                price: item.price,
+                                warranty: w
+                                    ? `Warranty: ${w.warrantyName} (${w.expiryDate ? `valid to ${dayjs(w.expiryDate).format('DD MMM YYYY')}` : 'lifetime'})`
+                                    : undefined,
+                            };
+                        }),
                         subtotal: subTotal,
                         discountAmount: discountAmount > 0 ? discountAmount : undefined,
                         deliveryCharge: deliveryCharge > 0 ? deliveryCharge : undefined,
@@ -980,6 +994,7 @@ const POS: React.FC = () => {
                         HOLD BILL
                     </Button>
                     <Button onClick={() => setRefundModalVisible(true)} size="middle" style={{ backgroundColor: '#fa5f55', color: 'white', border: 'none' }} className="hover:opacity-90 text-xs rounded-lg shadow-sm font-semibold">REFUND</Button>
+                    <Button onClick={() => setWarrantyLookupOpen(true)} size="middle" style={{ backgroundColor: '#13a8a8', color: 'white', border: 'none' }} className="hover:opacity-90 text-xs rounded-lg shadow-sm font-semibold">WARRANTY</Button>
                     <Button onClick={() => setUnknownItemModalVisible(true)} size="middle" style={{ backgroundColor: '#8c8c8c', color: 'white', border: 'none' }} className="hover:opacity-90 text-xs rounded-lg shadow-sm font-semibold">+ UNKNOWN ITEM</Button>
 
                     <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }} trigger={['click']} placement="bottomRight">
@@ -1801,6 +1816,7 @@ const POS: React.FC = () => {
             />
 
             {/* ── Feature #10 – Held Bills Modal ─────────────────────────── */}
+            <WarrantyLookupModal open={warrantyLookupOpen} onClose={() => setWarrantyLookupOpen(false)} />
             <HeldBillsModal
                 visible={heldBillsModalVisible}
                 onClose={() => setHeldBillsModalVisible(false)}

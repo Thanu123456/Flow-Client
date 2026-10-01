@@ -103,7 +103,8 @@ export interface EscposReceiptData {
     dateLabel: string;
     customerName: string;
     paymentMethod: string;
-    items: { name: string; quantity: number; price: number }[];
+    // warranty: e.g. "Warranty: 1 Year (valid to 01 Oct 2027)" — printed under the line
+    items: { name: string; quantity: number; price: number; warranty?: string }[];
     subtotal: number;
     discountAmount?: number;
     deliveryCharge?: number;
@@ -140,6 +141,7 @@ export function buildEscposReceipt(data: EscposReceiptData): Uint8Array {
         b.line(item.name);
         const qty = item.quantity % 1 === 0 ? String(item.quantity) : item.quantity.toFixed(3);
         b.twoColumn(`  ${qty} x ${money(item.price)}`, money(item.quantity * item.price));
+        if (item.warranty) b.line(`  ${item.warranty}`);
     }
     b.divider();
 

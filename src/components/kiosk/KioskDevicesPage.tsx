@@ -1,11 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Table, Badge, Button, Input, Modal, message, Typography, Space, Tooltip } from 'antd';
+import { Table, Badge, Button, Input, Modal, message, Typography, Space, Tooltip, Select } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { EditOutlined, LogoutOutlined, DeleteOutlined, ReloadOutlined, DesktopOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { authService } from '../../services/auth/authService';
 import type { KioskDeviceInfo } from '../../types/auth/kiosk.types';
+import { useWarehouseStore } from '../../store/management/warehouseStore';
+import { apiErrorMessage } from '../../utils/apiError';
+import { isSellableWarehouseType } from '../../utils/warehouse';
 
 dayjs.extend(relativeTime);
 
@@ -23,6 +26,7 @@ const KioskDevicesPage: React.FC = () => {
     const [renaming, setRenaming] = useState<KioskDeviceInfo | null>(null);
     const [renameValue, setRenameValue] = useState('');
     const [busyId, setBusyId] = useState<string | null>(null);
+    const { allWarehouses, getAllWarehouses } = useWarehouseStore();
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -36,6 +40,20 @@ const KioskDevicesPage: React.FC = () => {
     }, []);
 
     useEffect(() => { load(); }, [load]);
+    useEffect(() => { if (allWarehouses.length === 0) getAllWarehouses(); }, [allWarehouses.length, getAllWarehouses]);
+
+    const handleWarehouse = async (device: KioskDeviceInfo, warehouseId: string | undefined) => {
+        setBusyId(device.id);
+        try {
+            await authService.setKioskDeviceWarehouse(device.id, warehouseId ?? null);
+            message.success(warehouseId ? 'Register warehouse saved' : 'Register warehouse cleared');
+            load();
+        } catch (e) {
+            message.error(apiErrorMessage(e, 'Failed to set the register warehouse'));
+        } finally {
+            setBusyId(null);
+        }
+    };
 
     const handleRename = async () => {
         if (!renaming || !renameValue.trim()) return;
@@ -109,6 +127,25 @@ const KioskDevicesPage: React.FC = () => {
             title: 'Signed in as',
             key: 'user',
             render: (_, d) => d.current_user_name || <Text type="secondary">Nobody (at PIN screen)</Text>,
+        },
+        {
+            title: 'Sells from',
+            key: 'warehouse',
+            render: (_, d) => (
+                <Select
+                    size="small"
+                    allowClear
+                    style={{ width: 170 }}
+                    placeholder="Cashier / shop default"
+                    value={d.warehouse_id}
+                    loading={busyId === d.id}
+                    onChange={(v) => handleWarehouse(d, v)}
+                    onClear={() => handleWarehouse(d, undefined)}
+                    options={allWarehouses
+                        .filter((w) => w.status === 'active' && isSellableWarehouseType(w.warehouseType))
+                        .map((w) => ({ value: w.id, label: w.name }))}
+                />
+            ),
         },
         {
             title: 'Last seen',

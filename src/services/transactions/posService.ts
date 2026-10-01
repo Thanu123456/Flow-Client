@@ -94,11 +94,20 @@ export interface PriceChangedLine {
 // customer's balance and returns the rest here as cash to hand back.
 // replayed is true when the server recognised client_txn_id as a sale it had
 // already saved (e.g. the first reply was lost) and returned that sale.
+// A warranty registered for a sold item — printed under the line on the receipt.
+export interface ReceiptWarranty {
+    productId: string;
+    warrantyName: string;
+    /** YYYY-MM-DD; undefined = lifetime */
+    expiryDate?: string;
+}
+
 export interface POSTransactionResult {
     id: string;
     invoiceNumber: string;
     changeDue: number;
     replayed?: boolean;
+    warranties?: ReceiptWarranty[];
 }
 
 // Which warehouse this till sells from — resolved by the server exactly as a
@@ -119,7 +128,12 @@ export const posService = {
     createSale: async (data: POSSaleRequest): Promise<POSTransactionResult> => {
         const response = await axiosInstance.post("/admin/pos/sale", data);
         const sale = response.data?.sale ?? {};
-        return { id: sale.id, invoiceNumber: sale.invoice_number, changeDue: Number(sale.change_due || 0), replayed: !!sale.replayed };
+        const warranties: ReceiptWarranty[] = (sale.warranties ?? []).map((w: any) => ({
+            productId: w.product_id,
+            warrantyName: w.warranty_name,
+            expiryDate: w.expiry_date || undefined,
+        }));
+        return { id: sale.id, invoiceNumber: sale.invoice_number, changeDue: Number(sale.change_due || 0), replayed: !!sale.replayed, warranties };
     },
 
     getTillContext: async (warehouseId?: string): Promise<TillContext> => {

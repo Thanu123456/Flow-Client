@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Modal, Form, Button, App, Typography, Space } from "antd";
 import { PlusCircleOutlined } from "@ant-design/icons";
 import type { AddModalProps } from "./Modal.types";
+import { apiErrorMessage } from '../../../utils/apiError';
 
 const { Title, Text } = Typography;
 
@@ -51,9 +52,7 @@ function AddModal<T = any>({
         return;
       }
       console.error(err);
-      message.error(
-        err?.response?.data?.message || `Failed to ${title.toLowerCase()}`
-      );
+      message.error(apiErrorMessage(err, `Failed to ${title.toLowerCase()}`));
     } finally {
       setInternalLoading(false);
     }

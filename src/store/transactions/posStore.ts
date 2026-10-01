@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { posService } from "../../services/transactions/posService";
-import type { POSSaleRequest, PriceChangedLine } from "../../services/transactions/posService";
+import type { POSSaleRequest, PriceChangedLine, ReceiptWarranty } from "../../services/transactions/posService";
 import { holdService } from "../../services/transactions/holdService";
 import type { HeldBill } from "../../types/entities/holdBill.types";
 import { isWeightBasedProduct } from "../../utils/posHelpers";
@@ -106,7 +106,7 @@ interface POSState {
     setSplitBankAmount: (amount: number) => void;
     setPriceMode: (mode: "our" | "retail" | "wholesale") => void;
     initializePriceMode: () => void;
-    checkout: (paidAmount: number, approvals?: CheckoutApprovals) => Promise<{ saleId: string; invoiceNumber: string; changeDue: number; queued?: boolean }>;
+    checkout: (paidAmount: number, approvals?: CheckoutApprovals) => Promise<{ saleId: string; invoiceNumber: string; changeDue: number; queued?: boolean; warranties?: ReceiptWarranty[] }>;
     updateCartItemPrices: (itemsWithNewPrices: { id: string; price: number }[]) => void;
     setLinePrice: (id: string, price: number, reason: string) => void;
     clearLinePriceOverride: (id: string) => void;
@@ -360,7 +360,7 @@ export const usePOSStore = create<POSState>()(
 
                         clearCart();
                         set({ loading: false });
-                        return { saleId: result.id, invoiceNumber: result.invoiceNumber, changeDue: result.changeDue };
+                        return { saleId: result.id, invoiceNumber: result.invoiceNumber, changeDue: result.changeDue, warranties: result.warranties };
                     } catch (networkError: any) {
                         // No `response` means the request never reached the server
                         // (dropped connection, DNS failure, timeout) — a real business

@@ -1,8 +1,10 @@
 import React from 'react';
-import { Space, Tooltip, Popconfirm, Modal, message } from 'antd';
+import { Space, Tooltip, Popconfirm, Modal } from 'antd';
 import { EditOutlined, DeleteOutlined, EyeOutlined, WarningOutlined } from '@ant-design/icons';
 import { CommonTable } from '../common/Table';
-import type { Warranty, WarrantyPeriod } from '../../types/entities/warranty.types';
+import { Tag } from 'antd';
+import { formatTerm, typeColor, typeLabel } from '../../utils/warranty';
+import type { Warranty } from '../../types/entities/warranty.types';
 import dayjs from 'dayjs';
 
 interface Props {
@@ -13,6 +15,10 @@ interface Props {
   onEdit: (warranty: Warranty) => void;
   onDelete: (id: string) => void;
   onView: (warranty: Warranty) => void;
+  onBulkDelete: (ids: string[]) => Promise<void>;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
+  onSortChange: (sortBy?: string, sortDir?: 'asc' | 'desc') => void;
   pagination?: {
     current: number;
     pageSize: number;
@@ -29,16 +35,12 @@ const WarrantiesTable: React.FC<Props> = ({
   onEdit,
   onDelete,
   onView,
+  onBulkDelete,
+  sortBy,
+  sortDir,
+  onSortChange,
   pagination,
 }) => {
-  const getPeriodLabel = (period: WarrantyPeriod): string => {
-    const labelMap: Record<WarrantyPeriod, string> = {
-      month: 'Month(s)',
-      year: 'Year(s)',
-    };
-    return labelMap[period] || period;
-  };
-
   const handleBulkDelete = () => {
     Modal.confirm({
       title: "Delete Multiple Warranties",
@@ -48,16 +50,27 @@ const WarrantiesTable: React.FC<Props> = ({
       okType: "danger",
       cancelText: "Cancel",
       onOk: async () => {
-        try {
-          // Perform bulk delete logic here
-          message.success(`Successfully deleted ${selectedRowKeys.length} warranties`);
-          onSelectChange([]);
-          // refresh logic
-        } catch (error) {
-          message.error("Failed to delete warranties");
-        }
+        await onBulkDelete(selectedRowKeys);
+        onSelectChange([]);
       },
     });
+  };
+
+  // Column key -> backend sort_by (see warrantySortExpressions in warranty_repository.go)
+  const SORT_KEYS: Record<string, string> = {
+    name: 'name',
+    duration: 'duration',
+    createdAt: 'created_at',
+    isActive: 'status',
+  };
+  const orderFor = (backendKey: string) =>
+    sortBy === backendKey ? (sortDir === 'desc' ? 'descend' : 'ascend') : null;
+
+  const handleTableChange = (_p: any, _f: any, sorter: any) => {
+    const s = Array.isArray(sorter) ? sorter[0] : sorter;
+    const key = typeof s?.columnKey === 'string' ? SORT_KEYS[s.columnKey] : undefined;
+    if (key && s?.order) onSortChange(key, s.order === 'descend' ? 'desc' : 'asc');
+    else onSortChange(undefined, undefined);
   };
 
   const columns = [
@@ -65,6 +78,8 @@ const WarrantiesTable: React.FC<Props> = ({
       title: 'Warranty Name',
       dataIndex: 'name',
       key: 'name',
+      sorter: true,
+      sortOrder: orderFor('name'),
       render: (name: string) => (
         <span style={{ fontWeight: 'bold' }}>{name}</span>
       ),
@@ -72,20 +87,25 @@ const WarrantiesTable: React.FC<Props> = ({
     {
       title: 'Duration',
       key: 'duration',
+      sorter: true,
+      sortOrder: orderFor('duration'),
       render: (_: any, record: Warranty) => (
-        <span>{record.duration} {getPeriodLabel(record.period)}</span>
+        <span>{formatTerm(record.duration, record.period)}</span>
       ),
     },
     {
-      title: 'Period',
-      dataIndex: 'period',
-      key: 'period',
-      render: (period: WarrantyPeriod) => (
-        <span
-          className="px-3 py-1 rounded-lg text-sm border border-blue-500 text-blue-500 bg-blue-50/70"
-        >
-          {period === 'month' ? 'Monthly' : 'Yearly'}
-        </span>
+      title: 'Type',
+      dataIndex: 'warrantyType',
+      key: 'warrantyType',
+      render: (t: string) => <Tag color={typeColor(t)}>{typeLabel(t)}</Tag>,
+    },
+    {
+      title: 'Products',
+      dataIndex: 'productCount',
+      key: 'productCount',
+      align: 'center' as const,
+      render: (n: number) => (
+        <span className={n > 0 ? 'font-semibold' : 'text-gray-400'}>{n ?? 0}</span>
       ),
     },
     {
@@ -99,12 +119,16 @@ const WarrantiesTable: React.FC<Props> = ({
       title: 'Created Date',
       dataIndex: 'createdAt',
       key: 'createdAt',
+      sorter: true,
+      sortOrder: orderFor('created_at'),
       render: (date: string) => date ? dayjs(date).format('DD MMM YYYY') : '-',
     },
     {
       title: 'Status',
       dataIndex: 'isActive',
       key: 'isActive',
+      sorter: true,
+      sortOrder: orderFor('status'),
       render: (isActive: boolean) => (
         <span
           className={`px-3 py-1 rounded-lg text-sm border ${isActive
@@ -165,6 +189,7 @@ const WarrantiesTable: React.FC<Props> = ({
       rowKey="id"
       loading={loading}
       onBulkDelete={handleBulkDelete}
+      onChange={handleTableChange}
       bulkDeleteText={`Delete (${selectedRowKeys.length})`}
       rowSelection={{
         selectedRowKeys,

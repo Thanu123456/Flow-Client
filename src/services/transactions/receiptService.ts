@@ -2,15 +2,42 @@ import { axiosInstance } from "../api/axiosInstance";
 import api from "../../utils/api";
 import type { SaleDetailItem } from "../../types/entities/sale.types";
 
+export interface PublicWarranty {
+    productName: string;
+    warrantyName: string;
+    warrantyType: string;
+    period: string;
+    duration: number;
+    startDate: string;
+    /** undefined = lifetime */
+    expiryDate?: string;
+    serialNumber?: string;
+    terms?: string;
+    exclusions?: string;
+}
+
 export interface PublicReceipt {
     shopName: string;
     logoUrl?: string;
     sale: SaleDetailItem;
+    warranties: PublicWarranty[];
 }
 
 const transformPublicReceipt = (d: any): PublicReceipt => ({
     shopName: d.shop_name,
     logoUrl: d.logo_url || undefined,
+    warranties: (d.warranties || []).map((w: any) => ({
+        productName: w.product_name,
+        warrantyName: w.warranty_name,
+        warrantyType: w.warranty_type,
+        period: w.period,
+        duration: Number(w.duration || 0),
+        startDate: w.start_date,
+        expiryDate: w.expiry_date || undefined,
+        serialNumber: w.serial_number || undefined,
+        terms: w.terms || undefined,
+        exclusions: w.exclusions || undefined,
+    })),
     sale: {
         id: d.sale.id,
         bill_number: d.sale.invoice_number,

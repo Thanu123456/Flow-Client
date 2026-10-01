@@ -47,6 +47,7 @@ const Categories = lazy(() => import("../pages/management/Categories"));
 const SubCategories = lazy(() => import("../pages/management/SubCategories"));
 const Units = lazy(() => import("../pages/management/Units"));
 const Warehouses = lazy(() => import("../pages/management/Warehouses"));
+const WarehouseDetail = lazy(() => import("../pages/management/WarehouseDetail"));
 const Roles = lazy(() => import("../pages/management/Roles"));
 const Users = lazy(() => import("../pages/management/Users"));
 const Variations = lazy(() => import("../pages/management/Variations"));
@@ -56,6 +57,7 @@ const CreditSupplier = lazy(() => import("../pages/management/CreditSupplier"));
 const SupplierPayment = lazy(() => import("../pages/management/SupplierPayment"));
 const CreditCustomer = lazy(() => import("../pages/management/CreditCustomer"));
 const Warranties = lazy(() => import("../pages/management/Warranties"));
+const WarrantyClaims = lazy(() => import("../pages/management/WarrantyClaims"));
 const Products = lazy(() => import("../pages/management/Products"));
 const Stock = lazy(() => import("../pages/management/Stock"));
 const LowStock = lazy(() => import("../pages/inventory/LowStock"));
@@ -181,7 +183,14 @@ const AppRoutes: React.FC = () => {
         <Route path="/categories" element={<Categories />} />
         <Route path="/subcategories" element={<SubCategories />} />
         <Route path="/units" element={<Units />} />
-        <Route path="/warehouses" element={<Warehouses />} />
+        <Route
+          element={
+            <PermissionRoute requiredPermission={PERMISSIONS.SETTINGS_WAREHOUSES} />
+          }
+        >
+          <Route path="/warehouses" element={<Warehouses />} />
+          <Route path="/warehouses/:id" element={<WarehouseDetail />} />
+        </Route>
         <Route path="/variations" element={<Variations />} />
 
         {/* Stock Adjustment Routes */}
@@ -263,6 +272,13 @@ const AppRoutes: React.FC = () => {
           }
         >
           <Route path="/warranties" element={<Warranties />} />
+        </Route>
+        <Route
+          element={
+            <PermissionRoute requiredPermissions={[PERMISSIONS.WARRANTIES_CLAIMS, PERMISSIONS.WARRANTIES_VIEW]} />
+          }
+        >
+          <Route path="/warranty-claims" element={<WarrantyClaims />} />
         </Route>
 
         {/* Purchase / GRN Routes */}

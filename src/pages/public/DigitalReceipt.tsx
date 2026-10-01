@@ -120,6 +120,25 @@ const DigitalReceipt: React.FC = () => {
                     <span>Rs. {fmt(sale.total_amount)}</span>
                 </div>
 
+                {receipt.warranties.length > 0 && (
+                    <div style={{ marginTop: 20, padding: 12, background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 8 }}>
+                        <Text strong style={{ fontSize: 14 }}>Warranty</Text>
+                        {receipt.warranties.map((w, i) => (
+                            <div key={i} style={{ marginTop: 10, fontSize: 13 }}>
+                                <div><b>{w.productName}</b>{w.serialNumber ? ` · SN ${w.serialNumber}` : ''}</div>
+                                <div>
+                                    {w.warrantyName} — {w.expiryDate
+                                        ? `valid until ${dayjs(w.expiryDate).format('DD MMM YYYY')}`
+                                        : 'lifetime warranty'}
+                                </div>
+                                {w.terms && <div style={{ whiteSpace: 'pre-wrap' }}><Text type="secondary">Covered: </Text>{w.terms}</div>}
+                                {w.exclusions && <div style={{ whiteSpace: 'pre-wrap' }}><Text type="secondary">Not covered: </Text>{w.exclusions}</div>}
+                            </div>
+                        ))}
+                        <div style={{ marginTop: 8, fontSize: 12 }}><Text type="secondary">Keep this receipt as proof of purchase for warranty claims.</Text></div>
+                    </div>
+                )}
+
                 <div style={{ textAlign: 'center', marginTop: 24 }}>
                     <Text type="secondary" style={{ fontSize: 12 }}>Thank you for your business!</Text>
                 </div>

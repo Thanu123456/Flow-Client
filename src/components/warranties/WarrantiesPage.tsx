@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { message, Space, Modal, Descriptions } from 'antd';
+import { message, Space, Modal, Descriptions, Tag } from 'antd';
+import { formatTerm, typeColor, typeLabel } from '../../utils/warranty';
+import { apiErrorMessage } from '../../utils/apiError';
 import { PlusOutlined, ReloadOutlined, FileExcelOutlined, FilePdfOutlined } from '@ant-design/icons';
 import { useWarrantyStore } from '../../store/management/warrantyStore';
 import { warrantyService } from '../../services/management/warrantyService';
@@ -28,6 +30,9 @@ const WarrantiesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
 
+  const [sortBy, setSortBy] = useState<string | undefined>(undefined);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc' | undefined>(undefined);
+
   const debouncedSearch = useDebounce(searchTerm, 300);
 
   const fetchWarranties = useCallback(async (page = 1, limit = 10) => {
@@ -36,12 +41,14 @@ const WarrantiesPage: React.FC = () => {
       limit,
       search: debouncedSearch || undefined,
       status: statusFilter === 'all' ? undefined : (statusFilter as 'active' | 'inactive'),
+      sortBy,
+      sortDir,
     });
-  }, [getWarranties, debouncedSearch, statusFilter]);
+  }, [getWarranties, debouncedSearch, statusFilter, sortBy, sortDir]);
 
   useEffect(() => {
     fetchWarranties(1, pagination.limit);
-  }, [debouncedSearch, statusFilter]);
+  }, [debouncedSearch, statusFilter, sortBy, sortDir]);
 
   const handlePageChange = (page: number, pageSize: number) => {
     fetchWarranties(page, pageSize);
@@ -51,6 +58,8 @@ const WarrantiesPage: React.FC = () => {
   const handleRefresh = async () => {
     setSearchTerm('');
     setStatusFilter(undefined);
+    setSortBy(undefined);
+    setSortDir(undefined);
     setSelectedRowKeys([]);
     setRefreshing(true);
     try {
@@ -80,8 +89,20 @@ const WarrantiesPage: React.FC = () => {
       message.success('Warranty deleted successfully');
       fetchWarranties(pagination.page, pagination.limit);
     } catch (error: any) {
-      message.error(error.response?.data?.message || 'Failed to delete warranty');
+      message.error(apiErrorMessage(error, 'Failed to delete warranty'));
     }
+  };
+
+  const handleBulkDelete = async (ids: string[]) => {
+    const results = await Promise.allSettled(ids.map((id) => warrantyService.deleteWarranty(id)));
+    const failed = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+    const deleted = ids.length - failed.length;
+    if (deleted > 0) message.success(`Deleted ${deleted} warranty(ies)`);
+    if (failed.length > 0) {
+      const reason = apiErrorMessage(failed[0].reason, '');
+      message.error(`${failed.length} could not be deleted${reason ? `: ${reason}` : ''}`);
+    }
+    fetchWarranties(pagination.page, pagination.limit);
   };
 
   const handleAddSuccess = () => {
@@ -102,6 +123,8 @@ const WarrantiesPage: React.FC = () => {
         limit: 1000,
         search: searchTerm || undefined,
         status: statusFilter === 'all' ? undefined : (statusFilter as 'active' | 'inactive'),
+        sortBy,
+        sortDir,
       });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -123,6 +146,8 @@ const WarrantiesPage: React.FC = () => {
         limit: 1000,
         search: searchTerm || undefined,
         status: statusFilter === 'all' ? undefined : (statusFilter as 'active' | 'inactive'),
+        sortBy,
+        sortDir,
       });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -198,6 +223,10 @@ const WarrantiesPage: React.FC = () => {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onView={handleView}
+          onBulkDelete={handleBulkDelete}
+          sortBy={sortBy}
+          sortDir={sortDir}
+          onSortChange={(by, dir) => { setSortBy(by); setSortDir(dir); }}
           pagination={{
             current: pagination.page,
             pageSize: pagination.limit,
@@ -236,16 +265,23 @@ const WarrantiesPage: React.FC = () => {
         {selectedWarranty && (
           <Descriptions bordered column={1} size="small">
             <Descriptions.Item label="Warranty Name">{selectedWarranty.name}</Descriptions.Item>
-            <Descriptions.Item label="Duration">
-              {selectedWarranty.duration} {selectedWarranty.period === 'month' ? 'Month(s)' : 'Year(s)'}
+            <Descriptions.Item label="Type">
+              <Tag color={typeColor(selectedWarranty.warrantyType)}>{typeLabel(selectedWarranty.warrantyType)}</Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="Period">
-              <span className="px-3 py-1 rounded-lg text-sm border border-blue-500 text-blue-500 bg-blue-50/70">
-                {selectedWarranty.period === 'month' ? 'Monthly' : 'Yearly'}
-              </span>
+            <Descriptions.Item label="Duration">
+              {formatTerm(selectedWarranty.duration, selectedWarranty.period)}
+            </Descriptions.Item>
+            <Descriptions.Item label="Products Using">
+              {selectedWarranty.productCount ?? 0}
             </Descriptions.Item>
             <Descriptions.Item label="Description">
               {selectedWarranty.description || '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="Terms & Coverage">
+              <span style={{ whiteSpace: 'pre-wrap' }}>{selectedWarranty.terms || '-'}</span>
+            </Descriptions.Item>
+            <Descriptions.Item label="Exclusions">
+              <span style={{ whiteSpace: 'pre-wrap' }}>{selectedWarranty.exclusions || '-'}</span>
             </Descriptions.Item>
             <Descriptions.Item label="Status">
               <span

@@ -12,6 +12,10 @@ export const transformWarranty = (data: any): Warranty => ({
   description: data.description,
   duration: data.duration,
   period: data.period,
+  warrantyType: data.warranty_type || "manufacturer",
+  terms: data.terms || undefined,
+  exclusions: data.exclusions || undefined,
+  productCount: Number(data.product_count || 0),
   isActive: data.is_active,
   createdAt: data.created_at,
   updatedAt: data.updated_at,
@@ -23,7 +27,9 @@ export const warrantyService = {
       page: params.page,
       per_page: params.limit,
       search: params.search,
-      include_inactive: params.status !== "active",
+      status: params.status ?? "all",
+      sort_by: params.sortBy || undefined,
+      sort_dir: params.sortDir || undefined,
     };
     const response = await axiosInstance.get("/admin/warranties", { params: backendParams });
     const data = response.data.warranties || response.data.data || [];
@@ -53,8 +59,11 @@ export const warrantyService = {
     await axiosInstance.post("/admin/warranties", {
       name: data.name,
       description: data.description,
-      duration: data.duration,
+      duration: data.period === "lifetime" ? 0 : data.duration,
       period: data.period,
+      warranty_type: data.warrantyType,
+      terms: data.terms,
+      exclusions: data.exclusions,
       is_active: data.isActive
     });
   },
@@ -63,9 +72,13 @@ export const warrantyService = {
     await axiosInstance.put(`/admin/warranties/${id}`, {
       name: data.name,
       description: data.description,
-      duration: data.duration,
+      duration: data.period === "lifetime" ? 0 : data.duration,
       period: data.period,
-      is_active: data.isActive
+      warranty_type: data.warrantyType,
+      terms: data.terms ?? "",
+      exclusions: data.exclusions ?? "",
+      is_active: data.isActive,
+      updated_at: data.updatedAt,
     });
   },
 
@@ -75,7 +88,7 @@ export const warrantyService = {
 
   exportToPDF: async (params: WarrantyPaginationParams): Promise<Blob> => {
     const response = await axiosInstance.get("/admin/warranties/export/pdf", {
-      params,
+      params: { search: params.search, status: params.status ?? "all", sort_by: params.sortBy || undefined, sort_dir: params.sortDir || undefined },
       responseType: 'blob'
     });
     return response.data;
@@ -83,7 +96,7 @@ export const warrantyService = {
 
   exportToExcel: async (params: WarrantyPaginationParams): Promise<Blob> => {
     const response = await axiosInstance.get("/admin/warranties/export/excel", {
-      params,
+      params: { search: params.search, status: params.status ?? "all", sort_by: params.sortBy || undefined, sort_dir: params.sortDir || undefined },
       responseType: 'blob'
     });
     return response.data;

@@ -47,6 +47,10 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
     const [statusFilter, setStatusFilter] = useState<ProductStatus | undefined>(
         () => (searchParams.get("status") as ProductStatus) || undefined
     );
+    // Set when arriving from the Warehouses page's product-count badge.
+    const [warehouseFilter, setWarehouseFilter] = useState<string | undefined>(
+        () => searchParams.get("warehouseId") || undefined
+    );
     const [sortBy, setSortBy] = useState<string | undefined>(() => searchParams.get("sort_by") || undefined);
     const [sortDir, setSortDir] = useState<"asc" | "desc" | undefined>(
         () => (searchParams.get("sort_dir") as "asc" | "desc") || undefined
@@ -68,17 +72,18 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
             search: debouncedSearch || undefined,
             productType: typeFilter,
             status: statusFilter,
+            warehouseId: warehouseFilter,
             sortBy,
             sortDir,
         });
-    }, [getProducts, debouncedSearch, typeFilter, statusFilter, sortBy, sortDir]);
+    }, [getProducts, debouncedSearch, typeFilter, statusFilter, warehouseFilter, sortBy, sortDir]);
 
     useEffect(() => {
         const page = isFirstFetchRef.current ? initialPageRef.current : 1;
         isFirstFetchRef.current = false;
         fetchProducts(page, pagination.limit || 50);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [debouncedSearch, typeFilter, statusFilter, sortBy, sortDir, fetchProducts]);
+    }, [debouncedSearch, typeFilter, statusFilter, warehouseFilter, sortBy, sortDir, fetchProducts]);
 
     // Mirror the current filters/sort/page into the URL (replace, not push,
     // so every keystroke/page click doesn't pile up in browser history).
@@ -87,12 +92,13 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
         if (debouncedSearch) next.set("search", debouncedSearch);
         if (typeFilter) next.set("type", typeFilter);
         if (statusFilter) next.set("status", statusFilter);
+        if (warehouseFilter) next.set("warehouseId", warehouseFilter);
         if (sortBy) next.set("sort_by", sortBy);
         if (sortDir) next.set("sort_dir", sortDir);
         if (pagination.page > 1) next.set("page", String(pagination.page));
         setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [debouncedSearch, typeFilter, statusFilter, sortBy, sortDir, pagination.page]);
+    }, [debouncedSearch, typeFilter, statusFilter, warehouseFilter, sortBy, sortDir, pagination.page]);
 
     const handlePageChange = (page: number, pageSize: number) => {
         fetchProducts(page, pageSize);
@@ -108,6 +114,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
         setSearchTerm("");
         setTypeFilter(undefined);
         setStatusFilter(undefined);
+        setWarehouseFilter(undefined);
         setSortBy(undefined);
         setSortDir(undefined);
         setRefreshing(true);
@@ -132,6 +139,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
         search: debouncedSearch || undefined,
         productType: typeFilter,
         status: statusFilter,
+        warehouseId: warehouseFilter,
         sortBy,
         sortDir,
     };

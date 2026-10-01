@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
+import { message } from "antd";
+import { apiErrorMessage } from "../../utils/apiError";
 import { warrantyService } from "../../services/management/warrantyService";
 import type {
   Warranty,
@@ -12,6 +14,11 @@ interface WarrantyState {
   // Separate field for dropdowns so paginated table data is never overwritten
   allWarranties: Warranty[];
   loading: boolean;
+  // state of the dropdown list (GET /warranties/all), independent of the table
+  allLoading: boolean;
+  allError: string | null;
+  // true while a create/update/delete is in flight (kept apart from `loading` so the table doesn't flash)
+  submitting: boolean;
   error: string | null;
   pagination: {
     total: number;
@@ -35,6 +42,9 @@ export const useWarrantyStore = create<WarrantyState>()(
       warranties: [],
       allWarranties: [],
       loading: false,
+      allLoading: false,
+      allError: null,
+      submitting: false,
       error: null,
       pagination: { total: 0, page: 1, limit: 10, totalPages: 0 },
 
@@ -62,20 +72,22 @@ export const useWarrantyStore = create<WarrantyState>()(
 
       getAllWarranties: async () => {
         // Populates dropdown list — writes to allWarranties, NOT warranties (table data)
-        const cached = get().allWarranties;
-        const tryFetch = async (attemptsLeft: number): Promise<void> => {
+        set({ allLoading: true, allError: null });
+        let lastError: any;
+        // One quick retry for a transient blip; anything beyond that is surfaced, not hidden.
+        for (let attempt = 0; attempt < 2; attempt++) {
           try {
             const data = await warrantyService.getAllWarranties();
-            set({ allWarranties: data });
+            set({ allWarranties: data, allLoading: false });
+            return;
           } catch (err: any) {
-            if (cached.length === 0 && attemptsLeft > 0) {
-              await new Promise(r => setTimeout(r, 3000));
-              return tryFetch(attemptsLeft - 1);
-            }
-            if (cached.length === 0) console.error("Failed to fetch warranties:", err);
+            lastError = err;
+            if (attempt === 0) await new Promise((r) => setTimeout(r, 800));
           }
-        };
-        return tryFetch(2);
+        }
+        const msg = apiErrorMessage(lastError, "Failed to load warranties");
+        set({ allLoading: false, allError: msg });
+        if (get().allWarranties.length === 0) message.error(`${msg}. Please refresh and try again.`);
       },
 
       getWarrantyById: async (id) => {
@@ -88,34 +100,34 @@ export const useWarrantyStore = create<WarrantyState>()(
       },
 
       createWarranty: async (data) => {
-        set({ loading: true });
+        set({ submitting: true });
         try {
           await warrantyService.createWarranty(data);
-          set({ loading: false });
+          set({ submitting: false });
         } catch (error: any) {
-          set({ loading: false, error: error.message });
+          set({ submitting: false, error: error.message });
           throw error;
         }
       },
 
       updateWarranty: async (id, data) => {
-        set({ loading: true });
+        set({ submitting: true });
         try {
           await warrantyService.updateWarranty(id, data);
-          set({ loading: false });
+          set({ submitting: false });
         } catch (error: any) {
-          set({ loading: false, error: error.message });
+          set({ submitting: false, error: error.message });
           throw error;
         }
       },
 
       deleteWarranty: async (id) => {
-        set({ loading: true });
+        set({ submitting: true });
         try {
           await warrantyService.deleteWarranty(id);
-          set({ loading: false });
+          set({ submitting: false });
         } catch (error: any) {
-          set({ loading: false, error: error.message });
+          set({ submitting: false, error: error.message });
           throw error;
         }
       },

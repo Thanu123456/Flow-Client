@@ -5,10 +5,13 @@ import {
   ReloadOutlined,
   FilePdfOutlined,
   FileExcelOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
 import { useDebounce } from "../../hooks/ui/useDebounce";
 import { useWarehouseStore } from "../../store/management/warehouseStore";
-import type { WarehousePaginationParams } from "../../types/entities/warehouse.types";
+import type { WarehousePaginationParams, WarehouseStatusFilter, WarehouseType } from "../../types/entities/warehouse.types";
+import { WAREHOUSE_TYPE_OPTIONS } from "../../utils/warehouse";
+import ImportWarehousesModal from "./ImportWarehousesModal";
 import WarehousesTable from "./WarehousesTable";
 import AddWarehouseModal from "./AddWarehouseModal";
 import EditWarehouseModal from "./EditWarehouseModal";
@@ -40,9 +43,9 @@ const WarehousesPage: React.FC<WarehousesPageProps> = ({
     onHeaderCollapseChange?.(newCollapsed);
   };
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<
-    "active" | "inactive" | undefined
-  >(undefined);
+  const [statusFilter, setStatusFilter] = useState<WarehouseStatusFilter | undefined>(undefined);
+  const [typeFilter, setTypeFilter] = useState<WarehouseType | undefined>(undefined);
+  const [importVisible, setImportVisible] = useState(false);
   const [paginationParams, setPaginationParams] =
     useState<WarehousePaginationParams>({
       page: 1,
@@ -59,10 +62,11 @@ const WarehousesPage: React.FC<WarehousesPageProps> = ({
       ...paginationParams,
       search: debouncedSearchTerm,
       status: statusFilter,
+      warehouseType: typeFilter,
     };
     setPaginationParams(params);
     getWarehouses(params);
-  }, [debouncedSearchTerm, statusFilter, getWarehouses]);
+  }, [debouncedSearchTerm, statusFilter, typeFilter, getWarehouses]);
 
   const handlePageChange = (page: number, pageSize: number) => {
     const params = { ...paginationParams, page, limit: pageSize };
@@ -74,7 +78,8 @@ const WarehousesPage: React.FC<WarehousesPageProps> = ({
   const handleRefresh = async () => {
     setSearchTerm("");
     setStatusFilter(undefined);
-    const params = { ...paginationParams, page: 1, search: "", status: undefined };
+    setTypeFilter(undefined);
+    const params = { ...paginationParams, page: 1, search: "", status: undefined, warehouseType: undefined };
     setPaginationParams(params);
     setRefreshing(true);
     try {
@@ -150,7 +155,14 @@ const WarehousesPage: React.FC<WarehousesPageProps> = ({
             options: [
               { label: "Active", value: "active" },
               { label: "Inactive", value: "inactive" },
+              { label: "Deleted (restorable)", value: "deleted" },
             ],
+          },
+          {
+            placeholder: "Filter By Type",
+            value: typeFilter,
+            onChange: setTypeFilter,
+            options: WAREHOUSE_TYPE_OPTIONS.map((o) => ({ label: o.label, value: o.value })),
           },
         ]}
         actions={
@@ -161,6 +173,13 @@ const WarehousesPage: React.FC<WarehousesPageProps> = ({
               onClick={handleAddWarehouse}
             >
               Add Warehouse
+            </CommonButton>
+            <CommonButton
+              icon={<UploadOutlined />}
+              onClick={() => setImportVisible(true)}
+              tooltip="Import from Excel / CSV"
+            >
+              Import
             </CommonButton>
             <CommonButton
               icon={<FilePdfOutlined style={{ color: "#FF0000" }} />}
@@ -192,7 +211,7 @@ const WarehousesPage: React.FC<WarehousesPageProps> = ({
           pagination={pagination}
           onPageChange={handlePageChange}
           onEdit={handleEditWarehouse}
-          onView={(warehouse) => console.log("View warehouse:", warehouse)}
+          onView={(warehouse) => navigate(`/warehouses/${warehouse.id}`)}
           onProductCountClick={handleProductCountClick}
           refreshData={handleRefresh}
         />
@@ -202,6 +221,11 @@ const WarehousesPage: React.FC<WarehousesPageProps> = ({
         visible={addModalVisible}
         onCancel={() => setAddModalVisible(false)}
         onSuccess={handleAddSuccess}
+      />
+      <ImportWarehousesModal
+        visible={importVisible}
+        onCancel={() => setImportVisible(false)}
+        onDone={() => getWarehouses(paginationParams)}
       />
       <EditWarehouseModal
         visible={editModalVisible}

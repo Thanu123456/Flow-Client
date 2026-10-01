@@ -20,6 +20,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   SafetyCertificateOutlined,
+  ToolOutlined,
   RightOutlined,
   RollbackOutlined,
   CreditCardOutlined,
@@ -309,6 +310,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     if (p.startsWith("/inventory")) return "inventory-stock";
     if (p.startsWith("/warehouses")) return "warehouses";
     if (p.startsWith("/variations")) return "variations";
+    if (p.startsWith("/warranty-claims")) return "warranty-claims";
     if (p.startsWith("/warranties")) return "warranties";
     if (p.startsWith("/sales-returns")) return "sales-returns";
     if (p.startsWith("/sales")) return "sales";
@@ -340,7 +342,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
   useMemo(() => {
     const p = location.pathname;
     const next = new Set<string>();
-    if (["/brands", "/categories", "/subcategories", "/units", "/products", "/inventory", "/adjustments", "/stock-takes", "/warehouses", "/variations", "/warranties"].some((s) => p.startsWith(s))) next.add("inventory");
+    if (["/brands", "/categories", "/subcategories", "/units", "/products", "/inventory", "/adjustments", "/stock-takes", "/warehouses", "/variations", "/warranties", "/warranty-claims"].some((s) => p.startsWith(s))) next.add("inventory");
     if (["/sales", "/pos", "/purchases", "/purchase-orders", "/sales-returns", "/purchase-returns", "/expenses", "/expense-categories", "/cheques", "/cheque-returns"].some((s) => p.startsWith(s))) next.add("transactions");
     if (["/customers", "/suppliers", "/credit-supplier"].some((s) => p.startsWith(s))) next.add("contacts");
     if (["/users", "/roles"].some((s) => p.startsWith(s))) next.add("team");
@@ -414,6 +416,9 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     }
     if (isOwner || hasPermission(PERMISSIONS.WARRANTIES_VIEW)) {
       invChildren.push({ key: "warranties", label: "Warranties", icon: <SafetyCertificateOutlined />, path: "/warranties" });
+    }
+    if (isOwner || hasPermission(PERMISSIONS.WARRANTIES_CLAIMS) || hasPermission(PERMISSIONS.WARRANTIES_VIEW)) {
+      invChildren.push({ key: "warranty-claims", label: "Warranty Claims", icon: <ToolOutlined />, path: "/warranty-claims" });
     }
     if (invChildren.length > 0) {
       groups.push({

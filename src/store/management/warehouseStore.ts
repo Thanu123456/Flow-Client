@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
+import { message } from "antd";
+import { apiErrorMessage } from "../../utils/apiError";
 import { warehouseService } from "../../services/management/warehouseService";
 import type {
   Warehouse,
@@ -13,6 +15,11 @@ interface WarehouseState {
   // Full list for dropdowns — separate so table data is never overwritten
   allWarehouses: Warehouse[];
   loading: boolean;
+  // state of the dropdown list (GET /warehouses/all), independent of the table
+  allLoading: boolean;
+  allError: string | null;
+  // true while a create/update/delete is in flight (kept apart from `loading` so the table doesn't flash)
+  submitting: boolean;
   error: string | null;
   pagination: {
     total: number;
@@ -36,6 +43,9 @@ export const useWarehouseStore = create<WarehouseState>()(
       warehouses: [],
       allWarehouses: [],
       loading: false,
+      allLoading: false,
+      allError: null,
+      submitting: false,
       error: null,
       pagination: { total: 0, page: 1, limit: 10, totalPages: 0 },
 
@@ -81,54 +91,56 @@ export const useWarehouseStore = create<WarehouseState>()(
       },
 
       getAllWarehouses: async () => {
-        const cached = get().allWarehouses;
-        const tryFetch = async (attemptsLeft: number): Promise<Warehouse[]> => {
+        set({ allLoading: true, allError: null });
+        let lastError: any;
+        // One quick retry for a transient blip; anything beyond that is surfaced, not hidden.
+        for (let attempt = 0; attempt < 2; attempt++) {
           try {
             const warehouses = await warehouseService.getAllWarehouses();
-            set({ allWarehouses: warehouses });
+            set({ allWarehouses: warehouses, allLoading: false });
             return warehouses;
           } catch (err: any) {
-            if (cached.length === 0 && attemptsLeft > 0) {
-              await new Promise(r => setTimeout(r, 3000));
-              return tryFetch(attemptsLeft - 1);
-            }
-            if (cached.length > 0) return cached;
-            set({ error: err.response?.data?.message || err.message || "Failed to fetch warehouses" });
-            return [];
+            lastError = err;
+            if (attempt === 0) await new Promise((r) => setTimeout(r, 800));
           }
-        };
-        return tryFetch(2);
+        }
+        const msg = apiErrorMessage(lastError, "Failed to load warehouses");
+        const cached = get().allWarehouses;
+        set({ allLoading: false, allError: msg });
+        // With nothing cached the dropdown would just look empty — tell the user why.
+        if (cached.length === 0) message.error(`${msg}. Please refresh and try again.`);
+        return cached;
       },
 
       createWarehouse: async (data) => {
-        set({ loading: true, error: null });
+        set({ submitting: true, error: null });
         try {
           await warehouseService.createWarehouse(data);
-          set({ loading: false });
+          set({ submitting: false });
         } catch (error: any) {
-          set({ error: error.response?.data?.message || error.message || "Failed to create warehouse", loading: false });
+          set({ error: apiErrorMessage(error, "Failed to create warehouse"), submitting: false });
           throw error;
         }
       },
 
       updateWarehouse: async (id, data) => {
-        set({ loading: true, error: null });
+        set({ submitting: true, error: null });
         try {
           await warehouseService.updateWarehouse(id, data);
-          set({ loading: false });
+          set({ submitting: false });
         } catch (error: any) {
-          set({ error: error.response?.data?.message || error.message || "Failed to update warehouse", loading: false });
+          set({ error: apiErrorMessage(error, "Failed to update warehouse"), submitting: false });
           throw error;
         }
       },
 
       deleteWarehouse: async (id) => {
-        set({ loading: true, error: null });
+        set({ submitting: true, error: null });
         try {
           await warehouseService.deleteWarehouse(id);
-          set({ loading: false });
+          set({ submitting: false });
         } catch (error: any) {
-          set({ error: error.response?.data?.message || error.message || "Failed to delete warehouse", loading: false });
+          set({ error: apiErrorMessage(error, "Failed to delete warehouse"), submitting: false });
           throw error;
         }
       },

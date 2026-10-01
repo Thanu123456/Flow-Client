@@ -18,7 +18,8 @@ export function renderReceiptHtml(data: EscposReceiptData): string {
                 <td style="text-align:right;">${qty}</td>
                 <td style="text-align:right;">${money(item.price)}</td>
                 <td style="text-align:right;">${money(item.quantity * item.price)}</td>
-            </tr>`;
+            </tr>${item.warranty ? `
+            <tr><td colspan="4" style="padding:0 0 4px 8px;font-size:11px;">${esc(item.warranty)}</td></tr>` : ''}`;
     }).join('');
 
     return `
